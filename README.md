@@ -48,6 +48,20 @@ Then, and every time you update your native dependencies, run:
 bundle exec pod install
 ```
 
+If `pod` is not available globally in your shell, use the project script from the repo root:
+
+```sh
+npm run ios:pods
+```
+
+If you still see encoding errors from CocoaPods, add UTF-8 locale to your shell config:
+
+```sh
+echo 'export LANG=en_US.UTF-8' >> ~/.zshrc
+echo 'export LC_ALL=en_US.UTF-8' >> ~/.zshrc
+source ~/.zshrc
+```
+
 For more information, please visit [CocoaPods Getting Started guide](https://guides.cocoapods.org/using/getting-started.html).
 
 ```sh

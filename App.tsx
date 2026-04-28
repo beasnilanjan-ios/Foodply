@@ -6,10 +6,12 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import SplashScreen from './src/Screens/SplashScreen';
 import Banner from './src/Screens/Banner';
+import Login from './src/Screens/Login';
 
 export type RootStackParamList = {
   Splash: undefined;
   Banner: undefined;
+  Login: undefined;
 };
 
 enableScreens();
@@ -27,6 +29,7 @@ const App = () => {
             component={Banner}
             options={{ animation: 'none' }}
           />
+          <Stack.Screen name="Login" component={Login} />
         </Stack.Navigator>
       </NavigationContainer>
     </SafeAreaProvider>

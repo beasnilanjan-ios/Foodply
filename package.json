@@ -5,6 +5,7 @@
   "scripts": {
     "android": "react-native run-android",
     "ios": "react-native run-ios",
+    "ios:pods": "cd ios && LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 bundle exec pod install",
     "link-fonts": "npx react-native-asset",
     "lint": "eslint .",
     "start": "react-native start",

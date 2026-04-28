@@ -137,7 +137,7 @@
 //   },
 // });
 
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   StyleSheet,
@@ -149,8 +149,14 @@ import {
   Dimensions,
 } from 'react-native';
 import Colors from '../assets/Colors/Colors';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { RootStackParamList } from '../../App';
 
 export default function Banner() {
+  const [counter, setCounter] = useState(0);
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+
   return (
     <View style={styles.container}>
       
@@ -161,7 +167,7 @@ export default function Banner() {
 
       {/* 🔥 IMAGE */}
       <Image
-        source={require('../assets/images/banner1.png')}
+        source={counter >= 2 ? require('../assets/images/banner3.png') : (counter >= 1 ? require('../assets/images/banner2.png') : require('../assets/images/banner1.png'))}
         style={styles.image}
       />
 
@@ -173,12 +179,12 @@ export default function Banner() {
 
         {/* ICON */}
         <Image
-          source={require('../assets/images/transfer_icon.png')} // 👈 add your icon here
+          source={counter >= 1 ? require('../assets/images/Deliver_Boy_Icon.png') : require('../assets/images/transfer_icon.png')}
           style={styles.icon}
         />
 
-        {/* TITLE */}
-        <Text style={styles.title}>Order For Food</Text>
+  {/* TITLE */}
+  <Text style={styles.title}>{counter >= 1 ? 'Fast Delivery' : 'Order For Food'}</Text>
 
         {/* DESCRIPTION */}
         <Text style={styles.desc}>
@@ -187,14 +193,26 @@ export default function Banner() {
 
         {/* DOTS */}
         <View style={styles.dotsContainer}>
-          <View style={[styles.dot, styles.activeDot]} />
-          <View style={styles.dot} />
-          <View style={styles.dot} />
+          {(() => {
+            const activeIndex = Math.min(Math.max(counter, 0), 2); // 0 -> first, 1 -> middle, 2 -> last
+            return [0, 1, 2].map(i => (
+              <View key={i} style={[styles.dot, i === activeIndex && styles.activeDot]} />
+            ));
+          })()}
         </View>
 
         {/* BUTTON */}
-        <TouchableOpacity style={styles.button}>
-          <Text style={styles.buttonText}>Next</Text>
+        <TouchableOpacity
+          style={styles.button}
+          onPress={() => {
+            if (counter > 1) {
+              navigation.navigate('Login');
+            } else {
+              setCounter(prev => (prev < 2 ? prev + 1 : prev));
+            }
+          }}
+        >
+          <Text style={styles.buttonText}>{counter > 1 ? 'Getting Started' : 'Next'}</Text>
         </TouchableOpacity>
 
       </View>
@@ -300,8 +318,12 @@ export default function Banner() {
     backgroundColor: Colors.primary,
     paddingVertical: 12,
     marginTop: 10,
-    paddingHorizontal: 60,
+    // Fixed width to match the "Getting Started" label so the button doesn't resize
+    width: 220,
+    paddingHorizontal: 0,
     borderRadius: 25,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 
   buttonText: {
