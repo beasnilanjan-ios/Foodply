@@ -7,11 +7,16 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import SplashScreen from './src/Screens/SplashScreen';
 import Banner from './src/Screens/Banner';
 import Login from './src/Screens/Login';
+import Dashboard from './src/Screens/Dashboard';
+import Orders from './src/Screens/Orders';
+
 
 export type RootStackParamList = {
   Splash: undefined;
   Banner: undefined;
   Login: undefined;
+  Dashboard: undefined;
+  Orders: undefined;
 };
 
 enableScreens();
@@ -30,6 +35,13 @@ const App = () => {
             options={{ animation: 'none' }}
           />
           <Stack.Screen name="Login" component={Login} />
+          <Stack.Screen name="Dashboard" component={Dashboard}  options={({ route }) => ({
+    animation: route.params?.fromTab ? 'none' : 'default',
+  })} />
+          <Stack.Screen name="Orders" component={Orders}  options={({ route }) => ({
+    animation: route.params?.fromTab ? 'none' : 'default',
+  })} />
+
         </Stack.Navigator>
       </NavigationContainer>
     </SafeAreaProvider>

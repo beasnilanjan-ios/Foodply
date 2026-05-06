@@ -54,9 +54,16 @@ export default function Login({ navigation }: any) {
          <Text style={styles.forgetText}>Forget Password</Text>
        </TouchableOpacity>
 
-      <GlobalButton onPress={() => { /* TODO: navigate to forgot password */ }}>
-         Login
-       </GlobalButton>
+      <GlobalButton
+          onPress={() =>
+            navigation.reset({
+              index: 0,
+              routes: [{ name: 'Dashboard' }],
+            })
+          }
+        >
+          Login
+        </GlobalButton>
 
        <Text style={styles.TextNew}>Or Sign Up With</Text>
 
