@@ -11,11 +11,11 @@ import GlobalTopBar from '../GlobalContainer/GlobalTopBar';
 
 const { width, height } = Dimensions.get('window');
 const isTablet = Math.min(width, height) >= 600;
-export default function Dashboard({ navigation }: any) {
+export default function Dashboard({ navigation, openDrawer }: any) {
 
   return (
  <View style={styles.container}>
- <GlobalTopBar navigation={navigation} />
+ <GlobalTopBar openDrawer={openDrawer} />
 
  {/* ✅ SINGLE overlay only */}
  <View style={styles.overlay}>
