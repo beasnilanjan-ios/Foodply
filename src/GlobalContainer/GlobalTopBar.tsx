@@ -224,8 +224,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 15,
     marginTop: Platform.OS === 'ios'
-      ? (isTablet ? 0 : -45)
-      : 25,
+      ? (isTablet ? 0 : 60)
+      : 30,
   },
 
   circleButton: {

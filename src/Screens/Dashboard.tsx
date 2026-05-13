@@ -1,9 +1,10 @@
 import React, { useEffect } from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, Text, Platform } from 'react-native';
 import Colors from '../assets/Colors/Colors';
 import GlobalBottomBar from '../GlobalContainer/GlobalBottomBar';
 import GlobalTopBar from '../GlobalContainer/GlobalTopBar';
 import GlobalLocationPermission from '../GlobalContainer/GlobalLocationPermission';
+
 
 export default function Dashboard({ navigation, openDrawer }: any) {
 
@@ -31,11 +32,22 @@ export default function Dashboard({ navigation, openDrawer }: any) {
 
   return (
     <View style={styles.container}>
+      
       <GlobalTopBar openDrawer={openDrawer} />
 
+      {/* 🔥 Header Text Section */}
+      <View style={styles.headerTextContainer}>
+        <Text style={styles.title}>Good Morning</Text>
+        <Text style={styles.subtitle}>
+          Rise And Shine! It's Breakfast Time
+        </Text>
+      </View>
+
+      {/* 🔽 White Overlay Card */}
       <View style={styles.overlay}>
         <GlobalBottomBar navigation={navigation} activeTab="Home" />
       </View>
+
     </View>
   );
 }
@@ -43,27 +55,44 @@ export default function Dashboard({ navigation, openDrawer }: any) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'flex-start',
-    alignItems: 'center',
-    paddingTop: 100,
     backgroundColor: Colors.primary,
+  },
+
+  headerTextContainer: {
+    width: '100%',
+    paddingHorizontal: 20,
+    marginTop: 10,
+  },
+
+  title: {
+    fontSize: 32,
+    fontWeight: '800',
+    fontFamily: 'LeagueSpartan-Bold',
+    color: '#fff',
+  },
+  
+
+  subtitle: {
+    fontSize: 16,
+    color: '#fff',
+    fontFamily: 'LeagueSpartan-Regular',
+    marginTop: 5,
   },
 
   overlay: {
     position: 'absolute',
-    bottom: 0,
+    bottom: Platform.OS === 'android' ? 0 : 0, // 👈 move up only on Android
     width: '100%',
-    height: '90%',
+   height: Platform.OS === 'android' ? '78%' : '75%',
+   
     backgroundColor: '#fff',
     borderTopLeftRadius: 30,
     borderTopRightRadius: 30,
-    alignItems: 'stretch',
     padding: 20,
 
     shadowColor: '#000',
     shadowOpacity: 0.1,
     shadowRadius: 10,
-
     elevation: 5,
   },
 });

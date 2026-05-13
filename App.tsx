@@ -36,7 +36,8 @@ const App = () => {
         if (GlobalLoginAuth.accessToken) {
           setInitialRoute('Dashboard'); // ✅ go directly to dashboard
         } else {
-          setInitialRoute('Banner'); // ✅ normal flow
+         // setInitialRoute('Banner'); // ✅ normal flow
+          setInitialRoute('Dashboard');
         }
       } catch (error) {
         console.log('Auth check error:', error);
