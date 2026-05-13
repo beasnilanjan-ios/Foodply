@@ -69,6 +69,34 @@ const GlobalStyles = StyleSheet.create({
     fontFamily: 'LeagueSpartan-SemiBold',
   },
 
+  loaderOverlay: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+  },
+
+  loaderBox: {
+    width: 180,
+    minHeight: 150,
+    borderRadius: 15,
+    backgroundColor: 'rgba(0, 0, 0, 0.75)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+  },
+
+  loaderSpinner: {
+    transform: [{ scale: 1.3 }],
+  },
+
+  loaderText: {
+    color: Colors.white,
+    fontSize: 22,
+    fontFamily: 'LeagueSpartan-SemiBold',
+    marginTop: 20,
+  },
+
   backButton: {
     position: 'absolute',
     left: 30,

@@ -1,17 +1,68 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
+ import React, { useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import Colors from '../assets/Colors/Colors';
 import GlobalStyles from '../assets/Styles/GlobalStyles';
+import GlobalApi from '../GlobalContainer/GlobalApi';
 import GlobalBackButton from '../GlobalContainer/GlobalBackButton';
 import GlobalButton from '../GlobalContainer/GlobalButton';
+import GlobalLoader from '../GlobalContainer/GlobalLoader';
 import GlobalPasswordToggle from '../GlobalContainer/GlobalPasswordToggle';
 import GlobalSocialButtons from '../GlobalContainer/GlobalSocialButtons';
 import GlobalTextInput from '../GlobalContainer/GlobalTextInput';
+import GlobalAuth from '../GlobalContainer/GlobalLoginAuth'; // ✅ ADD THIS
 
 export default function Login({ navigation }: any) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [secure, setSecure] = useState(true);
+  const [loading, setLoading] = useState(false);
+
+  const handleLogin = async () => {
+    if (!email.trim() || !password.trim()) {
+      Alert.alert('FoodyPly', 'Please fill all the fields');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const response = await fetch(`${GlobalApi.baseUrl}api/auth/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: email.trim(),
+          password,
+        }),
+      });
+
+      const result = await response.json(); // ✅ VERY IMPORTANT
+
+      // ❌ Handle API-level failure
+      if (!response.ok || !result.success) {
+        Alert.alert('FoodyPly', result.message || 'Login failed');
+        return;
+      }
+
+      // ✅ STORE FULL RESPONSE GLOBALLY
+      GlobalAuth.setAuthData(result);
+
+      console.log('User:', GlobalAuth.user);
+      console.log('Access Token:', GlobalAuth.accessToken);
+
+      // ✅ NAVIGATE AFTER SUCCESS
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'Dashboard' }],
+      });
+
+    } catch (error) {
+      Alert.alert('FoodyPly', 'Unable to connect to server');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -19,70 +70,60 @@ export default function Login({ navigation }: any) {
 
       <Text style={styles.title}>Log In</Text>
 
-      {/* Banner-like bottom overlay (intentionally empty) */}
       <View style={styles.overlay}>
-        {/* overlay intentionally empty */}
+        <Text style={styles.welcomeText}>Welcome</Text>
 
-       <Text style={styles.welcomeText}>Welcome</Text>
-       <Text style={styles.TextBody}>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</Text>
-       <Text style={GlobalStyles.formLabelLarge}>Email or Mobile Number</Text>
-    
+        <Text style={styles.TextBody}>
+          Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
+        </Text>
 
-       <GlobalTextInput
-         value={email}
-         onChangeText={setEmail}
-         placeholder="example@example.com"
-         keyboardType="email-address"
-         autoCapitalize="none"
-       />
+        <Text style={GlobalStyles.formLabelLarge}>Email or Mobile Number</Text>
 
-       <Text style={GlobalStyles.formLabelLarge}>Password</Text>
+        <GlobalTextInput
+          value={email}
+          onChangeText={setEmail}
+          placeholder="example@example.com"
+          keyboardType="email-address"
+          autoCapitalize="none"
+        />
 
-       <GlobalTextInput
-         value={password}
-         onChangeText={setPassword}
-         placeholder="Password"
-         style={GlobalStyles.formTextInputWithRightIcon}
-         secureTextEntry={secure}
-         autoCapitalize="none"
-         keyboardType="default"
-       >
-         <GlobalPasswordToggle secure={secure} onPress={() => setSecure(prev => !prev)} />
-       </GlobalTextInput>
-       
-       <TouchableOpacity style={styles.forgetButton} onPress={() => { /* TODO: navigate to forgot password */ }}>
-         <Text style={styles.forgetText}>Forget Password</Text>
-       </TouchableOpacity>
+        <Text style={GlobalStyles.formLabelLarge}>Password</Text>
 
-      <GlobalButton
-          onPress={() =>
-            navigation.reset({
-              index: 0,
-              routes: [{ name: 'Dashboard' }],
-            })
-          }
+        <GlobalTextInput
+          value={password}
+          onChangeText={setPassword}
+          placeholder="Password"
+          style={GlobalStyles.formTextInputWithRightIcon}
+          secureTextEntry={secure}
+          autoCapitalize="none"
         >
+          <GlobalPasswordToggle
+            secure={secure}
+            onPress={() => setSecure(prev => !prev)}
+          />
+        </GlobalTextInput>
+
+        <TouchableOpacity style={styles.forgetButton}>
+          <Text style={styles.forgetText}>Forget Password</Text>
+        </TouchableOpacity>
+
+        <GlobalButton onPress={handleLogin} disabled={loading}>
           Login
         </GlobalButton>
 
-       <Text style={styles.TextNew}>Or Sign Up With</Text>
+        <Text style={styles.TextNew}>Or Sign Up With</Text>
 
-       <GlobalSocialButtons />
+        <GlobalSocialButtons />
 
-       <View style={styles.socialContainer}>
-  
-       <Text style={styles.TextNew}>Don't have an account? </Text>
-       <TouchableOpacity style={styles.forgetButton} onPress={() => { /* TODO: navigate to forgot password */ }}>
-       <Text style={styles.TextSignUp}>Sign Up</Text>
-       </TouchableOpacity>
-      
-
-  
-       </View>
-
-       
-
+        <View style={styles.socialContainer}>
+          <Text style={styles.TextNew}>Don't have an account? </Text>
+          <TouchableOpacity>
+            <Text style={styles.TextSignUp}>Sign Up</Text>
+          </TouchableOpacity>
+        </View>
       </View>
+
+      <GlobalLoader visible={loading} />
     </View>
   );
 }
@@ -113,11 +154,9 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 30,
     alignItems: 'stretch',
     padding: 20,
-    // shadow (iOS)
     shadowColor: '#000',
     shadowOpacity: 0.1,
     shadowRadius: 10,
-    // shadow (Android)
     elevation: 5,
   },
 
@@ -127,7 +166,6 @@ const styles = StyleSheet.create({
     color: '#000',
     marginTop: 20,
     fontFamily: 'LeagueSpartan-Bold',
-    marginLeft: 0,
   },
 
   TextBody: {
@@ -135,41 +173,36 @@ const styles = StyleSheet.create({
     color: '#000',
     marginTop: 15,
     fontFamily: 'LeagueSpartan-Regular',
-    marginLeft: 0,
   },
 
   forgetButton: {
-  marginTop: 10,
-  alignSelf: 'flex-end', // 👈 pushes it to extreme right
-},
+    marginTop: 10,
+    alignSelf: 'flex-end',
+  },
 
-forgetText: {
-  fontSize: 14,
-  color: Colors.primary, // or any highlight color
-  fontFamily: 'LeagueSpartan-SemiBold',
-},
+  forgetText: {
+    fontSize: 14,
+    color: Colors.primary,
+    fontFamily: 'LeagueSpartan-SemiBold',
+  },
 
   TextNew: {
     color: '#000',
     fontSize: 12,
     fontFamily: 'LeagueSpartan-Regular',
     alignSelf: 'center',
-     marginTop: 20,
+    marginTop: 20,
   },
 
-socialContainer: {
-  flexDirection: 'row',
-  alignSelf: 'center',
-  marginTop: 0,
-},
+  socialContainer: {
+    flexDirection: 'row',
+    alignSelf: 'center',
+  },
 
   TextSignUp: {
     color: Colors.primary,
     fontSize: 12,
     fontFamily: 'LeagueSpartan-SemiBold',
-    alignSelf: 'center',
-     marginTop: 10,
+    marginTop: 20,
   },
-
-
 });
