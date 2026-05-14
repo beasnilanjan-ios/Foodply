@@ -1,10 +1,9 @@
 import React, { useEffect } from 'react';
-import { View, StyleSheet, Text, Platform } from 'react-native';
+import { View, StyleSheet, Platform , Text} from 'react-native';
 import Colors from '../assets/Colors/Colors';
 import GlobalBottomBar from '../GlobalContainer/GlobalBottomBar';
 import GlobalTopBar from '../GlobalContainer/GlobalTopBar';
 import GlobalLocationPermission from '../GlobalContainer/GlobalLocationPermission';
-
 
 export default function Dashboard({ navigation, openDrawer }: any) {
 
@@ -32,22 +31,18 @@ export default function Dashboard({ navigation, openDrawer }: any) {
 
   return (
     <View style={styles.container}>
-      
       <GlobalTopBar openDrawer={openDrawer} />
 
-      {/* 🔥 Header Text Section */}
-      <View style={styles.headerTextContainer}>
-        <Text style={styles.title}>Good Morning</Text>
-        <Text style={styles.subtitle}>
-          Rise And Shine! It's Breakfast Time
-        </Text>
-      </View>
+      <View style={styles.headerContainer}>
+  <Text style={styles.title}>Good Morning</Text>
+  <Text style={styles.subtitle}>
+    Rise And Shine! It's Breakfast Time
+  </Text>
+</View>
 
-      {/* 🔽 White Overlay Card */}
       <View style={styles.overlay}>
         <GlobalBottomBar navigation={navigation} activeTab="Home" />
       </View>
-
     </View>
   );
 }
@@ -55,44 +50,47 @@ export default function Dashboard({ navigation, openDrawer }: any) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    justifyContent: 'flex-start',
+    alignItems: 'center',
+    paddingTop: 100,
     backgroundColor: Colors.primary,
-  },
-
-  headerTextContainer: {
-    width: '100%',
-    paddingHorizontal: 20,
-    marginTop: 10,
-  },
-
-  title: {
-    fontSize: 32,
-    fontWeight: '800',
-    fontFamily: 'LeagueSpartan-Bold',
-    color: '#fff',
-  },
-  
-
-  subtitle: {
-    fontSize: 16,
-    color: '#fff',
-    fontFamily: 'LeagueSpartan-Regular',
-    marginTop: 5,
   },
 
   overlay: {
     position: 'absolute',
-    bottom: Platform.OS === 'android' ? 0 : 0, // 👈 move up only on Android
+    bottom: 0,
     width: '100%',
-   height: Platform.OS === 'android' ? '78%' : '75%',
-   
+    height: Platform.OS === 'ios' ? '88%' : '90%',
     backgroundColor: '#fff',
     borderTopLeftRadius: 30,
     borderTopRightRadius: 30,
+    alignItems: 'stretch',
     padding: 20,
-
     shadowColor: '#000',
     shadowOpacity: 0.1,
     shadowRadius: 10,
     elevation: 5,
   },
+
+ headerContainer: {
+  width: '100%',              // 🔥 ADD THIS (MOST IMPORTANT)
+  paddingHorizontal: 20,
+  marginTop: Platform.OS === 'ios' ? 15 : 10,
+  alignItems: 'flex-start',
+},
+
+title: {
+  fontSize: 34,
+  fontFamily: 'LeagueSpartan-Bold',
+  color: '#fff',
+  textAlign: 'left', // ✅ this is correct
+},
+
+subtitle: {
+  fontSize: 16,
+  fontFamily: 'LeagueSpartan-Regular',
+  color: '#fff',
+  marginTop: 5,
+  textAlign: 'left', // ✅ this is correct
+},
 });

@@ -2,9 +2,11 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import Colors from '../assets/Colors/Colors';
 import GlobalBottomBar from '../GlobalContainer/GlobalBottomBar';
-export default function Dashboard({ navigation }: any) {
+import GlobalTopBar from '../GlobalContainer/GlobalTopBar';
+export default function Dashboard({ navigation, openDrawer }: any) {
   return (
      <View style={styles.container}>
+      <GlobalTopBar openDrawer={openDrawer} />
         <View style={styles.overlay}>
         <GlobalBottomBar navigation={navigation} activeTab="Orders" />
          </View>

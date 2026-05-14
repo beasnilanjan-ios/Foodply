@@ -223,9 +223,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 15,
-    marginTop: Platform.OS === 'ios'
-      ? (isTablet ? 0 : 60)
-      : 30,
+    // marginTop: Platform.OS === 'ios'
+    //   ? (isTablet ? 0 : 60)
+    //   : 30,
+       marginTop: Platform.OS === 'ios'
+    ? (isTablet ? -65 : -45)
+    : -70,
   },
 
   circleButton: {
