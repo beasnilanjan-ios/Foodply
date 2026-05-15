@@ -298,10 +298,13 @@ export default function Dashboard({ navigation, openDrawer }: any) {
               return;
             }
 
-            const menuCategoryNames =
-              restaurantMenu.data?.items
-                .map(item => item.category?.name)
-                .filter((name): name is string => Boolean(name)) ?? [];
+            const menuCategoryNames = Array.from(
+              new Set(
+                restaurantMenu.data?.items
+                  .map(item => item.category?.name)
+                  .filter((name): name is string => Boolean(name)) ?? [],
+              ),
+            );
 
             console.log('Menu category names:', menuCategoryNames);
             console.log('Menu category names count:', menuCategoryNames.length);
