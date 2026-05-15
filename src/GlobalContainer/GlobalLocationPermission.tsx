@@ -42,12 +42,13 @@ export default class GlobalLocationPermission {
       // 👉 iOS
       if (Platform.OS === 'ios') {
         const status = await Geolocation.requestAuthorization('whenInUse');
+        console.log('iOS location authorization result:', status);
 
         if (status === 'granted') {
           return 'granted';
         }
 
-        if (status === 'denied') {
+        if (status === 'denied' || status === 'restricted') {
           Alert.alert(
             'Location Permission Denied',
             'Please enable location permission from Settings.',
@@ -100,25 +101,86 @@ export default class GlobalLocationPermission {
     }
   }
 
-  // ✅ GET CURRENT LOCATION (FIXED — NO ERRORS)
-  static getCurrentLocation(): Promise<any> {
+  private static getPosition(options: any): Promise<any> {
     return new Promise((resolve, reject) => {
+      let completed = false;
+      const timeoutMs =
+        typeof options?.timeout === 'number' ? options.timeout + 1000 : 21000;
+      const timeout = setTimeout(() => {
+        if (completed) {
+          return;
+        }
+
+        completed = true;
+        reject({
+          code: 3,
+          message: 'Location request timed out before coordinates were received',
+        });
+      }, timeoutMs);
+
       Geolocation.getCurrentPosition(
         (position) => {
+          if (completed) {
+            return;
+          }
+
+          completed = true;
+          clearTimeout(timeout);
+          console.log('Current location received:', position);
           resolve(position);
         },
         (error) => {
+          if (completed) {
+            return;
+          }
+
+          completed = true;
+          clearTimeout(timeout);
           console.log('Location Error:', error);
           reject(error);
         },
-        {
-          enableHighAccuracy: true,
-          timeout: 15000,
-          maximumAge: 10000,
-          forceRequestLocation: true,
-          showLocationDialog: true,
-        }
+        options
       );
     });
+  }
+
+  // ✅ GET CURRENT LOCATION
+  static async getCurrentLocation(): Promise<any> {
+    const options =
+      Platform.OS === 'ios'
+        ? {
+            accuracy: { ios: 'hundredMeters' },
+            enableHighAccuracy: false,
+            timeout: 20000,
+            maximumAge: 60000,
+            distanceFilter: 0,
+          }
+        : {
+            accuracy: { android: 'balanced' },
+            enableHighAccuracy: true,
+            timeout: 15000,
+            maximumAge: 10000,
+            distanceFilter: 0,
+            forceRequestLocation: true,
+            showLocationDialog: true,
+          };
+
+    try {
+      return await this.getPosition(options);
+    } catch (error) {
+      if (Platform.OS !== 'ios') {
+        throw error;
+      }
+
+      console.log('Retrying iOS location with reduced accuracy');
+
+      return this.getPosition({
+        accuracy: { ios: 'reduced' },
+        enableHighAccuracy: false,
+        timeout: 20000,
+        maximumAge: 300000,
+        distanceFilter: 0,
+      });
+    }
   }
 }
