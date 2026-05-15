@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "720080454964",
+    "project_id": "restaurant-app-7c31b",
+    "storage_bucket": "restaurant-app-7c31b.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:720080454964:android:14a981bda6e7d457be1161",
+        "android_client_info": {
+          "package_name": "com.foodyply"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "720080454964-962be3o1gbqkf9usae7v13l4peq9ficg.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.foodyply",
+            "certificate_hash": "5e8f16062ea3cd2c4a0d547876baa6f38cabf625"
+          }
+        },
+        {
+          "client_id": "720080454964-otev4leastlqa94ucrg3kglnbgmo3tqd.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyApFxGo_oPxQs5AmtodDnFQ6JRnEiH-glc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "720080454964-otev4leastlqa94ucrg3kglnbgmo3tqd.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

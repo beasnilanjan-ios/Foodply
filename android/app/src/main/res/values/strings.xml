@@ -1,3 +1,10 @@
 <resources>
     <string name="app_name">Foodyply</string>
+    <string name="facebook_app_id">978232395164318</string>
+    <string name="facebook_client_token">66c562bee97c63351d24181a2d442e5c</string>
+    <string name="fb_login_protocol_scheme">fb978232395164318</string>
+    <!-- <string name="facebook_app_id">3434586630022248</string> -->
+    <!-- <string name="facebook_client_token">8d904423d8d38076bd3d14e61bd92049</string> -->
+    <!-- <string name="fb_login_protocol_scheme">fb3434586630022248</string> -->
 </resources>
+<!-- Android hash key: K4tzR2Azj8nfJL2mpM78WFn4tvQ -->

@@ -10,6 +10,7 @@ import GlobalPasswordToggle from '../GlobalContainer/GlobalPasswordToggle';
 import GlobalSocialButtons from '../GlobalContainer/GlobalSocialButtons';
 import GlobalTextInput from '../GlobalContainer/GlobalTextInput';
 import GlobalAuth from '../GlobalContainer/GlobalLoginAuth'; // ✅ ADD THIS
+import GlobalSocialAuth from '../GlobalContainer/GlobalSocialAuth';
 
 export default function Login({ navigation }: any) {
   const [email, setEmail] = useState('');
@@ -114,6 +115,7 @@ export default function Login({ navigation }: any) {
         <Text style={styles.TextNew}>Or Sign Up With</Text>
 
         <GlobalSocialButtons />
+        {/* <GlobalSocialAuth /> */}
 
         <View style={styles.socialContainer}>
           <Text style={styles.TextNew}>Don't have an account? </Text>
