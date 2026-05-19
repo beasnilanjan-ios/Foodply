@@ -170,7 +170,7 @@
 // });
 
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   StyleSheet,
@@ -199,10 +199,19 @@ const isTablet = Math.min(width, height) >= 600;
 const overlayHorizontalPadding = 20;
 const categoryMaxWidth = isTablet ? 600 : width - overlayHorizontalPadding * 2;
 const categoryGap = isTablet ? 18 : 8;
+const promoBannerWidth = isTablet ? categoryMaxWidth : 323;
 
 type CategoryItem = {
   name: string;
   icon: ImageSourcePropType;
+};
+
+type PromoBannerItem = {
+  id: number;
+  image: ImageSourcePropType;
+  title: string;
+  subtitle: string;
+  discountText: string;
 };
 
 const categoryIcons: Record<string, ImageSourcePropType> = {
@@ -221,9 +230,36 @@ const categoryIcons: Record<string, ImageSourcePropType> = {
 const getCategoryIcon = (name: string) =>
   categoryIcons[name.trim().toLowerCase()] ?? require('../assets/images/Meals.png');
 
+const promoBanners: PromoBannerItem[] = [
+  {
+    id: 1,
+    image: require('../assets/images/banner1.png'),
+    title: 'Experience our',
+    subtitle: 'delicious new dish',
+    discountText: '30% OFF',
+  },
+  {
+    id: 2,
+    image: require('../assets/images/banner1.png'),
+    title: 'Experience our',
+    subtitle: 'delicious new dish',
+    discountText: '30% OFF',
+  },
+  {
+    id: 3,
+    image: require('../assets/images/banner1.png'),
+    title: 'Experience our',
+    subtitle: 'delicious new dish',
+    discountText: '30% OFF',
+  },
+];
+
 export default function Dashboard({ navigation, openDrawer }: any) {
   const [categories, setCategories] = useState<CategoryItem[]>([]);
   const [bestSellerItems, setBestSellerItems] = useState<RestaurantMenuItemModel[]>([]);
+  const [recommendedItems, setRecommendedItems] = useState<RestaurantMenuItemModel[]>([]);
+  const [activeBannerIndex, setActiveBannerIndex] = useState(0);
+  const bannerScrollRef = useRef<ScrollView>(null);
   const categoryCount = Math.max(categories.length, 1);
   const categoryColumns = isTablet ? Math.min(categoryCount, 6) : Math.min(categoryCount, 5);
   const categoryItemWidth =
@@ -231,6 +267,21 @@ export default function Dashboard({ navigation, openDrawer }: any) {
   const categoryIconSize = Math.min(isTablet ? 78 : 72, categoryItemWidth);
   const categoryIconRadius = categoryIconSize * 0.28;
   const categoryNeedsScroll = categories.length > categoryColumns;
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setActiveBannerIndex((currentIndex) => {
+        const nextIndex = (currentIndex + 1) % promoBanners.length;
+        bannerScrollRef.current?.scrollTo({
+          x: nextIndex * promoBannerWidth,
+          animated: true,
+        });
+        return nextIndex;
+      });
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     const getLocation = async () => {
@@ -244,10 +295,11 @@ export default function Dashboard({ navigation, openDrawer }: any) {
           console.log('Location permission granted, fetching current location');
 
           const position = await GlobalLocationPermission.getCurrentLocation();
-          const latitude = position.coords.latitude;
-          const longitude = position.coords.longitude;
-         // const testLatitude = 22.5726;
-         // const testLongitude = 88.3639;
+          //const latitude = position.coords.latitude;
+         // const longitude = position.coords.longitude;
+          const latitude =  22.5726;
+          const longitude = 88.3639;
+         
 
           console.log('Latitude:', latitude);
           console.log('Longitude:', longitude);
@@ -365,6 +417,7 @@ export default function Dashboard({ navigation, openDrawer }: any) {
                 : restaurantMenu.data?.items ?? []
               ).slice(0, 6),
             );
+            setRecommendedItems((restaurantMenu.data?.items ?? []).slice(0, 4));
 
             console.log(
               'Restaurant menu:',
@@ -468,7 +521,10 @@ export default function Dashboard({ navigation, openDrawer }: any) {
               style={styles.viewAllButton}
               onPress={() => console.log('View All best sellers pressed')}>
               <Text style={styles.viewAllText}>View All</Text>
-              <Text style={styles.viewAllArrow}>{'>'}</Text>
+              <Image
+                source={require('../assets/images/Next_icon _Arrow.png')}
+                style={styles.viewAllArrow}
+              />
             </TouchableOpacity>
           </View>
 
@@ -489,6 +545,84 @@ export default function Dashboard({ navigation, openDrawer }: any) {
 
                 <View style={styles.priceBadge}>
                   <Text style={styles.priceText}>Rs{item.price.toFixed(2)}</Text>
+                </View>
+              </View>
+            ))}
+          </ScrollView>
+        </View>
+
+        <View style={styles.bannerSection}>
+          <ScrollView
+            ref={bannerScrollRef}
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            style={styles.bannerScroll}
+            onMomentumScrollEnd={(event) => {
+              const nextIndex = Math.round(
+                event.nativeEvent.contentOffset.x / promoBannerWidth,
+              );
+              setActiveBannerIndex(nextIndex);
+            }}>
+            {promoBanners.map((banner) => (
+              <View key={banner.id} style={styles.promoBanner}>
+                <View style={styles.bannerTextArea}>
+                  <Text style={styles.bannerTitle}>{banner.title}</Text>
+                  <Text style={styles.bannerSubtitle}>{banner.subtitle}</Text>
+                  <Text style={styles.bannerDiscount}>{banner.discountText}</Text>
+                </View>
+
+                <Image source={banner.image} style={styles.bannerImage} />
+              </View>
+            ))}
+          </ScrollView>
+
+          <View style={styles.bannerDots}>
+            {promoBanners.map((banner, index) => (
+              <View
+                key={banner.id}
+                style={[
+                  styles.bannerDot,
+                  index === activeBannerIndex && styles.bannerDotActive,
+                ]}
+              />
+            ))}
+          </View>
+        </View>
+
+        <View style={styles.recommendSection}>
+          <Text style={styles.sectionTitle}>Recommend</Text>
+
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.recommendGrid}>
+            {recommendedItems.map(item => (
+              <View key={item.id} style={styles.recommendCard}>
+                <Image
+                  source={
+                    item.imageUrl
+                      ? { uri: item.imageUrl }
+                      : getCategoryIcon(item.category?.name ?? item.name)
+                  }
+                  style={styles.recommendImage}
+                />
+
+                <View style={styles.recommendRatingBadge}>
+                  <Text style={styles.recommendRatingText}>
+                    {(item.rating || 5).toFixed(1)}
+                  </Text>
+                  <Text style={styles.recommendStar}>★</Text>
+                </View>
+
+                <View style={styles.recommendHeartBadge}>
+                  <Text style={styles.recommendHeart}>♥</Text>
+                </View>
+
+                <View style={styles.recommendPriceBadge}>
+                  <Text style={styles.recommendPriceText}>
+                    Rs{item.price.toFixed(1)}
+                  </Text>
                 </View>
               </View>
             ))}
@@ -613,7 +747,7 @@ const styles = StyleSheet.create({
   },
 
   sectionTitle: {
-    fontSize: isTablet ? 32 : 26,
+    fontSize: isTablet ? 23 : 19,
     fontFamily: 'LeagueSpartan-medium',
     color: '#202A3A',
     includeFontPadding: false,
@@ -627,30 +761,30 @@ const styles = StyleSheet.create({
   },
 
   viewAllText: {
-    fontSize: isTablet ? 20 : 16,
-    fontFamily: 'LeagueSpartan-Bold',
+    fontSize: isTablet ? 20 : 14,
+    fontFamily: 'LeagueSpartan-medium',
     color: Colors.primary,
     includeFontPadding: false,
   },
 
   viewAllArrow: {
-    marginLeft: 10,
-    fontSize: isTablet ? 28 : 24,
-    fontFamily: 'LeagueSpartan-Bold',
-    color: Colors.primary,
-    includeFontPadding: false,
+    marginLeft: 3,
+    marginTop: isTablet ? -2 : -2,
+    width: isTablet ? 16 : 10,
+    height: isTablet ? 24 : 15,
+    resizeMode: 'contain',
   },
 
   bestSellerList: {
-    paddingTop: 18,
+    paddingTop: 10,
     paddingBottom: 4,
   },
 
   bestSellerCard: {
-    width: isTablet ? 145 : 122,
-    height: isTablet ? 190 : 150,
+    width: isTablet ? 145 : 71.68,
+    height: isTablet ? 190 : 108,
     marginRight: isTablet ? 22 : 16,
-    borderRadius: 24,
+    borderRadius: 16,
     overflow: 'hidden',
     backgroundColor: '#F2F2F2',
   },
@@ -664,19 +798,185 @@ const styles = StyleSheet.create({
   priceBadge: {
     position: 'absolute',
     right: 0,
-    bottom: 24,
-    minWidth: 62,
-    height: 32,
-    paddingHorizontal: 8,
-    borderTopLeftRadius: 16,
-    borderBottomLeftRadius: 16,
+    bottom: 10,
+    minWidth: 44,
+    height: 22,
+    paddingHorizontal: 5,
+    borderTopLeftRadius: 11,
+    borderBottomLeftRadius: 11,
     backgroundColor: Colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
   },
 
   priceText: {
-    fontSize: isTablet ? 18 : 16,
+    fontSize: isTablet ? 16 : 12,
+    fontFamily: 'LeagueSpartan-Regular',
+    color: '#fff',
+    includeFontPadding: false,
+  },
+
+  bannerSection: {
+    marginTop: 18,
+    alignItems: 'center',
+  },
+
+  bannerScroll: {
+    width: promoBannerWidth,
+    alignSelf: 'center',
+  },
+
+  promoBanner: {
+    width: promoBannerWidth,
+    height: isTablet ? 160 : 128,
+    borderRadius: 20,
+    backgroundColor: Colors.primary,
+    overflow: 'hidden',
+    flexDirection: 'row',
+  },
+
+  bannerTextArea: {
+    width: '48%',
+    paddingLeft: isTablet ? 34 : 26,
+    paddingTop: isTablet ? 34 : 25,
+    zIndex: 2,
+  },
+
+  bannerTitle: {
+    fontSize: isTablet ? 24 : 18,
+    fontFamily: 'LeagueSpartan-Regular',
+    color: '#fff',
+    includeFontPadding: false,
+  },
+
+  bannerSubtitle: {
+    marginTop: 2,
+    fontSize: isTablet ? 24 : 18,
+    fontFamily: 'LeagueSpartan-Regular',
+    color: '#fff',
+    includeFontPadding: false,
+  },
+
+  bannerDiscount: {
+    marginTop: 18,
+    fontSize: isTablet ? 48 : 38,
+    fontFamily: 'LeagueSpartan-Bold',
+    color: '#fff',
+    includeFontPadding: false,
+  },
+
+  bannerImage: {
+    position: 'absolute',
+    right: 0,
+    top: 0,
+    width: '58%',
+    height: '100%',
+    resizeMode: 'cover',
+  },
+
+  bannerDots: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 10,
+  },
+
+  bannerDot: {
+    width: 34,
+    height: 4,
+    borderRadius: 12,
+    backgroundColor: '#E8D9A8',
+    marginHorizontal: 4,
+  },
+
+  bannerDotActive: {
+    backgroundColor: Colors.primary,
+  },
+
+  recommendSection: {
+    marginTop: 18,
+  },
+
+  recommendGrid: {
+    flexDirection: 'row',
+    paddingTop: 16,
+  },
+
+  recommendCard: {
+    width: isTablet ? (categoryMaxWidth - 20) / 2 : (categoryMaxWidth - 14) / 2,
+    height: isTablet ? 190 : 140,
+    borderRadius: 22,
+    overflow: 'hidden',
+    backgroundColor: '#F2F2F2',
+    marginRight: 14,
+  },
+
+  recommendImage: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
+  },
+
+  recommendRatingBadge: {
+    position: 'absolute',
+    top: 12,
+    left: 12,
+    height: 24,
+    paddingHorizontal: 6,
+    borderRadius: 12,
+    backgroundColor: '#fff',
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+
+  recommendRatingText: {
+    fontSize: isTablet ? 16 : 13,
+    fontFamily: 'LeagueSpartan-Regular',
+    color: '#202A3A',
+    includeFontPadding: false,
+  },
+
+  recommendStar: {
+    marginLeft: 3,
+    fontSize: isTablet ? 15 : 12,
+    color: '#F6B31A',
+    includeFontPadding: false,
+  },
+
+  recommendHeartBadge: {
+    position: 'absolute',
+    top: 12,
+    left: isTablet ? 72 : 58,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#fff',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  recommendHeart: {
+    fontSize: isTablet ? 15 : 12,
+    color: Colors.primary,
+    includeFontPadding: false,
+  },
+
+  recommendPriceBadge: {
+    position: 'absolute',
+    right: 0,
+    bottom: 22,
+    minWidth: 54,
+    height: 28,
+    paddingHorizontal: 8,
+    borderTopLeftRadius: 14,
+    borderBottomLeftRadius: 14,
+    backgroundColor: Colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  recommendPriceText: {
+    fontSize: isTablet ? 17 : 14,
     fontFamily: 'LeagueSpartan-Regular',
     color: '#fff',
     includeFontPadding: false,
