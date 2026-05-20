@@ -10,6 +10,7 @@ import Banner from './src/Screens/Banner';
 import Login from './src/Screens/Login';
 import MainScreen from './src/GlobalContainer/MainScreen';
 import Orders from './src/Screens/Orders';
+import ViewAll from './src/Screens/ViewAll';
 import GlobalLoginAuth from './src/GlobalContainer/GlobalLoginAuth'; // ✅ ADD THIS
 
 export type RootStackParamList = {
@@ -18,6 +19,7 @@ export type RootStackParamList = {
   Login: undefined;
   Dashboard: { fromTab?: boolean } | undefined;
   Orders: { fromTab?: boolean } | undefined;
+  ViewAll: undefined;
 };
 
 enableScreens();
@@ -91,6 +93,13 @@ const App = () => {
             options={({ route }) => ({
               animation: route.params?.fromTab ? 'none' : 'default',
             })}
+            
+          />
+          <Stack.Screen
+            name="ViewAll"
+            component={ViewAll}
+            options={{ animation: 'none' }}
+           
           />
         </Stack.Navigator>
       </NavigationContainer>

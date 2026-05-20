@@ -354,8 +354,8 @@ export default function Dashboard({ navigation, openDrawer }: any) {
               JSON.stringify(nearbyRestaurants, null, 2),
             );
 
-           // const restaurantId = nearbyRestaurants.data[0]?.id;
-            const restaurantId = 1
+            const restaurantId = nearbyRestaurants.data[0]?.id;
+          // const restaurantId = 1
 
             if (!restaurantId) {
               console.log('No nearby restaurant id found');
@@ -512,122 +512,128 @@ export default function Dashboard({ navigation, openDrawer }: any) {
         {/* Divider */}
         <View style={styles.divider} />
 
-        <View style={styles.bestSellerSection}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Best Seller</Text>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          style={styles.homeContentScroll}
+          contentContainerStyle={styles.homeContentContainer}>
+          <View style={styles.bestSellerSection}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Best Seller</Text>
 
-            <TouchableOpacity
-              activeOpacity={0.8}
-              style={styles.viewAllButton}
-              onPress={() => console.log('View All best sellers pressed')}>
-              <Text style={styles.viewAllText}>View All</Text>
-              <Image
-                source={require('../assets/images/Next_icon _Arrow.png')}
-                style={styles.viewAllArrow}
-              />
-            </TouchableOpacity>
+              <TouchableOpacity
+                activeOpacity={0.8}
+                style={styles.viewAllButton}
+                onPress={() => navigation.navigate('ViewAll')}>
+                <Text style={styles.viewAllText}>View All</Text>
+                <Image
+                  source={require('../assets/images/Next_icon _Arrow.png')}
+                  style={styles.viewAllArrow}
+                />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.bestSellerList}>
+              {bestSellerItems.map(item => (
+                <View key={item.id} style={styles.bestSellerCard}>
+                  <Image
+                    source={
+                      item.imageUrl
+                        ? { uri: item.imageUrl }
+                        : getCategoryIcon(item.category?.name ?? item.name)
+                    }
+                    style={styles.bestSellerImage}
+                  />
+
+                  <View style={styles.priceBadge}>
+                    <Text style={styles.priceText}>Rs{item.price.toFixed(2)}</Text>
+                  </View>
+                </View>
+              ))}
+            </ScrollView>
           </View>
 
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.bestSellerList}>
-            {bestSellerItems.map(item => (
-              <View key={item.id} style={styles.bestSellerCard}>
-                <Image
-                  source={
-                    item.imageUrl
-                      ? { uri: item.imageUrl }
-                      : getCategoryIcon(item.category?.name ?? item.name)
-                  }
-                  style={styles.bestSellerImage}
+          <View style={styles.bannerSection}>
+            <ScrollView
+              ref={bannerScrollRef}
+              horizontal
+              pagingEnabled
+              showsHorizontalScrollIndicator={false}
+              style={styles.bannerScroll}
+              onMomentumScrollEnd={(event) => {
+                const nextIndex = Math.round(
+                  event.nativeEvent.contentOffset.x / promoBannerWidth,
+                );
+                setActiveBannerIndex(nextIndex);
+              }}>
+              {promoBanners.map((banner) => (
+                <View key={banner.id} style={styles.promoBanner}>
+                  <View style={styles.bannerTextArea}>
+                    <Text style={styles.bannerTitle}>{banner.title}</Text>
+                    <Text style={styles.bannerSubtitle}>{banner.subtitle}</Text>
+                    <Text style={styles.bannerDiscount}>{banner.discountText}</Text>
+                  </View>
+
+                  <Image source={banner.image} style={styles.bannerImage} />
+                </View>
+              ))}
+            </ScrollView>
+
+            <View style={styles.bannerDots}>
+              {promoBanners.map((banner, index) => (
+                <View
+                  key={banner.id}
+                  style={[
+                    styles.bannerDot,
+                    index === activeBannerIndex && styles.bannerDotActive,
+                  ]}
                 />
-
-                <View style={styles.priceBadge}>
-                  <Text style={styles.priceText}>Rs{item.price.toFixed(2)}</Text>
-                </View>
-              </View>
-            ))}
-          </ScrollView>
-        </View>
-
-        <View style={styles.bannerSection}>
-          <ScrollView
-            ref={bannerScrollRef}
-            horizontal
-            pagingEnabled
-            showsHorizontalScrollIndicator={false}
-            style={styles.bannerScroll}
-            onMomentumScrollEnd={(event) => {
-              const nextIndex = Math.round(
-                event.nativeEvent.contentOffset.x / promoBannerWidth,
-              );
-              setActiveBannerIndex(nextIndex);
-            }}>
-            {promoBanners.map((banner) => (
-              <View key={banner.id} style={styles.promoBanner}>
-                <View style={styles.bannerTextArea}>
-                  <Text style={styles.bannerTitle}>{banner.title}</Text>
-                  <Text style={styles.bannerSubtitle}>{banner.subtitle}</Text>
-                  <Text style={styles.bannerDiscount}>{banner.discountText}</Text>
-                </View>
-
-                <Image source={banner.image} style={styles.bannerImage} />
-              </View>
-            ))}
-          </ScrollView>
-
-          <View style={styles.bannerDots}>
-            {promoBanners.map((banner, index) => (
-              <View
-                key={banner.id}
-                style={[
-                  styles.bannerDot,
-                  index === activeBannerIndex && styles.bannerDotActive,
-                ]}
-              />
-            ))}
+              ))}
+            </View>
           </View>
-        </View>
 
-        <View style={styles.recommendSection}>
-          <Text style={styles.sectionTitle}>Recommend</Text>
+          <View style={styles.recommendSection}>
+            <Text style={styles.sectionTitle}>Recommend</Text>
 
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.recommendGrid}>
-            {recommendedItems.map(item => (
-              <View key={item.id} style={styles.recommendCard}>
-                <Image
-                  source={
-                    item.imageUrl
-                      ? { uri: item.imageUrl }
-                      : getCategoryIcon(item.category?.name ?? item.name)
-                  }
-                  style={styles.recommendImage}
-                />
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              nestedScrollEnabled
+              style={styles.recommendScroll}
+              contentContainerStyle={styles.recommendGrid}>
+              {recommendedItems.map(item => (
+                <View key={item.id} style={styles.recommendCard}>
+                  <Image
+                    source={
+                      item.imageUrl
+                        ? { uri: item.imageUrl }
+                        : getCategoryIcon(item.category?.name ?? item.name)
+                    }
+                    style={styles.recommendImage}
+                  />
 
-                <View style={styles.recommendRatingBadge}>
-                  <Text style={styles.recommendRatingText}>
-                    {(item.rating || 5).toFixed(1)}
-                  </Text>
-                  <Text style={styles.recommendStar}>★</Text>
+                  <View style={styles.recommendRatingBadge}>
+                    <Text style={styles.recommendRatingText}>
+                      {(item.rating || 5).toFixed(1)}
+                    </Text>
+                    <Text style={styles.recommendStar}>★</Text>
+                  </View>
+
+                  <View style={styles.recommendHeartBadge}>
+                    <Text style={styles.recommendHeart}>♥</Text>
+                  </View>
+
+                  <View style={styles.recommendPriceBadge}>
+                    <Text style={styles.recommendPriceText}>
+                      Rs{item.price.toFixed(1)}
+                    </Text>
+                  </View>
                 </View>
-
-                <View style={styles.recommendHeartBadge}>
-                  <Text style={styles.recommendHeart}>♥</Text>
-                </View>
-
-                <View style={styles.recommendPriceBadge}>
-                  <Text style={styles.recommendPriceText}>
-                    Rs{item.price.toFixed(1)}
-                  </Text>
-                </View>
-              </View>
-            ))}
-          </ScrollView>
-        </View>
+              ))}
+            </ScrollView>
+          </View>
+        </ScrollView>
 
         {/* Bottom Bar */}
         <GlobalBottomBar navigation={navigation} activeTab="Home" />
@@ -734,6 +740,14 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: '#E0E0E0',
     marginTop: 10,
+  },
+
+  homeContentScroll: {
+    flex: 1,
+  },
+
+  homeContentContainer: {
+    paddingBottom: 110,
   },
 
   bestSellerSection: {
@@ -897,8 +911,14 @@ const styles = StyleSheet.create({
     marginTop: 18,
   },
 
+  recommendScroll: {
+    maxHeight: isTablet ? 420 : 310,
+  },
+
   recommendGrid: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
     paddingTop: 16,
   },
 
@@ -908,7 +928,7 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     overflow: 'hidden',
     backgroundColor: '#F2F2F2',
-    marginRight: 14,
+    marginBottom: 16,
   },
 
   recommendImage: {
