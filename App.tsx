@@ -12,12 +12,14 @@ import MainScreen from './src/GlobalContainer/MainScreen';
 import Orders from './src/Screens/Orders';
 import ViewAll from './src/Screens/ViewAll';
 import GlobalLoginAuth from './src/GlobalContainer/GlobalLoginAuth'; // ✅ ADD THIS
+import DeliveryDashboard from './src/Screens/DeliveryDashboard';
 
 export type RootStackParamList = {
   Splash: undefined;
   Banner: undefined;
   Login: undefined;
   Dashboard: { fromTab?: boolean } | undefined;
+  DeliveryDashboard: undefined;
   Orders: { fromTab?: boolean } | undefined;
   ViewAll: undefined;
 };
@@ -36,7 +38,13 @@ const App = () => {
         await GlobalLoginAuth.loadAuthData();
 
         if (GlobalLoginAuth.accessToken) {
+          if (GlobalLoginAuth.user.roles === 'customer') {    
           setInitialRoute('Dashboard'); // ✅ go directly to dashboard
+          } else if (GlobalLoginAuth.user.roles === 'delivery_boy') {
+            setInitialRoute('DeliveryDashboard'); // ✅ go directly to delivery dashboard
+          } else {
+            setInitialRoute('Banner'); // ✅ normal flow for unknown roles
+          }
         } else {
           setInitialRoute('Banner'); // ✅ normal flow
          // setInitialRoute('Dashboard');
@@ -98,6 +106,12 @@ const App = () => {
           <Stack.Screen
             name="ViewAll"
             component={ViewAll}
+            options={{ animation: 'none' }}
+           
+          />
+          <Stack.Screen
+            name="DeliveryDashboard"
+            component={DeliveryDashboard}
             options={{ animation: 'none' }}
            
           />

@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { User } from '../Models/Login/User';
 class GlobalLoginAuth {
   private static instance: GlobalLoginAuth;
 
@@ -7,7 +8,7 @@ class GlobalLoginAuth {
   refreshToken: string | null = null;
   tokenType: string | null = null;
   refreshTokenExpiresAt: string | null = null;
-  user: any = null;
+  user: User = undefined as any; // ✅ Initialize as undefined to avoid type issues
 
   private constructor() {}
 
@@ -27,7 +28,7 @@ class GlobalLoginAuth {
     this.refreshToken = data?.refreshToken || null;
     this.tokenType = data?.tokenType || null;
     this.refreshTokenExpiresAt = data?.refreshTokenExpiresAt || null;
-    this.user = data?.user || null;
+    this.user = data?.user || undefined as any; // ✅ Initialize as undefined to avoid type issues
 
     // 🔥 Save to storage
     await AsyncStorage.setItem('authData', JSON.stringify(data));
@@ -46,7 +47,7 @@ class GlobalLoginAuth {
         this.refreshToken = data?.refreshToken || null;
         this.tokenType = data?.tokenType || null;
         this.refreshTokenExpiresAt = data?.refreshTokenExpiresAt || null;
-        this.user = data?.user || null;
+        this.user = data?.user || undefined as any; // ✅ Initialize as undefined to avoid type issues
       }
     } catch (error) {
       console.log('Error loading auth data:', error);
@@ -60,7 +61,7 @@ class GlobalLoginAuth {
     this.refreshToken = null;
     this.tokenType = null;
     this.refreshTokenExpiresAt = null;
-    this.user = null;
+    this.user = undefined as any; // ✅ Initialize as undefined to avoid type issues
 
     await AsyncStorage.removeItem('authData');
   }
