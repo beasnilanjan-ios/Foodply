@@ -41,9 +41,9 @@ const App = () => {
           if (GlobalLoginAuth.user.roles === 'customer') {    
           setInitialRoute('Dashboard'); // ✅ go directly to dashboard
           } else if (GlobalLoginAuth.user.roles === 'delivery_boy') {
-            setInitialRoute('DeliveryDashboard'); // ✅ go directly to delivery dashboard
+            setInitialRoute('DeliveryDashboard'); // ✅ go directly to delivery dashboard 
           } else {
-            setInitialRoute('Banner'); // ✅ normal flow for unknown roles
+            setInitialRoute('Banner'); // ✅ normal flow for logout users or other roles
           }
         } else {
           setInitialRoute('Banner'); // ✅ normal flow
