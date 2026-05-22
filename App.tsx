@@ -13,15 +13,19 @@ import Orders from './src/Screens/Orders';
 import ViewAll from './src/Screens/ViewAll';
 import GlobalLoginAuth from './src/GlobalContainer/GlobalLoginAuth'; // ✅ ADD THIS
 import DeliveryDashboard from './src/Screens/DeliveryDashboard';
+import DeliveryOrders from './src/Screens/DeliveryOrder';
+import DeliveryProfile from './src/Screens/DeliveryProfile';
 
 export type RootStackParamList = {
   Splash: undefined;
   Banner: undefined;
   Login: undefined;
   Dashboard: { fromTab?: boolean } | undefined;
-  DeliveryDashboard: undefined;
   Orders: { fromTab?: boolean } | undefined;
   ViewAll: undefined;
+  DeliveryDashboard: undefined;
+  DeliveryOrders: undefined;
+  DeliveryProfile: undefined;
 };
 
 enableScreens();
@@ -112,6 +116,18 @@ const App = () => {
           <Stack.Screen
             name="DeliveryDashboard"
             component={DeliveryDashboard}
+            options={{ animation: 'none' }}
+           
+          />
+          <Stack.Screen
+            name="DeliveryOrders"
+            component={DeliveryOrders}
+            options={{ animation: 'none' }}
+           
+          />
+          <Stack.Screen
+            name="DeliveryProfile"
+            component={DeliveryProfile}
             options={{ animation: 'none' }}
            
           />
