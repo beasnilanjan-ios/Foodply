@@ -157,7 +157,7 @@ const orderItems = [
                     <View style={styles.deliveryCard}>
                         <View style={styles.deliveryTop}>
                             <View style = {[{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }]}>
-                            <View style={[styles.iconButton, { width: 34, height: 34, borderRadius: 17}]}>
+                            <View style={[styles.iconButton, { width: 32, height: 32, borderRadius: 16}]}>
                             <Image
                                 style={[
                                     DeliveryGlobalStyles.iconLarge,
@@ -399,6 +399,7 @@ const styles = StyleSheet.create({
 
     deliveryTop: {
         alignItems: 'center',
+        paddingLeft: 10,
     },
 
     deliveryIcon: {
