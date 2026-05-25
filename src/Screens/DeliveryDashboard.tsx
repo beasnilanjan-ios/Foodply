@@ -8,6 +8,7 @@ import {
   FlatList,
   Image,
   ImageBackground,
+  Dimensions,
 } from 'react-native';
 
 import Colors from '../assets/Colors/Colors';
@@ -15,6 +16,9 @@ import GlobalTopBarDelivery from '../GlobalContainer/GlobalTopBarDelivery';
 import GlobalBottomBarDelivery from '../GlobalContainer/GlobalBottomBarDelivery';
 import DeliveryOrderListComponent from '../GlobalContainer/DeliveryOrderListComponent';
 import { FontFamily } from '../assets/GlobalFont/GlobalFont';
+
+const { width, height } = Dimensions.get('window');
+const isTablet = Math.min(width, height) >= 600;
 
 const assignedOrders = [
   {
@@ -51,7 +55,7 @@ const assignedOrders = [
 export default function DeliveryDashboard({ navigation }: any) {
   return (
     <View style={styles.container}>
-      <GlobalTopBarDelivery notificationClick={() => {}} />
+      <GlobalTopBarDelivery navigation={navigation} notificationClick={() => {}} text="Delivery Person" subtitleText="Good Morning" isBackVisible={false} isOnlineVisible = {true} />
 
       <View style={styles.overlay}>
         <ScrollView
@@ -104,7 +108,9 @@ export default function DeliveryDashboard({ navigation }: any) {
 
           {/* Assigned Orders List */}
           {assignedOrders.length > 0 ? (
-            <DeliveryOrderListComponent orders={assignedOrders} onPressItem={() => {}} />
+            <DeliveryOrderListComponent orders={assignedOrders} onPressItem={() => { 
+              navigation.navigate('DeliveryOrderDetail');
+            }} />
           ) : (
             <View style={styles.noOrderContainer}>
               <Text style={styles.noOrderText}>No Orders Available</Text>
@@ -197,7 +203,7 @@ const styles = StyleSheet.create({
   },
 
   icon: {
-    height: 40,
+    height: 42,
     width: 30,
     tintColor: Colors.primary,
     padding: 4,
@@ -421,7 +427,7 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   bannerImageStyle: {
-    height: 120,
+    height: isTablet ? 260 : 120,
     width: '100%',
     justifyContent: 'center',
     marginTop: -10,

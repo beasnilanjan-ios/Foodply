@@ -13,26 +13,40 @@ import Colors from '../assets/Colors/Colors';
 const { width, height } = Dimensions.get('window');
 const isTablet = Math.min(width, height) >= 600;
 
-export default function GlobalTopBarDelivery({ notificationClick }: any) {
+export default function GlobalTopBarDelivery({ navigation, notificationClick, text, subtitleText, isBackVisible, isOnlineVisible }: any) {
   return (
     <View style={styles.topBar}>
 
        <View style={styles.headerContainer}>
-              <Text style={styles.subtitle}>
-               Good Morning
-              </Text>
-              <View style={styles.row}>
-                <Text style={styles.title}>Delivery Person</Text>
-                <View style={styles.curveBackground}>
-                  <View style={[styles.circle, { backgroundColor: 'green' }]} />
-                  <Text style={[styles.subtitle, { color: Colors.black }, { marginTop: 2 }]}>
-                    Online
-                  </Text>
-                </View>
-              </View>
+          <Text style={[styles.subtitle, { marginLeft: isBackVisible ? 18 : 0 }]}>
+            {subtitleText}
+          </Text>
+        <View style={styles.row}>
+          {isBackVisible && (
+            <TouchableOpacity onPress={() => navigation.goBack()}>
+              <Image
+                source={require('../assets/images/Back.png')}
+                style={{
+                  width: 20,
+                  height: 20,
+                  padding: 4,
+                  marginRight: 2,
+                  marginLeft: -2,
+                }}
+              />
+            </TouchableOpacity>
+          )}
+          <Text style={styles.title}>{text}</Text>
+          {isOnlineVisible && (
+            <View style={styles.curveBackground}>
+              <View style={[styles.circle, { backgroundColor: 'green' }]} />
+                <Text style={[styles.subtitle, { color: Colors.black }, { marginTop: 2 }]}>
+                   Online
+                </Text>
+            </View>
+          )}
+          </View>
         </View>
-
-      
       {/* RIGHT ICONS */}
       <View style={styles.rightIcons}>
         <TouchableOpacity style={styles.smallCircle} onPress={notificationClick}>
@@ -154,6 +168,7 @@ const styles = StyleSheet.create({
     row: {
       flexDirection: 'row',
       justifyContent: 'center',
+      alignItems: 'center',
     },
 
     curveBackground: {
@@ -162,6 +177,7 @@ const styles = StyleSheet.create({
       marginLeft: 10,
       paddingHorizontal: 12,
       maxHeight: 30,
+      height: 24,
       justifyContent: 'center',
       flexDirection: 'row',
       alignItems: 'center',

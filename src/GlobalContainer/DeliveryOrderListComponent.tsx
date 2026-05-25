@@ -46,7 +46,7 @@ const OrderCard = ({ item, onPressItem }: any) => {
             <Text style={styles.codText}>COD</Text>
           </View>
 
-          <TouchableOpacity style={styles.viewButton}>
+          <TouchableOpacity style={styles.viewButton} onPress={() => onPressItem?.(item)}>
             <Text style={styles.viewButtonText}>View Details</Text>
           </TouchableOpacity>
         </View>

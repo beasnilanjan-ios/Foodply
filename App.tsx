@@ -15,6 +15,7 @@ import GlobalLoginAuth from './src/GlobalContainer/GlobalLoginAuth'; // ✅ ADD 
 import DeliveryDashboard from './src/Screens/DeliveryDashboard';
 import DeliveryOrders from './src/Screens/DeliveryOrder';
 import DeliveryProfile from './src/Screens/DeliveryProfile';
+import DeliveryOrderDetail from './src/Screens/DeliveryOrderDetail';
 
 export type RootStackParamList = {
   Splash: undefined;
@@ -26,6 +27,7 @@ export type RootStackParamList = {
   DeliveryDashboard: undefined;
   DeliveryOrders: undefined;
   DeliveryProfile: undefined;
+  DeliveryOrderDetail: undefined;
 };
 
 enableScreens();
@@ -128,6 +130,12 @@ const App = () => {
           <Stack.Screen
             name="DeliveryProfile"
             component={DeliveryProfile}
+            options={{ animation: 'none' }}
+           
+          />
+          <Stack.Screen
+            name="DeliveryOrderDetail"
+            component={DeliveryOrderDetail}
             options={{ animation: 'none' }}
            
           />
