@@ -27,7 +27,7 @@ export type RootStackParamList = {
   DeliveryDashboard: undefined;
   DeliveryOrders: undefined;
   DeliveryProfile: undefined;
-  DeliveryOrderDetail: undefined;
+  DeliveryOrderDetail: { orderId: string } | undefined;
 };
 
 enableScreens();
@@ -136,7 +136,9 @@ const App = () => {
           <Stack.Screen
             name="DeliveryOrderDetail"
             component={DeliveryOrderDetail}
-            options={{ animation: 'none' }}
+            options={({ route }) => ({
+              animation: route.params?.orderId ? 'none' : 'default',
+            })}
            
           />
         </Stack.Navigator>

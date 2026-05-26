@@ -157,8 +157,8 @@ export default function DeliveryDashboard({ navigation }: any) {
           {assignedOrders.length > 0 ? (
             <DeliveryOrderListComponent
               orders={assignedOrders}
-              onPressItem={() => {
-                navigation.navigate('DeliveryOrderDetail');
+              onPressItem={(order) => {
+                navigation.navigate('DeliveryOrderDetail', { orderId: order.orderId });
               }}
             />
           ) : (

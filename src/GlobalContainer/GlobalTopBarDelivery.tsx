@@ -18,7 +18,7 @@ export default function GlobalTopBarDelivery({ navigation, notificationClick, te
     <View style={styles.topBar}>
 
        <View style={styles.headerContainer}>
-          <Text style={[styles.subtitle, { marginLeft: isBackVisible ? 18 : 0 }]}>
+          <Text style={[styles.subtitle, { marginLeft: isBackVisible ? 12 : 0 }]}>
             {subtitleText}
           </Text>
         <View style={styles.row}>
@@ -27,8 +27,8 @@ export default function GlobalTopBarDelivery({ navigation, notificationClick, te
               <Image
                 source={require('../assets/images/Back.png')}
                 style={{
-                  width: 20,
-                  height: 20,
+                  width: 12,
+                  height: 12,
                   padding: 4,
                   marginRight: 2,
                   marginLeft: -2,

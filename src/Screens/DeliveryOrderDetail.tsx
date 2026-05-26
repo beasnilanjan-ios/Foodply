@@ -1,50 +1,78 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, Alert } from 'react-native';
 import Colors from '../assets/Colors/Colors';
 import GlobalTopBarDelivery from '../GlobalContainer/GlobalTopBarDelivery';
 import OrderItemsListComponent from '../GlobalContainer/DeliveryOrderItemsListComponent';
 import { DeliveryGlobalStyles } from '../assets/Styles/GlobalStyles';
 import { FontFamily } from '../assets/GlobalFont/GlobalFont';
+import { DeliveryOrderDetailsResponse } from '../Models/DeliveryOrderDetails/DeliveryOrderDetailsResponse';
+import GlobalLoginAuth from '../GlobalContainer/GlobalLoginAuth';
+import GlobalApi from '../GlobalContainer/GlobalApi';
+import { DeliveryOrderDetails } from '../Models/DeliveryOrderDetails/DeliveryOrderDetails';
+import GlobalLoader from '../GlobalContainer/GlobalLoader';
 
-export default function DeliveryOrderDetail({ navigation }: any) {
-const orderItems = [
-  {
-    id: 1,
-    name: 'Margherita Pizza',
-    desc: 'Regular • Classic Crust',
-    qty: 1,
-    price: 250,
-    image: require('../assets/images/food.png'),
-  },
-  {
-    id: 2,
-    name: 'Veg Burger',
-    desc: 'No Onion • Extra Cheese',
-    qty: 2,
-    price: 220,
-    image: require('../assets/images/food.png'),
-  },
-  {
-    id: 3,
-    name: 'French Fries',
-    desc: 'Medium Fries',
-    qty: 2,
-    price: 120,
-    image: require('../assets/images/food.png'),
-  },
-  {
-    id: 4,
-    name: 'Coke',
-    desc: '500ml',
-    qty: 3,
-    price: 90,
-    image: require('../assets/images/food.png'),
-  },
-];
+export default function DeliveryOrderDetail({ route , navigation }: any) {
+const { orderId } = route.params;
+const [loading, setLoading] = useState(false);
+const [orderData, setOrderData] =
+    useState<DeliveryOrderDetails | null>(null);
+
+
+useEffect(() => {
+    getOrderDetails();
+  }, []);
+
+  const getOrderDetails = async () => {
+
+    try {
+
+      setLoading(true);
+
+      const response = await fetch(
+        `${GlobalApi.baseUrl}api/deliveries/me/orders/${orderId}`,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${GlobalLoginAuth.accessToken}`,
+          },
+        }
+      );
+
+      const result: DeliveryOrderDetailsResponse =
+        await response.json();
+
+      console.log('Order Details:', result);
+
+      if (!response.ok || !result.success) {
+        Alert.alert(
+          'FoodyPly',
+          result.message || 'Failed to load order details'
+        );
+        return;
+      }
+
+      setOrderData(result.data);
+
+    } catch (error) {
+
+      console.log(error);
+
+      Alert.alert(
+        'FoodyPly',
+        'Unable to connect to server'
+      );
+
+    } finally {
+
+      setLoading(false);
+
+    }
+  };
 
   return (
      <View style={styles.container}>
-      <GlobalTopBarDelivery navigation={navigation} notificationClick={() => {}} text="Order Detail" subtitleText="#ORD-1234" isBackVisible={true} isOnlineVisible = {false} />
+      <GlobalTopBarDelivery navigation={navigation} notificationClick={() => {}} text="Order Detail" subtitleText={`#${orderData?.order.orderNumber}`} isBackVisible={true} isOnlineVisible = {false} />
         <View style={styles.overlay}>
             <ScrollView
                 showsVerticalScrollIndicator={false}
@@ -67,15 +95,15 @@ const orderItems = [
 
                         <View style={styles.customerInfo}>
                         <Text style={styles.customerName}>
-                            Rahul Sharma
+                            {orderData?.customer.name}
                         </Text>
                         <View style={{ flexDirection: 'row', justifyContent: 'flex-start',alignItems: 'center', marginRight: 10, marginTop: 4 }}>
                             <Image style= {[DeliveryGlobalStyles.icon]} source={require('../assets/images/call.png')} />
-                            <Text style={styles.smallText}>+91 98765 43210</Text>
+                            <Text style={styles.smallText}> {orderData?.customer.phone}</Text>
                         </View>
                         <View style={{ flexDirection: 'row', justifyContent: 'flex-start',alignItems: 'flex-start', marginRight: 10, marginTop: 4 }}>
                             <Image style= {[DeliveryGlobalStyles.icon, {marginTop: 2}]} source={require('../assets/images/location.png')} />
-                            <Text style={styles.smallText}>Salt Lake, Sector 1, Block - B Kolkata - 700064, West Bengal</Text>
+                            <Text style={styles.smallText}> {orderData?.customer.address.address}</Text>
                         </View>
                         </View>
                     </View>
@@ -93,7 +121,7 @@ const orderItems = [
                 </View>
 
                 {/* Order Items */}
-                <OrderItemsListComponent items={orderItems} />
+                <OrderItemsListComponent itemQty ={ orderData?.itemsSummary?.totalQuantity || 0} items={orderData?.items || []} />
 
                 {/* Bottom Summary */}
                 <View style={styles.summaryRow}>
@@ -109,7 +137,7 @@ const orderItems = [
                         </Text>
 
                         <Text style={styles.summaryValue}>
-                        ₹690.00
+                            ₹{orderData?.billing?.itemTotal?.toFixed(2)}                        
                         </Text>
                     </View>
 
@@ -119,7 +147,7 @@ const orderItems = [
                         </Text>
 
                         <Text style={styles.summaryValue}>
-                        ₹40.00
+                        ₹{orderData?.billing?.deliveryCharge?.toFixed(2)}
                         </Text>
                     </View>
 
@@ -129,7 +157,16 @@ const orderItems = [
                         </Text>
 
                         <Text style={styles.summaryValue}>
-                        ₹20.00
+                        ₹{orderData?.billing?.packagingCharge?.toFixed(2)}
+                        </Text>
+                    </View>
+                     <View style={styles.summaryItem}>
+                        <Text style={styles.summaryLabel}>
+                        Discount
+                        </Text>
+
+                        <Text style={styles.summaryValue}>
+                        -₹{orderData?.billing?.discountAmount?.toFixed(2)}
                         </Text>
                     </View>
 
@@ -141,13 +178,13 @@ const orderItems = [
                         </Text>
 
                         <Text style={styles.totalAmount}>
-                        ₹900.00
+                        ₹{orderData?.billing?.finalAmount?.toFixed(2)}
                         </Text>
                     </View>
 
                     <View style={styles.codBadge}>
                         <Text style={styles.codText}>
-                        Payment Method: COD
+                        Payment Method: {orderData?.billing?.paymentMethod}
                         </Text>
                     </View>
                     </View>
@@ -174,7 +211,7 @@ const orderItems = [
                                 </Text>
 
                                 <Text style={styles.deliveryTime}>
-                                12:45 PM - 1:00 PM
+                                    {orderData?.delivery?.estimatedDeliveryWindow}
                                 </Text>
                             </View>
                             </View>
@@ -186,7 +223,7 @@ const orderItems = [
                             </Text>
 
                             <Text style={styles.summaryValue}>
-                            3.2 km
+                            {orderData?.delivery?.distanceKm?.toFixed(2)} km
                             </Text>
                         </View>
                         <View style={styles.divider1} />           
@@ -197,7 +234,7 @@ const orderItems = [
 
                             <View style={styles.paymentBadge}>
                             <Text style={styles.paymentText}>
-                                COD
+                                {orderData?.billing?.paymentMethod}
                             </Text>
                             </View>
                         </View>
@@ -225,6 +262,7 @@ const orderItems = [
                 </View>
                 </ScrollView>
         </View>
+        <GlobalLoader visible={loading} />
     </View>
     );
 }

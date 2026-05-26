@@ -64,7 +64,7 @@ export default function DeliveryOrderListComponent({
   return (
     <FlatList
       data={orders}
-      keyExtractor={(item) => item.id}
+      keyExtractor={(item) => String(item.orderId)}
       scrollEnabled={false}
       renderItem={({ item }) => (
         <OrderCard item={item} onPressItem={onPressItem} />

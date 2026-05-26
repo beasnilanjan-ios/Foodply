@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   FlatList,
   View,
@@ -9,17 +9,27 @@ import {
 import Colors from '../assets/Colors/Colors';
 import { FontFamily } from '../assets/GlobalFont/GlobalFont';
 import { DeliveryGlobalStyles } from '../assets/Styles/GlobalStyles';
+import { OrderItem } from '../Models/DeliveryOrderDetails/OrderItem';
 
 type Props = {
-  items: any[];
+  itemQty: number;
+  items: OrderItem[];
 };
 
-const ItemCard = ({ item }: any) => {
+const ItemCard = ({ item }: { item: OrderItem }) => {
+  const [description, setDescription] = useState('');
+   useEffect(() => {
+      setDescription(item.addons.join(' • '));
+    }, [item]);
   return (
     <View style={styles.itemRow}>
       {/* Food Image */}
-      <Image
-        source={item.image}
+     <Image
+        source={
+          item.imageUrl
+            ? { uri: item.imageUrl }
+            : require('../assets/images/food.png')
+        }
         style={styles.foodImage}
       />
 
@@ -29,25 +39,28 @@ const ItemCard = ({ item }: any) => {
           {item.name}
         </Text>
 
+        {description ? (
         <Text style={styles.itemDesc}>
-          {item.desc}
+          {description}
         </Text>
+      ) : null}
       </View>
 
       {/* Qty */}
       <Text style={styles.qtyText}>
-        {item.qty}
+        {item.quantity}
       </Text>
 
       {/* Price */}
       <Text style={styles.priceText}>
-        ₹{item.price}
+        ₹{item.totalPrice.toFixed(2)}
       </Text>
     </View>
   );
 };
 
 export default function DeliveryOrderItemsListComponent({
+  itemQty,
   items,
 }: Props) {
   return (
@@ -62,10 +75,7 @@ export default function DeliveryOrderItemsListComponent({
         <View style={DeliveryGlobalStyles.backLight}>
           <Text style={styles.itemCount}>
             {items.length} Items •{' '}
-            {items.reduce(
-              (sum, item) => sum + item.qty,
-              0,
-            )}{' '}
+            {itemQty}{' '}
             Qty
           </Text>
         </View>
@@ -161,8 +171,8 @@ const styles = StyleSheet.create({
   },
 
   foodImage: {
-    width: 48,
-    height: 38,
+    width: 70,
+    height: 50,
     borderRadius: 10,
     marginRight: 10,
   },
