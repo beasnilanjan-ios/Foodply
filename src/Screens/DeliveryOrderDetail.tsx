@@ -69,12 +69,12 @@ const orderItems = [
                         <Text style={styles.customerName}>
                             Rahul Sharma
                         </Text>
-                        <View style={{ flexDirection: 'row', alignItems: 'flex-start', marginRight: 10, marginTop: 3 }}>
-                            <Image style= {[DeliveryGlobalStyles.icon , {marginTop: 2}]} source={require('../assets/images/call.png')} />
+                        <View style={{ flexDirection: 'row', justifyContent: 'flex-start',alignItems: 'center', marginRight: 10, marginTop: 4 }}>
+                            <Image style= {[DeliveryGlobalStyles.icon]} source={require('../assets/images/call.png')} />
                             <Text style={styles.smallText}>+91 98765 43210</Text>
                         </View>
-                        <View style={{ flexDirection: 'row', alignItems: 'flex-start', marginRight: 30, marginTop: 3 }}>
-                            <Image style= {[DeliveryGlobalStyles.icon , {marginTop: 2}]} source={require('../assets/images/location.png')} />
+                        <View style={{ flexDirection: 'row', justifyContent: 'flex-start',alignItems: 'flex-start', marginRight: 10, marginTop: 4 }}>
+                            <Image style= {[DeliveryGlobalStyles.icon, {marginTop: 2}]} source={require('../assets/images/location.png')} />
                             <Text style={styles.smallText}>Salt Lake, Sector 1, Block - B Kolkata - 700064, West Bengal</Text>
                         </View>
                         </View>
@@ -289,7 +289,6 @@ const styles = StyleSheet.create({
     },
 
     smallText: {
-        marginTop: 5,
         fontSize: 12,
         color: Colors.textBrown,
         fontFamily: FontFamily.regular,

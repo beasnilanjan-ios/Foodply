@@ -42,11 +42,11 @@ const App = () => {
     const checkAuth = async () => {
       try {
         await GlobalLoginAuth.loadAuthData();
-
+        console.log('role', GlobalLoginAuth.user?.role);
         if (GlobalLoginAuth.accessToken) {
-          if (GlobalLoginAuth.user.roles === 'customer') {    
+          if (GlobalLoginAuth.user?.role === 'customer') {    
           setInitialRoute('Dashboard'); // ✅ go directly to dashboard
-          } else if (GlobalLoginAuth.user.roles === 'delivery_boy') {
+          } else if (GlobalLoginAuth.user?.role === 'delivery_boy') {
             setInitialRoute('DeliveryDashboard'); // ✅ go directly to delivery dashboard 
           } else {
             setInitialRoute('Banner'); // ✅ normal flow for logout users or other roles

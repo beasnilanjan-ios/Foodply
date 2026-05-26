@@ -56,18 +56,25 @@ export default function Login({ navigation }: any) {
       console.log('Access Token:', GlobalAuth.accessToken);
 
       // ✅ NAVIGATE AFTER SUCCESS
-      if (loginResponse.data.user.roles === 'customer') {
+      if (GlobalAuth.user?.role==='customer') {
         navigation.reset({
-        index: 0,
-        routes: [{ name: 'Dashboard' }],
-      });
-    } else if (loginResponse.data.user.roles === 'delivery_boy') {
+          index: 0,
+          routes: [{ name: 'Dashboard' }],
+        });
+        return;
+      } else if (GlobalAuth.user?.role==='delivery_boy') {
         navigation.reset({
           index: 0,
           routes: [{ name: 'DeliveryDashboard' }],
         });
-    }
+        return;
+      }
 
+      console.warn('Unrecognized role for navigation:', GlobalAuth.user?.role);
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'Banner' }],
+      });
     } catch (error) {
       Alert.alert('FoodyPly', 'Unable to connect to server');
     } finally {
@@ -202,7 +209,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: 'LeagueSpartan-Regular',
     alignSelf: 'center',
-    marginTop: 20,
+    marginTop: 5,
   },
 
   socialContainer: {
@@ -214,6 +221,6 @@ const styles = StyleSheet.create({
     color: Colors.primary,
     fontSize: 12,
     fontFamily: 'LeagueSpartan-SemiBold',
-    marginTop: 20,
+    marginTop: 5,
   },
 });

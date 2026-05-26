@@ -4,5 +4,5 @@ export interface User {
   email: string;
   phone: string;
   profileImageUrl: string | null;
-  roles: string;
+  role: string;
 }

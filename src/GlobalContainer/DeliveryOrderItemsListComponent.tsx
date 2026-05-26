@@ -8,7 +8,7 @@ import {
 } from 'react-native';
 import Colors from '../assets/Colors/Colors';
 import { FontFamily } from '../assets/GlobalFont/GlobalFont';
-import GlobalStyles, { DeliveryGlobalStyles } from '../assets/Styles/GlobalStyles';
+import { DeliveryGlobalStyles } from '../assets/Styles/GlobalStyles';
 
 type Props = {
   items: any[];
@@ -116,7 +116,7 @@ const styles = StyleSheet.create({
   container: {
     backgroundColor: '#fff',
     borderRadius: 18,
-    padding: 14,
+    padding: 16,
     marginTop: 16,
   },
 

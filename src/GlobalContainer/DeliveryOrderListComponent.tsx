@@ -9,41 +9,43 @@ import {
 } from 'react-native';
 import Colors from '../assets/Colors/Colors';
 import { FontFamily } from '../assets/GlobalFont/GlobalFont';
+import { AssignedOrder } from '../Models/DeliveryDasboard/AssignedOrder';
+import { getTimeAgo } from '../Utils/CommonUtil';
 
 type Props = {
-  orders: any[];
-  onPressItem?: (item: any) => void;
+  orders: AssignedOrder[];
+  onPressItem?: (item: AssignedOrder) => void;
 };
 
-const OrderCard = ({ item, onPressItem }: any) => {
+const OrderCard = ({ item, onPressItem }: { item: AssignedOrder; onPressItem?: (item: AssignedOrder) => void }) => {
   return (
     <TouchableOpacity
       style={styles.orderCard}
       onPress={() => onPressItem?.(item)}
     >
       <View style={styles.orderLeft}>
-        <Text style={styles.orderId}>{item.orderId}</Text>
-        <Text style={styles.orderTime}>{item.time}</Text>
+        <Text style={styles.orderId}>{item.orderNumber}</Text>
+        <Text style={styles.orderTime}>{getTimeAgo(item.minutesAgo)}</Text>
       </View>
 
       <View style={styles.orderCenter}>
         <View style={styles.rowBetween}>
-          <Text style={styles.customerName}>{item.customer}</Text>
+          <Text style={styles.customerName}>{item.customerName}</Text>
 
-          <Text style={styles.amount}>₹{item.amount}</Text>
+          <Text style={styles.amount}>₹{item.finalAmount}</Text>
         </View>
 
-        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+        <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'flex-start' }}>
             <Image style={styles.icon} source={require('../assets/images/location.png')} />
-            <Text style={styles.address}>{item.address}</Text>
+            <Text style={styles.address}>{item.addressText}</Text>
         </View>
         <View style={styles.bottomRow}>
           <View style={styles.codBadge}>
-              <Text style={styles.itemText}>{item.items}</Text>
+              <Text style={styles.itemText}>{item.itemCount} item</Text>
           </View>
 
           <View style={styles.codBadge}>
-            <Text style={styles.codText}>COD</Text>
+            <Text style={styles.codText}>{item.paymentMethod}</Text>
           </View>
 
           <TouchableOpacity style={styles.viewButton} onPress={() => onPressItem?.(item)}>
@@ -104,6 +106,7 @@ const styles = StyleSheet.create({
     color: Colors.primary,
     fontFamily: FontFamily.medium,
     fontSize: 16,
+    textAlign: 'center',
   },
 
   orderTime: {
@@ -138,12 +141,14 @@ const styles = StyleSheet.create({
   address: {
     fontSize: 12,
     color: Colors.textBrown,
+    maxWidth: '80%',
   },
 
   icon: {
     width: 14,
     height: 14,
-    marginRight: 3,
+    marginRight: 1,
+    marginTop: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },

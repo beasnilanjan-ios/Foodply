@@ -1,14 +1,13 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
   ScrollView,
-  FlatList,
   Image,
   ImageBackground,
   Dimensions,
+  Alert,
 } from 'react-native';
 
 import Colors from '../assets/Colors/Colors';
@@ -16,62 +15,100 @@ import GlobalTopBarDelivery from '../GlobalContainer/GlobalTopBarDelivery';
 import GlobalBottomBarDelivery from '../GlobalContainer/GlobalBottomBarDelivery';
 import DeliveryOrderListComponent from '../GlobalContainer/DeliveryOrderListComponent';
 import { FontFamily } from '../assets/GlobalFont/GlobalFont';
+import GlobalLoginAuth from '../GlobalContainer/GlobalLoginAuth';
+import GlobalApi from '../GlobalContainer/GlobalApi';
+import { DeliveryDashboardResponse }  from '../Models/DeliveryDasboard/DeliveryDashboardResponse';
+import { AssignedOrder } from '../Models/DeliveryDasboard/AssignedOrder';
+import { DashboardData } from '../Models/DeliveryDasboard/DashboardData';
+import GlobalLoader from '../GlobalContainer/GlobalLoader';
 
 const { width, height } = Dimensions.get('window');
 const isTablet = Math.min(width, height) >= 600;
 
-const assignedOrders = [
-  {
-    id: '1',
-    orderId: '#ORD-1025',
-    customer: 'Rahul Sharma',
-    address: 'Salt Lake, Sector 1, Kolkata',
-    amount: '650',
-    time: '2 Mins Ago',
-    items: '5 Items',
-  },
-  {
-    id: '2',
-    orderId: '#ORD-1026',
-    customer: 'Ananya Das',
-    address: 'New Town, Action Area 2',
-    amount: '320',
-    time: '5 Mins Ago',
-    items: '3 Items',
-  },
-  {
-    id: '3',
-    orderId: '#ORD-1027',
-    customer: 'Vikram Roy',
-    address: 'Lake Gardens, Kolkata',
-    amount: '870',
-    time: '12 Mins Ago',
-    items: '7 Items',
-  },
-];
-
-
-
 export default function DeliveryDashboard({ navigation }: any) {
+
+  const [loading, setLoading] = useState(false);
+
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
+
+  const [assignedOrders, setAssignedOrders] = useState<AssignedOrder[]>([]);
+
+  useEffect(() => {
+    getDashboardData();
+  }, []);
+
+  const getDashboardData = async () => {
+    try {
+      setLoading(true);
+
+      const response = await fetch(
+        `${GlobalApi.baseUrl}api/deliveries/me/dashboard`,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${GlobalLoginAuth.accessToken}`,
+          },
+        }
+      );
+
+      const result = await response.json();
+      const dashboardResponse = result as DeliveryDashboardResponse; // ✅ Type assertion to ensure it matches our model
+
+      console.log('Dashboard Response:', result);
+
+      if (!response.ok) {
+        Alert.alert('FoodyPly', result.message || 'Failed to load dashboard');
+        return;
+      }
+
+      setDashboardData(dashboardResponse.data);
+
+      // if orders available from API
+      if (dashboardResponse.data?.assignedOrders) {
+        setAssignedOrders(dashboardResponse.data.assignedOrders);
+      }
+
+    } catch (error) {
+      console.log(error);
+      Alert.alert('FoodyPly', 'Unable to connect to server');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <View style={styles.container}>
-      <GlobalTopBarDelivery navigation={navigation} notificationClick={() => {}} text="Delivery Person" subtitleText="Good Morning" isBackVisible={false} isOnlineVisible = {true} />
+      <GlobalTopBarDelivery
+        navigation={navigation}
+        notificationClick={() => {}}
+        text={GlobalLoginAuth.user.name}
+        subtitleText="Good Morning"
+        isBackVisible={false}
+        isOnlineVisible={true}
+      />
 
       <View style={styles.overlay}>
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingBottom: 140 }}
         >
-          {/* Top Stats Single Card */}
+
+          {/* Top Stats Card */}
           <View style={styles.statsMainCard}>
+
             <View style={styles.statItem}>
               <View style={styles.iconCircle}>
-                <Image style = {styles.icon}
+                <Image
+                  style={styles.icon}
                   source={require('../assets/images/MyOrdersNavBar.png')}
                 />
               </View>
 
-              <Text style={styles.statCount}>8</Text>
+              <Text style={styles.statCount}>
+                {dashboardData?.stats?.assigned || 0}
+              </Text>
+
               <Text style={styles.statTitle}>Assigned</Text>
             </View>
 
@@ -79,12 +116,16 @@ export default function DeliveryDashboard({ navigation }: any) {
 
             <View style={styles.statItem}>
               <View style={styles.iconCircle}>
-                <Image style = {[styles.icon, {width:40, height: 35}]}
+                <Image
+                  style={[styles.icon, { width: 40, height: 35 }]}
                   source={require('../assets/images/scooter.png')}
                 />
               </View>
 
-              <Text style={styles.statCount}>3</Text>
+              <Text style={styles.statCount}>
+                {dashboardData?.stats?.onTheWay || 0}
+              </Text>
+
               <Text style={styles.statTitle}>On The Way</Text>
             </View>
 
@@ -92,58 +133,62 @@ export default function DeliveryDashboard({ navigation }: any) {
 
             <View style={styles.statItem}>
               <View style={styles.iconCircle}>
-                <Image style = {[styles.icon, {width:35, height: 35}]}
+                <Image
+                  style={[styles.icon, { width: 35, height: 35 }]}
                   source={require('../assets/images/tick.png')}
                 />
               </View>
 
-              <Text style={styles.statCount}>12</Text>
+              <Text style={styles.statCount}>
+                {dashboardData?.stats?.delivered || 0}
+              </Text>
+
               <Text style={styles.statTitle}>Delivered</Text>
             </View>
+
           </View>
+
           {/* Assigned Orders Header */}
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Assigned Orders</Text>
           </View>
 
-          {/* Assigned Orders List */}
+          {/* Orders List */}
           {assignedOrders.length > 0 ? (
-            <DeliveryOrderListComponent orders={assignedOrders} onPressItem={() => { 
-              navigation.navigate('DeliveryOrderDetail');
-            }} />
+            <DeliveryOrderListComponent
+              orders={assignedOrders}
+              onPressItem={() => {
+                navigation.navigate('DeliveryOrderDetail');
+              }}
+            />
           ) : (
             <View style={styles.noOrderContainer}>
-              <Text style={styles.noOrderText}>No Orders Available</Text>
+              <Text style={styles.noOrderText}>
+                No Orders Available
+              </Text>
             </View>
           )}
 
-          {/* Delivery Banner */}
-          <ImageBackground  source={require('../assets/images/delivery_banner.png')}
-              style={styles.bannerImageStyle}
-              imageStyle={styles.imageStyle}
-              resizeMode="contain">
-            <View style={{ flex: 1 }}>
-              {/* <Text style={styles.bannerTitle}>Deliver Smiles 😊</Text>
-
-              <Text style={styles.bannerSubTitle}>    
-                You are doing great! Keep delivering happiness.
-              </Text>
-
-              <TouchableOpacity style={styles.profileButton}>
-                <Text style={styles.profileButtonText}>
-                  View My Profile
-                </Text>
-              </TouchableOpacity> */}
-            </View>
+          {/* Banner */}
+          <ImageBackground
+            source={require('../assets/images/delivery_banner.png')}
+            style={styles.bannerImageStyle}
+            imageStyle={styles.imageStyle}
+            resizeMode="contain"
+          >
+            <View style={{ flex: 1 }} />
           </ImageBackground>
+
         </ScrollView>
       </View>
+
       <View style={styles.bottomContainer}>
-          <GlobalBottomBarDelivery
-            navigation={navigation}
-            activeTab="Home"
-          />
-        </View>
+        <GlobalBottomBarDelivery
+          navigation={navigation}
+          activeTab="Home"
+        />
+      </View>
+      <GlobalLoader visible={loading} />
     </View>
   );
 }
