@@ -16,6 +16,8 @@ import DeliveryDashboard from './src/Screens/DeliveryDashboard';
 import DeliveryOrders from './src/Screens/DeliveryOrder';
 import DeliveryProfile from './src/Screens/DeliveryProfile';
 import DeliveryOrderDetail from './src/Screens/DeliveryOrderDetail';
+import { DeliveryOrderDetails } from './src/Models/DeliveryOrderDetails/DeliveryOrderDetails';
+import DeliveryStart from './src/Screens/DeliveryStart';
 
 export type RootStackParamList = {
   Splash: undefined;
@@ -28,6 +30,7 @@ export type RootStackParamList = {
   DeliveryOrders: undefined;
   DeliveryProfile: undefined;
   DeliveryOrderDetail: { orderId: string } | undefined;
+  DeliveryStart: { orderDetail: DeliveryOrderDetails } | undefined;
 };
 
 enableScreens();
@@ -139,6 +142,12 @@ const App = () => {
             options={({ route }) => ({
               animation: route.params?.orderId ? 'none' : 'default',
             })}
+           
+          />
+          <Stack.Screen
+            name="DeliveryStart"
+            component={DeliveryStart}
+            options={{ animation: 'none' }}
            
           />
         </Stack.Navigator>

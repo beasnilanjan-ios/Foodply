@@ -18,3 +18,7 @@ export const getTimeAgo = (minutesAgo: number): string => {
 
   return `${days} day ago`;
 };
+
+export const ASSIGNED = 'ASSIGNED';
+export const ON_THE_WAY = 'ON_THE_WAY';
+export const DELIVERED = 'DELIVERED';

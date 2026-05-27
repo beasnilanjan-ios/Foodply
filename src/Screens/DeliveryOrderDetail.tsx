@@ -10,6 +10,7 @@ import GlobalLoginAuth from '../GlobalContainer/GlobalLoginAuth';
 import GlobalApi from '../GlobalContainer/GlobalApi';
 import { DeliveryOrderDetails } from '../Models/DeliveryOrderDetails/DeliveryOrderDetails';
 import GlobalLoader from '../GlobalContainer/GlobalLoader';
+import { ON_THE_WAY } from '../Utils/CommonUtil';
 
 export default function DeliveryOrderDetail({ route , navigation }: any) {
 const { orderId } = route.params;
@@ -52,6 +53,10 @@ useEffect(() => {
         return;
       }
 
+      if(result.data.delivery.status === ON_THE_WAY) {
+        navigation.replace('DeliveryStart', { orderDetail: result.data });
+        return;
+      }
       setOrderData(result.data);
 
     } catch (error) {
@@ -69,6 +74,64 @@ useEffect(() => {
 
     }
   };
+
+   const updateOrderStatus = async (
+    orderId: number,
+    status: string,
+    ) => {
+
+    try {
+
+        setLoading(true);
+
+        const response = await fetch(
+        `${GlobalApi.baseUrl}api/deliveries/me/orders/${orderId}/status`,
+        {
+            method: 'PATCH',
+            headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${GlobalLoginAuth.accessToken}`,
+            },
+            body: JSON.stringify({
+            status: status,
+            }),
+        }
+        );
+
+        const result: DeliveryOrderDetailsResponse =
+                await response.json();
+
+      console.log('Order Details:', result);
+
+        console.log('Status Update Response:', result);
+
+        if (!response.ok || !result.success) {
+
+        Alert.alert(
+            'FoodyPly',
+            result.message || 'Failed to update status'
+        );
+
+        return;
+        }
+
+       if(result.data.delivery.status === ON_THE_WAY) {
+        navigation.replace('DeliveryStart', { orderDetail: result.data });
+        return;
+      }
+    } catch (error) {
+
+        console.log(error);
+
+        Alert.alert(
+        'FoodyPly',
+        'Unable to connect to server'
+        );
+
+    } finally {
+        setLoading(false);
+    }
+};
 
   return (
      <View style={styles.container}>
@@ -253,10 +316,10 @@ useEffect(() => {
                     </TouchableOpacity>
 
                     <TouchableOpacity
-                    style={styles.acceptButton}
+                        style={styles.acceptButton} onPress={() => updateOrderStatus(orderData?.order.id || 0, ON_THE_WAY)}
                     >
                     <Text style={styles.acceptButtonText}>
-                        Accept Order
+                       Start Delivery
                     </Text>
                     </TouchableOpacity>
                 </View>
