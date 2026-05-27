@@ -101,6 +101,8 @@ const GlobalStyles = StyleSheet.create({
     position: 'absolute',
     left: 30,
     top: 105,
+    zIndex: 999,
+    elevation: 10,
   },
 
   backIcon: {

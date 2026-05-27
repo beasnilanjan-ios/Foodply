@@ -1,220 +1,9 @@
-// import React from 'react';
-// import {
-//   View,
-//   Text,
-//   StyleSheet,
-//   Image,
-//   ScrollView,
-//   Dimensions,
-//   ImageSourcePropType,
-// } from 'react-native';
-// import Colors from '../assets/Colors/Colors';
-// import GlobalBackButton from '../GlobalContainer/GlobalBackButton';
-
-// const { width } = Dimensions.get('window');
-// const itemImageWidth = Math.min(width - 40, 323);
-
-// type ViewAllItem = {
-//   id: number;
-//   title: string;
-//   description: string;
-//   rating: number;
-//   price: string;
-//   image: ImageSourcePropType;
-// };
-
-// const viewAllItems: ViewAllItem[] = [
-//   {
-//     id: 1,
-//     title: 'Mexican Appetizer',
-//     description: 'Tortilla Chips With Toppins',
-//     rating: 5.0,
-//     price: '₹50.00',
-//     image: require('../assets/images/banner1.png'),
-//   },
-//   {
-//     id: 2,
-//     title: 'Pork Skewer',
-//     description:
-//       'Marinated in a rich blend of herbs and spices, then grilled to perfection, served with a side of zesty dipping sauce.',
-//     rating: 4.0,
-//     price: '₹12.99',
-//     image: require('../assets/images/banner2.png'),
-//   },
-// ];
-
-// export default function Dashboard({ navigation, openDrawer }: any) {
-//   return (
-//      <View style={styles.container}>
-//         <GlobalBackButton onPress={() => navigation.goBack()} />
-
-//         <Text style={styles.title}>Menu Items</Text>
-
-//         <View style={styles.overlay}>
-//           <ScrollView
-//             showsVerticalScrollIndicator={false}
-//             contentContainerStyle={styles.listContainer}>
-//             {/* {viewAllItems.map((item, index) => (
-//               <View key={item.id}>
-//                 <View style={styles.foodCard}>
-//                   <Image source={item.image} style={styles.foodImage} />
-
-//                   <View style={styles.foodHeader}>
-//                     <Text style={styles.foodTitle}>{item.title}</Text>
-//                     <Text style={styles.dot}>•</Text>
-
-//                     <View style={styles.ratingBadge}>
-//                       <Text style={styles.ratingText}>{item.rating.toFixed(1)}</Text>
-//                       <Text style={styles.ratingStar}>★</Text>
-//                     </View>
-
-//                     <Text style={styles.priceText}>{item.price}</Text>
-//                   </View>
-
-//                   <Text style={styles.descriptionText}>{item.description}</Text>
-//                 </View>
-
-//                 {index < viewAllItems.length - 1 && <View style={styles.divider} />}
-//               </View>
-//             ))} */}
-//           </ScrollView>
-//          </View>
-//     </View>
-//     );
-// }
-
-// const styles = StyleSheet.create({
-//   container: {
-//     flex: 1,
-//     justifyContent: 'flex-start',
-//     alignItems: 'center',
-//     paddingTop: 100,
-//     backgroundColor: Colors.primary,
-//   },
-
-//   title: {
-//     color: '#fff',
-//     fontSize: 28,
-//     fontWeight: '700',
-//     fontFamily: 'LeagueSpartan-Bold',
-//   },
-
-//   overlay: {
-//     position: 'absolute',
-//     bottom: 0,
-//     width: '100%',
-//     height: '90%',
-//     backgroundColor: '#fff',
-//     borderTopLeftRadius: 30,
-//     borderTopRightRadius: 30,
-//     alignItems: 'stretch',
-//     padding: 20,
-//     // shadow (iOS)
-//     shadowColor: '#000',
-//     shadowOpacity: 0.1,
-//     shadowRadius: 10,
-//     // shadow (Android)
-//     elevation: 5,
-//   },
-
-//   listContainer: {
-//     paddingBottom: 30,
-//   },
-
-//   foodCard: {
-//     width: '100%',
-//   },
-
-//   foodImage: {
-//     width: itemImageWidth,
-//     height: 174,
-//     borderRadius: 36,
-//     resizeMode: 'cover',
-//     alignSelf: 'center',
-//   },
-
-//   foodHeader: {
-//     width: itemImageWidth,
-//     flexDirection: 'row',
-//     alignItems: 'center',
-//     marginTop: 16,
-//     alignSelf: 'center',
-//   },
-
-//   foodTitle: {
-//     flexShrink: 1,
-//     fontSize: 18,
-//     fontFamily: 'LeagueSpartan-SemiBold',
-//     color: '#351B18',
-//     includeFontPadding: false,
-//   },
-
-//   dot: {
-//     marginHorizontal: 12,
-//     fontSize: 24,
-//     fontFamily: 'LeagueSpartan-Bold',
-//     color: Colors.primary,
-//     includeFontPadding: false,
-//   },
-
-//   ratingBadge: {
-//     width: 34,
-//     height: 14,
-//     borderRadius: 30,
-//     backgroundColor: Colors.primary,
-//     flexDirection: 'row',
-//     justifyContent: 'center',
-//     alignItems: 'center',
-//   },
-
-//   ratingText: {
-//     fontSize: 10,
-//     fontFamily: 'LeagueSpartan-Regular',
-//     color: '#fff',
-//     includeFontPadding: false,
-//   },
-
-//   ratingStar: {
-//     marginLeft: 1,
-//     fontSize: 9,
-//     color: '#F4D235',
-//     includeFontPadding: false,
-//   },
-
-//   priceText: {
-//     marginLeft: 'auto',
-//     fontSize: 18,
-//     fontFamily: 'LeagueSpartan-Regular',
-//     color: Colors.primary,
-//     includeFontPadding: false,
-//   },
-
-//   descriptionText: {
-//     marginTop: 8,
-//     width: itemImageWidth,
-//     fontSize: 12,
-//     lineHeight: 12,
-//     fontFamily: 'LeagueSpartan-Regular',
-//     color: '#351B18',
-//     alignSelf: 'center',
-//     textAlign: 'left',
-//   },
-
-//   divider: {
-//     height: 1,
-//     backgroundColor: '#F0CDBF',
-//     marginVertical: 34,
-//   },
- 
-//   });
-
 
 import React from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  Dimensions,
   ScrollView,
   Image,
   TouchableOpacity,
@@ -222,20 +11,9 @@ import {
 import Colors from '../assets/Colors/Colors';
 import GlobalBackButton from '../GlobalContainer/GlobalBackButton';
 
-const { width } = Dimensions.get('window');
-const cardWidth = (width - 58) / 2;
+const cardWidth = '48%';
 
-type ViewAllItem = {
-  id: number;
-  title: string;
-  description: string;
-  rating: number;
-  price: string;
-  image: any;
-  categoryIcon: any;
-};
-
-const viewAllItems: ViewAllItem[] = [
+const viewAllItems = [
   {
     id: 1,
     title: 'Bean and vegetable burger',
@@ -278,49 +56,76 @@ export default function Dashboard({ navigation }: any) {
   return (
     <View style={styles.container}>
       <GlobalBackButton onPress={() => navigation.goBack()} />
-
       <Text style={styles.title}>Menu Items</Text>
 
       <View style={styles.overlay}>
         <Text style={styles.overlayTitle}>
           Search your favorite dishes by name, category, or ingredients.
         </Text>
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.cardsContainer}>
-          {viewAllItems.map((item, index) => (
-            <View key={item.id} style={styles.card}>
+
+        <ScrollView contentContainerStyle={styles.cardsContainer}>
+          {viewAllItems.map((item) => (
+            <TouchableOpacity
+  key={item.id}
+  style={styles.card}
+  activeOpacity={0.8}
+  onPress={() => navigation.navigate('MenuDetails', { item })}
+>
+
+              {/* IMAGE */}
               <View style={styles.cardImageContainer}>
                 <Image source={item.image} style={styles.cardImage} />
+
                 <View style={styles.categoryBadge}>
                   <Image source={item.categoryIcon} style={styles.categoryIcon} />
                 </View>
-                <TouchableOpacity style={styles.favoriteButton} activeOpacity={0.8}>
+
+                <TouchableOpacity style={styles.favoriteButton}>
                   <Text style={styles.favoriteIcon}>♥</Text>
                 </TouchableOpacity>
+
                 <View style={styles.ratingBadge}>
                   <Text style={styles.ratingText}>{item.rating.toFixed(1)}</Text>
                   <Text style={styles.ratingStar}>★</Text>
                 </View>
               </View>
-              <Text style={styles.cardTitle}>{item.title}</Text>
-              <Text style={styles.cardDescription}>{item.description}</Text>
+
+              {/* TEXT */}
+              <Text style={styles.cardTitle} numberOfLines={2}>
+                {item.title}
+              </Text>
+
+              <Text style={styles.cardDescription} numberOfLines={2}>
+                {item.description}
+              </Text>
+
+              {/* FOOTER */}
               <View style={styles.cardFooter}>
-                <Text style={styles.priceText}>{item.price}</Text>
-                <View style={styles.quantityContainer}>
-                  <TouchableOpacity style={styles.counterButton} activeOpacity={0.8}>
-                    <Text style={styles.counterButtonText}>-</Text>
-                  </TouchableOpacity>
-                  <Text style={styles.quantityText}>1</Text>
-                  <TouchableOpacity style={styles.counterButton} activeOpacity={0.8}>
-                    <Text style={styles.counterButtonText}>+</Text>
-                  </TouchableOpacity>
+                <View style={styles.leftSection}>
+                  <Text style={styles.priceText}>{item.price}</Text>
+
+                  <View style={styles.quantityContainer}>
+                    <TouchableOpacity style={styles.counterButton}>
+                      <Text style={styles.counterButtonText}>-</Text>
+                    </TouchableOpacity>
+
+                    <Text style={styles.quantityText}>1</Text>
+
+                    <TouchableOpacity style={styles.counterButton}>
+                      <Text style={styles.counterButtonText}>+</Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
-                <TouchableOpacity style={styles.cartButton} activeOpacity={0.8}>
-                  <Image source={require('../assets/images/Cart.png')} style={styles.cartIcon} />
+
+                <TouchableOpacity style={styles.cartButton}>
+                  <Image
+                    source={{ uri: 'https://cdn-icons-png.flaticon.com/512/263/263142.png' }}
+                    style={styles.cartIcon}
+                  />
                 </TouchableOpacity>
               </View>
-            </View>
+
+            </TouchableOpacity>
           ))}
         </ScrollView>
       </View>
@@ -340,16 +145,6 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 28,
     fontWeight: '700',
-    fontFamily: 'LeagueSpartan-Bold',
-  },
-
-  overlayTitle: {
-    color: Colors.primary,
-    fontSize: 20,
-    fontWeight: '400',
-    fontFamily: 'LeagueSpartan-Regular',
-    textAlign: 'center',
-    marginBottom: 18,
   },
 
   overlay: {
@@ -360,20 +155,17 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderTopLeftRadius: 30,
     borderTopRightRadius: 30,
-    alignItems: 'stretch',
     padding: 20,
+  },
 
-    // iOS shadow
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-
-    // Android shadow
-    elevation: 5,
+  overlayTitle: {
+    color: Colors.primary,
+    fontSize: 18,
+    textAlign: 'center',
+    marginBottom: 18,
   },
 
   cardsContainer: {
-    paddingBottom: 30,
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
@@ -382,169 +174,151 @@ const styles = StyleSheet.create({
   card: {
     width: cardWidth,
     marginBottom: 18,
-    borderRadius: 22,
-    backgroundColor: Colors.white,
-    shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 3,
+    borderRadius: 20,
+    backgroundColor: '#fff',
     overflow: 'hidden',
   },
 
   cardImageContainer: {
-    width: '100%',
-    height: 150,
-    overflow: 'hidden',
+     height: 120,
+
+  borderTopLeftRadius: 20,
+  borderTopRightRadius: 20,
+
+  borderBottomLeftRadius: 12,   // 👈 ADD THIS (soft match)
+  borderBottomRightRadius: 12,  // 👈 ADD THIS
+
+  overflow: 'hidden',    
   },
 
   cardImage: {
     width: '100%',
     height: '100%',
-    resizeMode: 'cover',
   },
 
   categoryBadge: {
     position: 'absolute',
-    top: 12,
-    left: 12,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: Colors.white,
+    top: 8,
+    left: 8,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: '#fff',
     justifyContent: 'center',
     alignItems: 'center',
   },
 
   categoryIcon: {
-    width: 18,
-    height: 18,
-    resizeMode: 'contain',
+    width: 16,
+    height: 16,
   },
 
   favoriteButton: {
     position: 'absolute',
-    top: 12,
-    right: 12,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: Colors.white,
+    top: 8,
+    right: 8,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#fff',
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 4,
   },
 
   favoriteIcon: {
     color: Colors.primary,
-    fontSize: 14,
   },
 
   ratingBadge: {
     position: 'absolute',
-    left: 12,
-    bottom: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 16,
+    bottom: 8,
+    left: 8,
     backgroundColor: Colors.primary,
+    borderRadius: 10,
+    paddingHorizontal: 6,
+    flexDirection: 'row',
   },
 
   ratingText: {
-    color: Colors.white,
+    color: '#fff',
     fontSize: 12,
-    fontWeight: '700',
   },
 
   ratingStar: {
-    marginLeft: 4,
     color: '#F4D235',
-    fontSize: 12,
+    marginLeft: 4,
   },
 
   cardTitle: {
-    marginTop: 14,
-    marginHorizontal: 14,
-    fontSize: 16,
+    marginHorizontal: 10,
+    marginTop: 6,
+    marginBottom: 2, // 👈 tightened
     fontWeight: '700',
-    color: '#351B18',
-    lineHeight: 22,
+    height: 36,
   },
 
   cardDescription: {
-    marginTop: 6,
-    marginHorizontal: 14,
-    fontSize: 12,
-    lineHeight: 18,
-    color: '#6D5D54',
-  },
+  marginHorizontal: 10,
+  fontSize: 12,
+  color: '#6D5D54',
+  marginBottom: 4,
+  height: 32, // 👈 ADD THIS
+},
 
   cardFooter: {
-    marginTop: 14,
-    marginBottom: 14,
-    marginHorizontal: 14,
+    marginHorizontal: 10,
+    marginTop: 4, // 👈 reduced gap
+    marginBottom: 10,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+  },
+
+  leftSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
 
   priceText: {
-    fontSize: 16,
-    fontWeight: '700',
     color: Colors.primary,
+    fontWeight: '700',
+    marginRight: 6,
   },
 
   quantityContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.lightGray,
-    borderRadius: 16,
-    paddingHorizontal: 6,
-    paddingVertical: 4,
   },
 
   counterButton: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: Colors.white,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#eee',
     justifyContent: 'center',
     alignItems: 'center',
-    marginHorizontal: 4,
   },
 
   counterButtonText: {
     color: Colors.primary,
-    fontSize: 16,
-    fontWeight: '700',
   },
 
   quantityText: {
-    fontSize: 14,
-    color: Colors.black,
-    minWidth: 16,
-    textAlign: 'center',
+    marginHorizontal: 6,
   },
 
   cartButton: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    marginLeft: 'auto',
+    width: 30,
+    height: 30,
+    borderRadius: 8,
     backgroundColor: Colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
   },
 
   cartIcon: {
-    width: 10,
-    height: 10,
-    resizeMode: 'contain',
-    tintColor: Colors.white,
+    width: 16,
+    height: 16,
+    tintColor: '#fff',
   },
 });
