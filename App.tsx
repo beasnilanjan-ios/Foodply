@@ -10,6 +10,7 @@ import Banner from './src/Screens/Banner';
 import Login from './src/Screens/Login';
 import MainScreen from './src/GlobalContainer/MainScreen';
 import Orders from './src/Screens/Orders';
+import DrawerScreenContainer from './src/GlobalContainer/DrawerScreenContainer';
 import ViewAll from './src/Screens/ViewAll';
 import GlobalLoginAuth from './src/GlobalContainer/GlobalLoginAuth'; // ✅ ADD THIS
 import DeliveryDashboard from './src/Screens/DeliveryDashboard';
@@ -18,6 +19,10 @@ import DeliveryProfile from './src/Screens/DeliveryProfile';
 import DeliveryOrderDetail from './src/Screens/DeliveryOrderDetail';
 import { DeliveryOrderDetails } from './src/Models/DeliveryOrderDetails/DeliveryOrderDetails';
 import DeliveryStart from './src/Screens/DeliveryStart';
+import MenuDetails from './src/Screens/MenuDetails';
+import Cart from './src/Screens/Cart';
+import Address from './src/Screens/DeliveryAddress'; 
+import OrderConfirmed from './src/Screens/OrderConfirmed'; 
 
 export type RootStackParamList = {
   Splash: undefined;
@@ -26,6 +31,10 @@ export type RootStackParamList = {
   Dashboard: { fromTab?: boolean } | undefined;
   Orders: { fromTab?: boolean } | undefined;
   ViewAll: undefined;
+  MenuDetails: undefined; // ✅ ADD THIS
+  Cart: undefined; // ✅ ADD THIS
+  Address: undefined; // ✅ ADD THIS
+  OrderConfirmed: undefined; // ✅ ADD THIS
   DeliveryDashboard: undefined;
   DeliveryOrders: undefined;
   DeliveryProfile: undefined;
@@ -38,7 +47,7 @@ enableScreens();
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 const App = () => {
-  const [initialRoute, setInitialRoute] = useState<string | null>(null);
+  const [initialRoute, setInitialRoute] = useState<keyof RootStackParamList | null>(null);
 
   // ✅ CHECK TOKEN ON APP START
   useEffect(() => {
@@ -106,19 +115,53 @@ const App = () => {
 
           <Stack.Screen
             name="Orders"
-            component={Orders}
             options={({ route }) => ({
               animation: route.params?.fromTab ? 'none' : 'default',
             })}
-            
-          />
+          >
+            {props => (
+              <DrawerScreenContainer navigation={props.navigation}>
+                {drawerNavigation => (
+                  <Orders navigation={drawerNavigation} />
+                )}
+              </DrawerScreenContainer>
+            )}
+          </Stack.Screen>
           <Stack.Screen
             name="ViewAll"
             component={ViewAll}
             options={{ animation: 'none' }}
            
           />
+
           <Stack.Screen
+            name="MenuDetails"
+            component={MenuDetails}
+            options={{ animation: 'none' }}
+           
+          />
+          <Stack.Screen
+            name="DeliveryOrders"
+            component={DeliveryOrders}
+            name="Cart"
+            component={Cart}
+            options={{ animation: 'none' }}
+           
+          />
+          <Stack.Screen
+            name="Address"
+            component={Address}
+            options={{ animation: 'none' }}
+           
+          />
+          
+          <Stack.Screen
+            name="OrderConfirmed"
+            component={OrderConfirmed}
+            options={{ animation: 'none' }}
+           
+          />
+           <Stack.Screen
             name="DeliveryDashboard"
             component={DeliveryDashboard}
             options={{ animation: 'none' }}
@@ -148,7 +191,6 @@ const App = () => {
             name="DeliveryStart"
             component={DeliveryStart}
             options={{ animation: 'none' }}
-           
           />
         </Stack.Navigator>
       </NavigationContainer>
