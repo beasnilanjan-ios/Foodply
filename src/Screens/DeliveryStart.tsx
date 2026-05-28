@@ -244,25 +244,32 @@ const getRoute = async (
           {/* MAP CARD */}
           <View style={styles.card}>
             <View style={styles.mapContainer}>
-              <Map
+             <Map
                 style={styles.map}
-                mapStyle="https://tiles.openfreemap.org/styles/liberty"
+                mapStyle="https://tiles.stadiamaps.com/styles/alidade_smooth_dark.json"
                 logo={false}
-                compass={true}
+                compass={false}
                 onPress={onMapPress}
               >
-                {/* CAMERA */}
-              <Camera
-                zoom={17}
-                center={[
-                  currentLocation.longitude,
-                  currentLocation.latitude,
-                ]}
-                pitch={60}
-                bearing={heading}
-                duration={1000}
-              />
-                {/* USER LOCATION */}
+                {/* NAVIGATION CAMERA */}
+                <Camera
+                  zoom={16}
+                  center={[
+                    currentLocation.longitude,
+                    currentLocation.latitude,
+                  ]}
+                  pitch={65}
+                  bearing={heading}
+                  duration={1200}
+                  padding={{
+                    paddingTop: 350,
+                    paddingBottom: 120,
+                    paddingLeft: 50,
+                    paddingRight: 50,
+                  }}
+                />
+
+                {/* BLUE USER DOT */}
                 <UserLocation
                   animated={true}
                   accuracy={true}
@@ -275,7 +282,9 @@ const getRoute = async (
                     currentLocation.latitude,
                   ]}
                 >
-                  <View style={styles.currentMarker} />
+                  <View style={styles.currentMarkerOuter}>
+                    <View style={styles.currentMarkerInner} />
+                  </View>
                 </Marker>
 
                 {/* DESTINATION MARKER */}
@@ -288,7 +297,7 @@ const getRoute = async (
                   <View style={styles.destinationMarker} />
                 </Marker>
 
-                {/* ROUTE PATH */}
+                {/* NAVIGATION ROUTE */}
                 {routeCoordinates.length > 1 && (
                   <GeoJSONSource
                     id="routeSource"
@@ -306,12 +315,28 @@ const getRoute = async (
                       ],
                     }}
                   >
+                    {/* ROUTE GLOW */}
+                    <Layer
+                      id="routeGlow"
+                      type="line"
+                      paint={{
+                        'line-color': '#00E5FF',
+                        'line-width': 12,
+                        'line-opacity': 0.25,
+                      }}
+                      layout={{
+                        'line-cap': 'round',
+                        'line-join': 'round',
+                      }}
+                    />
+
+                    {/* MAIN ROUTE */}
                     <Layer
                       id="routeLayer"
                       type="line"
                       paint={{
-                        'line-color': '#007AFF',
-                        'line-width': 5,
+                        'line-color': '#00E5FF',
+                        'line-width': 6,
                       }}
                       layout={{
                         'line-cap': 'round',
@@ -368,12 +393,31 @@ const styles = StyleSheet.create({
     borderColor: '#fff',
   },
 
-  destinationMarker: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    backgroundColor: 'red',
-    borderWidth: 3,
-    borderColor: '#fff',
-  },
+  
+  currentMarkerOuter: {
+  width: 28,
+  height: 28,
+  borderRadius: 14,
+  backgroundColor: 'rgba(0,229,255,0.25)',
+  justifyContent: 'center',
+  alignItems: 'center',
+},
+
+currentMarkerInner: {
+  width: 16,
+  height: 16,
+  borderRadius: 8,
+  backgroundColor: '#00E5FF',
+  borderWidth: 3,
+  borderColor: '#FFFFFF',
+},
+
+destinationMarker: {
+  width: 22,
+  height: 22,
+  borderRadius: 11,
+  backgroundColor: '#FF3B30',
+  borderWidth: 4,
+  borderColor: '#FFFFFF',
+},
 });
