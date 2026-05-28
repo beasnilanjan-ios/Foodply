@@ -41,41 +41,103 @@ export default function DeliveryStart({ route, navigation }: any) {
 
   // Route Coordinates
   const [routeCoordinates, setRouteCoordinates] = useState<any[]>([]);
+  const [heading, setHeading] = useState(0);
 
   // Request Permission + Live Location
-  useEffect(() => {
-    requestLocationPermission();
+ useEffect(() => {
+  requestLocationPermission();
 
-    const watchId = Geolocation.watchPosition(
-      position => {
-        const latitude = position.coords.latitude;
-        const longitude = position.coords.longitude;
+  let previousLatitude = 0;
+  let previousLongitude = 0;
 
-        console.log('Current Latitude:', latitude);
-        console.log('Current Longitude:', longitude);
+  const watchId = Geolocation.watchPosition(
+    async position => {
+      const latitude = position.coords.latitude;
+      const longitude = position.coords.longitude;
 
-        setCurrentLocation({
-          latitude,
-          longitude,
-        });
-      },
+      console.log('Latitude:', latitude);
+      console.log('Longitude:', longitude);
 
-      error => {
-        console.log('Location Error:', error);
-      },
+      // Ignore very small movement
+      const latDiff = Math.abs(
+        latitude - previousLatitude,
+      );
 
-      {
-        enableHighAccuracy: true,
-        distanceFilter: 5,
-        interval: 3000,
-        fastestInterval: 2000,
-      },
-    );
+      const lngDiff = Math.abs(
+        longitude - previousLongitude,
+      );
 
-    return () => {
-      Geolocation.clearWatch(watchId);
-    };
-  }, []);
+      if (latDiff < 0.00005 && lngDiff < 0.00005) {
+        return;
+      }
+
+      // Calculate Heading
+      if (
+        previousLatitude !== 0 &&
+        previousLongitude !== 0
+      ) {
+        const y =
+          Math.sin(
+            (longitude - previousLongitude) *
+              (Math.PI / 180),
+          ) *
+          Math.cos(latitude * (Math.PI / 180));
+
+        const x =
+          Math.cos(previousLatitude * (Math.PI / 180)) *
+            Math.sin(latitude * (Math.PI / 180)) -
+          Math.sin(previousLatitude * (Math.PI / 180)) *
+            Math.cos(latitude * (Math.PI / 180)) *
+            Math.cos(
+              (longitude - previousLongitude) *
+                (Math.PI / 180),
+            );
+
+        let bearing =
+          Math.atan2(y, x) * (180 / Math.PI);
+
+        bearing = (bearing + 360) % 360;
+
+        setHeading(bearing);
+      }
+
+      previousLatitude = latitude;
+      previousLongitude = longitude;
+
+      // Update current location
+      setCurrentLocation({
+        latitude,
+        longitude,
+      });
+
+      // ALWAYS FETCH NEW ROUTE
+      // Route now starts from updated current position
+      await getRoute(
+        latitude,
+        longitude,
+        destinationLocation.latitude,
+        destinationLocation.longitude,
+      );
+    },
+
+    error => {
+      console.log('Location Error:', error);
+    },
+
+    {
+      enableHighAccuracy: true,
+      distanceFilter: 5,
+      interval: 3000,
+      fastestInterval: 2000,
+      showLocationDialog: true,
+      forceRequestLocation: true,
+    },
+  );
+
+  return () => {
+    Geolocation.clearWatch(watchId);
+  };
+}, []);
 
   // Auto Update Route
   useEffect(() => {
@@ -188,16 +250,16 @@ const getRoute = async (
                 onPress={onMapPress}
               >
                 {/* CAMERA */}
-                <Camera
-                  zoom={15}
-                  center={[
-                    currentLocation.longitude,
-                    currentLocation.latitude,
-                  ]}
-                  easing="fly"
-                  duration={1000}
-                />
-
+              <Camera
+                zoom={17}
+                center={[
+                  currentLocation.longitude,
+                  currentLocation.latitude,
+                ]}
+                pitch={60}
+                bearing={heading}
+                duration={1000}
+              />
                 {/* USER LOCATION */}
                 <UserLocation
                   animated={true}
