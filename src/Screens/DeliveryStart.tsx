@@ -5,6 +5,7 @@ import {
   ScrollView,
   PermissionsAndroid,
   Platform,
+  ToastAndroid,
 } from 'react-native';
 
 import {
@@ -25,6 +26,15 @@ import { DeliveryOrderDetails } from '../Models/DeliveryOrderDetails/DeliveryOrd
 
 const DARK_MAP_STYLE = 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json';
 //const DARK_MAP_STYLE = 'https://tiles.openfreemap.org/styles/liberty';
+
+const showLocationToast = (latitude: number, longitude: number) => {
+  if (Platform.OS === 'android') {
+    ToastAndroid.show(
+      `Lat: ${latitude.toFixed(6)}, Lng: ${longitude.toFixed(6)}`,
+      ToastAndroid.SHORT,
+    );
+  }
+};
 
 const simplifyRouteCoordinates = (points: number[][], tolerance = 0.0001) => {
   if (points.length <= 2) {
@@ -170,6 +180,9 @@ export default function DeliveryStart({ route, navigation }: any) {
         latitude,
         longitude,
       });
+
+      // Show current coordinates in a toast on location update
+      showLocationToast(latitude, longitude);
 
       // ALWAYS FETCH NEW ROUTE
       // Route now starts from updated current position
