@@ -23,6 +23,8 @@ import Colors from '../assets/Colors/Colors';
 import GlobalTopBarDelivery from '../GlobalContainer/GlobalTopBarDelivery';
 import { DeliveryOrderDetails } from '../Models/DeliveryOrderDetails/DeliveryOrderDetails';
 
+//Test
+
 export default function DeliveryStart({ route, navigation }: any) {
   const { orderDetail }: { orderDetail: DeliveryOrderDetails } =
     route.params;
