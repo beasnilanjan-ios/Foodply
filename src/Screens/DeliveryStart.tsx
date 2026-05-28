@@ -23,7 +23,66 @@ import Colors from '../assets/Colors/Colors';
 import GlobalTopBarDelivery from '../GlobalContainer/GlobalTopBarDelivery';
 import { DeliveryOrderDetails } from '../Models/DeliveryOrderDetails/DeliveryOrderDetails';
 
-//Test
+const DARK_MAP_STYLE = 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json';
+//const DARK_MAP_STYLE = 'https://tiles.openfreemap.org/styles/liberty';
+
+const simplifyRouteCoordinates = (points: number[][], tolerance = 0.0001) => {
+  if (points.length <= 2) {
+    return points;
+  }
+
+  const getPerpendicularDistance = (
+    point: number[],
+    start: number[],
+    end: number[],
+  ) => {
+    const x0 = point[0];
+    const y0 = point[1];
+    const x1 = start[0];
+    const y1 = start[1];
+    const x2 = end[0];
+    const y2 = end[1];
+
+    const dx = x2 - x1;
+    const dy = y2 - y1;
+    if (dx === 0 && dy === 0) {
+      return Math.sqrt((x0 - x1) ** 2 + (y0 - y1) ** 2);
+    }
+
+    const numerator = Math.abs(
+      dy * x0 - dx * y0 + x2 * y1 - y2 * x1,
+    );
+    const denominator = Math.sqrt(dx * dx + dy * dy);
+    return numerator / denominator;
+  };
+
+  const simplifySection = (startIndex: number, endIndex: number) => {
+    let maxDistance = 0;
+    let index = startIndex;
+
+    for (let i = startIndex + 1; i < endIndex; i += 1) {
+      const distance = getPerpendicularDistance(
+        points[i],
+        points[startIndex],
+        points[endIndex],
+      );
+      if (distance > maxDistance) {
+        index = i;
+        maxDistance = distance;
+      }
+    }
+
+    if (maxDistance > tolerance) {
+      const left = simplifySection(startIndex, index);
+      const right = simplifySection(index, endIndex);
+      return [...left.slice(0, -1), ...right];
+    }
+
+    return [points[startIndex], points[endIndex]];
+  };
+
+  return simplifySection(0, points.length - 1);
+};
 
 export default function DeliveryStart({ route, navigation }: any) {
   const { orderDetail }: { orderDetail: DeliveryOrderDetails } =
@@ -31,8 +90,8 @@ export default function DeliveryStart({ route, navigation }: any) {
 
   // Destination Location
   const [destinationLocation, setDestinationLocation] = useState({
-    latitude: orderDetail.delivery.latestLocation.latitude || 22.8948,
-    longitude: orderDetail.delivery.latestLocation.longitude || 88.4100,
+    latitude: orderDetail.customer.address.latitude || 22.8948,
+    longitude: orderDetail.customer.address.longitude || 88.4100,
   });
 
   // Current User Location
@@ -200,9 +259,15 @@ const getRoute = async (
           Number(item[1]),
         ]);
 
-      console.log('VALID ROUTE:', validCoordinates);
+      const simplifiedCoordinates = simplifyRouteCoordinates(
+        validCoordinates,
+        0.00008,
+      );
 
-      setRouteCoordinates(validCoordinates);
+      console.log('VALID ROUTE:', validCoordinates);
+      console.log('SIMPLIFIED ROUTE:', simplifiedCoordinates);
+
+      setRouteCoordinates(simplifiedCoordinates);
     }
   } catch (error) {
     console.log('Route Error:', error);
@@ -244,32 +309,24 @@ const getRoute = async (
           {/* MAP CARD */}
           <View style={styles.card}>
             <View style={styles.mapContainer}>
-             <Map
+              <Map
                 style={styles.map}
-                mapStyle="https://tiles.stadiamaps.com/styles/alidade_smooth_dark.json"
+                mapStyle={DARK_MAP_STYLE}
                 logo={false}
-                compass={false}
-                onPress={onMapPress}
+                compass={true}
               >
-                {/* NAVIGATION CAMERA */}
-                <Camera
-                  zoom={16}
-                  center={[
-                    currentLocation.longitude,
-                    currentLocation.latitude,
-                  ]}
-                  pitch={65}
-                  bearing={heading}
-                  duration={1200}
-                  padding={{
-                    paddingTop: 350,
-                    paddingBottom: 120,
-                    paddingLeft: 50,
-                    paddingRight: 50,
-                  }}
-                />
-
-                {/* BLUE USER DOT */}
+                {/* CAMERA */}
+              <Camera
+                zoom={16}
+                center={[
+                  currentLocation.longitude,
+                  currentLocation.latitude,
+                ]}
+                pitch={60}
+                bearing={heading}
+                duration={1000}
+              />
+                {/* USER LOCATION */}
                 <UserLocation
                   animated={true}
                   accuracy={true}
@@ -282,9 +339,7 @@ const getRoute = async (
                     currentLocation.latitude,
                   ]}
                 >
-                  <View style={styles.currentMarkerOuter}>
-                    <View style={styles.currentMarkerInner} />
-                  </View>
+                  <View style={styles.currentMarker} />
                 </Marker>
 
                 {/* DESTINATION MARKER */}
@@ -297,7 +352,7 @@ const getRoute = async (
                   <View style={styles.destinationMarker} />
                 </Marker>
 
-                {/* NAVIGATION ROUTE */}
+                {/* ROUTE PATH */}
                 {routeCoordinates.length > 1 && (
                   <GeoJSONSource
                     id="routeSource"
@@ -315,28 +370,13 @@ const getRoute = async (
                       ],
                     }}
                   >
-                    {/* ROUTE GLOW */}
-                    <Layer
-                      id="routeGlow"
-                      type="line"
-                      paint={{
-                        'line-color': '#00E5FF',
-                        'line-width': 12,
-                        'line-opacity': 0.25,
-                      }}
-                      layout={{
-                        'line-cap': 'round',
-                        'line-join': 'round',
-                      }}
-                    />
-
-                    {/* MAIN ROUTE */}
                     <Layer
                       id="routeLayer"
                       type="line"
                       paint={{
-                        'line-color': '#00E5FF',
-                        'line-width': 6,
+                        'line-color': '#00FF9D',
+                        'line-width': 5,
+                        'line-opacity': 0.95,
                       }}
                       layout={{
                         'line-cap': 'round',
@@ -393,31 +433,12 @@ const styles = StyleSheet.create({
     borderColor: '#fff',
   },
 
-  
-  currentMarkerOuter: {
-  width: 28,
-  height: 28,
-  borderRadius: 14,
-  backgroundColor: 'rgba(0,229,255,0.25)',
-  justifyContent: 'center',
-  alignItems: 'center',
-},
-
-currentMarkerInner: {
-  width: 16,
-  height: 16,
-  borderRadius: 8,
-  backgroundColor: '#00E5FF',
-  borderWidth: 3,
-  borderColor: '#FFFFFF',
-},
-
-destinationMarker: {
-  width: 22,
-  height: 22,
-  borderRadius: 11,
-  backgroundColor: '#FF3B30',
-  borderWidth: 4,
-  borderColor: '#FFFFFF',
-},
+  destinationMarker: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: 'red',
+    borderWidth: 3,
+    borderColor: '#fff',
+  },
 });

@@ -143,6 +143,10 @@ const App = () => {
           <Stack.Screen
             name="DeliveryOrders"
             component={DeliveryOrders}
+            options={{ animation: 'none' }}
+           
+          />
+          <Stack.Screen
             name="Cart"
             component={Cart}
             options={{ animation: 'none' }}
@@ -161,17 +165,10 @@ const App = () => {
             options={{ animation: 'none' }}
            
           />
-           <Stack.Screen
+          <Stack.Screen
             name="DeliveryDashboard"
             component={DeliveryDashboard}
             options={{ animation: 'none' }}
-           
-          />
-          <Stack.Screen
-            name="DeliveryOrders"
-            component={DeliveryOrders}
-            options={{ animation: 'none' }}
-           
           />
           <Stack.Screen
             name="DeliveryProfile"
