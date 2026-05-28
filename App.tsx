@@ -13,6 +13,12 @@ import Orders from './src/Screens/Orders';
 import DrawerScreenContainer from './src/GlobalContainer/DrawerScreenContainer';
 import ViewAll from './src/Screens/ViewAll';
 import GlobalLoginAuth from './src/GlobalContainer/GlobalLoginAuth'; // ✅ ADD THIS
+import DeliveryDashboard from './src/Screens/DeliveryDashboard';
+import DeliveryOrders from './src/Screens/DeliveryOrder';
+import DeliveryProfile from './src/Screens/DeliveryProfile';
+import DeliveryOrderDetail from './src/Screens/DeliveryOrderDetail';
+import { DeliveryOrderDetails } from './src/Models/DeliveryOrderDetails/DeliveryOrderDetails';
+import DeliveryStart from './src/Screens/DeliveryStart';
 import MenuDetails from './src/Screens/MenuDetails';
 import Cart from './src/Screens/Cart';
 import Address from './src/Screens/DeliveryAddress'; 
@@ -43,9 +49,15 @@ const App = () => {
     const checkAuth = async () => {
       try {
         await GlobalLoginAuth.loadAuthData();
-
+        console.log('role', GlobalLoginAuth.user?.role);
         if (GlobalLoginAuth.accessToken) {
+          if (GlobalLoginAuth.user?.role === 'customer') {    
           setInitialRoute('Dashboard'); // ✅ go directly to dashboard
+          } else if (GlobalLoginAuth.user?.role === 'delivery_boy') {
+            setInitialRoute('DeliveryDashboard'); // ✅ go directly to delivery dashboard 
+          } else {
+            setInitialRoute('Banner'); // ✅ normal flow for logout users or other roles
+          }
         } else {
           setInitialRoute('Banner'); // ✅ normal flow
          // setInitialRoute('Dashboard');
@@ -124,6 +136,8 @@ const App = () => {
            
           />
           <Stack.Screen
+            name="DeliveryOrders"
+            component={DeliveryOrders}
             name="Cart"
             component={Cart}
             options={{ animation: 'none' }}

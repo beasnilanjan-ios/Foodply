@@ -7,6 +7,7 @@ import {
   Image,
 } from 'react-native';
 import Colors from '../assets/Colors/Colors';
+import GlobalLoginAuth from '../GlobalContainer/GlobalLoginAuth'; // ✅ IMPORT CLEAR FUNCTION
 
 export default function CustomDrawer({ navigation, closeDrawer }: any) {
   const menu = [
@@ -18,6 +19,12 @@ export default function CustomDrawer({ navigation, closeDrawer }: any) {
     { title: 'Help & FAQs', icon: require('../assets/images/Help.png') },
     { title: 'Settings', icon: require('../assets/images/SettingsSideMenu.png') },
   ];
+
+  const logoutClicked = () => {
+    closeDrawer(); // ✅ close drawer first
+    navigation.replace('Login');
+    GlobalLoginAuth.clear(); // ✅ then navigate
+  };
 
   return (
     <View style={styles.container}>
@@ -49,7 +56,7 @@ export default function CustomDrawer({ navigation, closeDrawer }: any) {
       ))}
 
       {/* LOGOUT */}
-      <TouchableOpacity style={styles.row}>
+      <TouchableOpacity style={styles.row} onPress={logoutClicked}>
         <View style={styles.iconBox}>
           <Image
             source={require('../assets/images/LogOuticon.png')}

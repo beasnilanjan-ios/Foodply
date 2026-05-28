@@ -133,4 +133,36 @@ const GlobalStyles = StyleSheet.create({
   },
 });
 
+//Dipanjali's Global Styles
+export const DeliveryGlobalStyles = StyleSheet.create({
+icon: {
+    width: 14,
+    height: 14,
+    marginRight: 3,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+iconMedium: {
+    width: 16,
+    height: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  iconLarge: {
+    width: 24,
+    height: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+backLight: {
+    backgroundColor: Colors.lightBackground,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 20,
+    marginLeft: 8,
+  },
+
+});
+
 export default GlobalStyles;
