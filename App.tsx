@@ -20,6 +20,8 @@ import DeliveryOrderDetail from './src/Screens/DeliveryOrderDetail';
 import { DeliveryOrderDetails } from './src/Models/DeliveryOrderDetails/DeliveryOrderDetails';
 import DeliveryStart from './src/Screens/DeliveryStart';
 import MenuDetails from './src/Screens/MenuDetails';
+import Cart from './src/Screens/Cart';
+import Address from './src/Screens/DeliveryAddress'; 
 import OrderConfirmed from './src/Screens/OrderConfirmed'; 
 
 export type RootStackParamList = {
@@ -29,15 +31,15 @@ export type RootStackParamList = {
   Dashboard: { fromTab?: boolean } | undefined;
   Orders: { fromTab?: boolean } | undefined;
   ViewAll: undefined;
+  MenuDetails: undefined; // ✅ ADD THIS
+  Cart: undefined; // ✅ ADD THIS
+  Address: undefined; // ✅ ADD THIS
+  OrderConfirmed: undefined; // ✅ ADD THIS
   DeliveryDashboard: undefined;
   DeliveryOrders: undefined;
   DeliveryProfile: undefined;
   DeliveryOrderDetail: { orderId: string } | undefined;
   DeliveryStart: { orderDetail: DeliveryOrderDetails } | undefined;
-  MenuDetails: undefined; // ✅ ADD THIS
-  Cart: undefined; // ✅ ADD THIS
-  Address: undefined; // ✅ ADD THIS
-  OrderConfirmed: undefined; // ✅ ADD THIS
 };
 
 enableScreens();
@@ -131,10 +133,6 @@ const App = () => {
             options={{ animation: 'none' }}
            
           />
-          <Stack.Screen
-            name="DeliveryDashboard"
-            component={DeliveryDashboard}
-            options={{ animation: 'none' }}/>
 
           <Stack.Screen
             name="MenuDetails"
@@ -147,6 +145,30 @@ const App = () => {
             component={DeliveryOrders}
             options={{ animation: 'none' }}
            
+          />
+          <Stack.Screen
+            name="Cart"
+            component={Cart}
+            options={{ animation: 'none' }}
+           
+          />
+          <Stack.Screen
+            name="Address"
+            component={Address}
+            options={{ animation: 'none' }}
+           
+          />
+          
+          <Stack.Screen
+            name="OrderConfirmed"
+            component={OrderConfirmed}
+            options={{ animation: 'none' }}
+           
+          />
+          <Stack.Screen
+            name="DeliveryDashboard"
+            component={DeliveryDashboard}
+            options={{ animation: 'none' }}
           />
           <Stack.Screen
             name="DeliveryProfile"
@@ -166,14 +188,6 @@ const App = () => {
             name="DeliveryStart"
             component={DeliveryStart}
             options={{ animation: 'none' }}
-           
-          />
-          
-          <Stack.Screen
-            name="OrderConfirmed"
-            component={OrderConfirmed}
-            options={{ animation: 'none' }}
-           
           />
         </Stack.Navigator>
       </NavigationContainer>
