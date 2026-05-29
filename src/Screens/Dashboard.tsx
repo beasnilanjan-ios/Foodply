@@ -307,14 +307,14 @@ export default function Dashboard({ navigation }: any) {
           console.log('Testing API with longitude:', longitude);
 
           const nearbyRestaurantsUrl =
-            `${GlobalApi.baseUrl}api/restaurants/nearby?` +
-            `lat=${latitude}&` +
-            `lng=${longitude}&` +
-            `latitude=${latitude}&` +
-            `longitude=${longitude}&` +
-            'radiusKm=10&' +
-            'page=1&' +
-            'limit=20';
+  `${GlobalApi.baseUrl}api/v1/restaurants/nearby?` +
+  `lat=${latitude}&` +
+  `lng=${longitude}&` +
+  `latitude=${latitude}&` +
+  `longitude=${longitude}&` +
+  `radiusKm=10&` +
+  `limit=20&` +
+  `offset=0`;
 
           console.log('Calling nearby restaurants API:', nearbyRestaurantsUrl);
 
@@ -330,6 +330,7 @@ export default function Dashboard({ navigation }: any) {
               headers.Authorization = `Bearer ${GlobalLoginAuth.accessToken}`;
             }
 
+            console.log('hwader:', headers);
             const response = await fetch(nearbyRestaurantsUrl, {
               method: 'GET',
               headers,
@@ -354,8 +355,8 @@ export default function Dashboard({ navigation }: any) {
               JSON.stringify(nearbyRestaurants, null, 2),
             );
 
-            const restaurantId = nearbyRestaurants.data[0]?.id;
-          // const restaurantId = 1
+           // const restaurantId = nearbyRestaurants.data[0]?.id;
+          const restaurantId = 1
 
             if (!restaurantId) {
               console.log('No nearby restaurant id found');
@@ -365,11 +366,13 @@ export default function Dashboard({ navigation }: any) {
             console.log('Selected restaurant id:', restaurantId);
 
             const restaurantMenuUrl =
-              `${GlobalApi.baseUrl}api/menu/restaurant/${restaurantId}?` +
-              `lat=${latitude}&` +
-              `lng=${longitude}&` +
-              `latitude=${latitude}&` +
-              `longitude=${longitude}`;
+  `${GlobalApi.baseUrl}api/v1/restaurants/${restaurantId}/menu?` +
+  `lat=${latitude}&` +
+  `lng=${longitude}&` +
+  `latitude=${latitude}&` +
+  `longitude=${longitude}&` +   // ✅ FIXED
+  `limit=20&` +
+  `offset=0`;
 
             console.log('Calling restaurant menu API:', restaurantMenuUrl);
 
