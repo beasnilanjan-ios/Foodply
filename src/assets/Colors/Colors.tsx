@@ -16,6 +16,7 @@ const Colors = {
   greenDark: '#54B648',
   tableHeader : '#565A5C',
   textColorLight: '#565A5C',
+  buttonLight: '#FFDECF',
 };
 
 export default Colors;
