@@ -473,8 +473,8 @@ export default function DeliveryStart({
             </Map>
 
 
-               {/* FLOATING CARD */}
-               {showDetailsCard ? (
+            {/* FLOATING CARD */}
+            {showDetailsCard ? (
             <View style={styles.card1}>
               {/* USER INFO */}
               <View style={styles.header}>
@@ -508,9 +508,9 @@ export default function DeliveryStart({
                   <View>
                     <Text style={styles.smallLabel}>{orderDetail.items.length} Items • {orderDetail.items.reduce((acc, item) => acc + item.quantity, 0)} Qty</Text>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 }}>
-                      <Text style={styles.smallLabel}>Payment Method</Text>
+                      <Text style={styles.smallLabel}>Payment Status</Text>
                        <View style={styles.codBadge}>
-                          <Text style={styles.codText}>{orderDetail.billing.paymentMethod}</Text>
+                          <Text style={styles.codText}>{orderDetail.billing.paymentStatus}</Text>
                         </View>
                     </View>
                   </View>
@@ -602,7 +602,9 @@ export default function DeliveryStart({
                   <Text style={styles.mapBtnText}>Open in Maps</Text>
                 </TouchableOpacity>
 
-                <TouchableOpacity style={styles.deliverBtn}>
+                <TouchableOpacity style={styles.deliverBtn} onPress={() =>
+                   navigation.replace('DeliveryOtpVerification', { orderDetail: orderDetail })
+                }>
                   <Text style={styles.deliverBtnText}>Order Delivered</Text>
                 </TouchableOpacity>
               </View>
@@ -616,7 +618,7 @@ export default function DeliveryStart({
                     }
                   >
                     <Image
-                      source={require('../assets/images/menu.png')}
+                      source={require('../assets/images/shopping_bag.png')}
                       style={styles.floatingArrow}
                     />
                   </TouchableOpacity>

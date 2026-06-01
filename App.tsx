@@ -23,6 +23,7 @@ import MenuDetails from './src/Screens/MenuDetails';
 import Cart from './src/Screens/Cart';
 import Address from './src/Screens/DeliveryAddress'; 
 import OrderConfirmed from './src/Screens/OrderConfirmed'; 
+import DeliveryOtpVerification from './src/Screens/DeliveryOtpVerification';
 
 export type RootStackParamList = {
   Splash: undefined;
@@ -40,6 +41,7 @@ export type RootStackParamList = {
   DeliveryProfile: undefined;
   DeliveryOrderDetail: { orderId: string } | undefined;
   DeliveryStart: { orderDetail: DeliveryOrderDetails } | undefined;
+  DeliveryOtpVerification: { orderDetail: DeliveryOrderDetails } | undefined; // ✅ ADD THIS
 };
 
 enableScreens();
@@ -189,6 +191,10 @@ const App = () => {
             component={DeliveryStart}
             options={{ animation: 'none' }}
           />
+          <Stack.Screen
+            name="DeliveryOtpVerification"
+            component={DeliveryOtpVerification}
+            options={{ animation: 'none' }}/>
         </Stack.Navigator>
       </NavigationContainer>
     </SafeAreaProvider>

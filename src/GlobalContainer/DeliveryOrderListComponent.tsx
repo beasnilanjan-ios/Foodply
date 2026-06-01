@@ -45,7 +45,7 @@ const OrderCard = ({ item, onPressItem }: { item: AssignedOrder; onPressItem?: (
           </View>
 
           <View style={styles.codBadge}>
-            <Text style={styles.codText}>{item.paymentMethod}</Text>
+            <Text style={styles.codText}>{item.paymentStatus}</Text>
           </View>
 
           <TouchableOpacity style={styles.viewButton} onPress={() => onPressItem?.(item)}>

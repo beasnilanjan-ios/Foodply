@@ -247,7 +247,7 @@ useEffect(() => {
 
                     <View style={styles.codBadge}>
                         <Text style={styles.codText}>
-                        Payment Method: {orderData?.billing?.paymentMethod}
+                        Payment Status: {orderData?.billing?.paymentStatus}
                         </Text>
                     </View>
                     </View>
