@@ -147,6 +147,15 @@ iconMedium: {
     height: 16,
     justifyContent: 'center',
     alignItems: 'center',
+    tintColor: Colors.greenDark,
+  },
+
+  iconMediumTheme: {
+    width: 16,
+    height: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    tintColor: Colors.primary,
   },
 
   iconLarge: {

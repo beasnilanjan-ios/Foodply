@@ -378,7 +378,7 @@ export default function DeliveryStart({
                       {
                         transform: [
                           {
-                            rotate: `${markerHeading - 90}deg`,
+                            rotate: `${markerHeading - 180}deg`,
                           },
                         ],
                       },
@@ -603,7 +603,7 @@ export default function DeliveryStart({
                 </TouchableOpacity>
 
                 <TouchableOpacity style={styles.deliverBtn} onPress={() =>
-                   navigation.replace('DeliveryOtpVerification', { orderDetail: orderDetail })
+                   navigation.navigate('DeliveryOtpVerification', { orderDetail: orderDetail })
                 }>
                   <Text style={styles.deliverBtnText}>Order Delivered</Text>
                 </TouchableOpacity>
