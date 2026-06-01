@@ -39,30 +39,32 @@ const DeliveryOtpVerification = ({ route,
         };
       }, [timer]);
 
-     const handleOtpChange = (text: string, index: number) => {
-        const value = text.replace(/[^0-9]/g, '');
+   const handleOtpChange = (text: string, index: number) => {
+      const value = text.replace(/[^0-9]/g, '');
 
-        const newOtp = [...otp];
-        newOtp[index] = value;
-        setOtp(newOtp);
+      const newOtp = [...otp];
+      newOtp[index] = value;
+      setOtp(newOtp);
 
-        // Move to next box
-        if (value.length === 1 && index < 3) {
+      // Move to next input
+      if (value !== '' && index < inputRefs.current.length - 1) {
+        setTimeout(() => {
           inputRefs.current[index + 1]?.focus();
-        }
-      };
-
-     const handleKeyPress = (
-      e: any,
-      index: number,
-    ) => {
-      if (e.nativeEvent.key === 'Backspace') {
-        if (otp[index] === '' && index > 0) {
-          inputRefs.current[index - 1]?.focus();
-        }
+        }, 100);
       }
     };
 
+    const handleKeyPress = (e: any, index: number) => {
+      if (e.nativeEvent.key === 'Backspace') {
+        if (otp[index] === '' && index > 0) {
+          const previousIndex = index - 1;
+
+          setTimeout(() => {
+            inputRefs.current[previousIndex]?.focus();
+          }, 100);
+        }
+      }
+    };
     const formatTime = (seconds: number) => {
       const mins = Math.floor(seconds / 60);
       const secs = seconds % 60;
@@ -213,18 +215,29 @@ const DeliveryOtpVerification = ({ route,
                       ref={(ref) => {
                         inputRefs.current[index] = ref;
                       }}
-                      style={styles.otpBox}
+                      style={[
+                        styles.otpBox,
+                        !(index === 0 || otp[index - 1] !== '') && {
+                          backgroundColor: '#EFEFEF',
+                          borderColor: '#E0E0E0',
+                        },
+                      ]}
                       value={value}
                       keyboardType="number-pad"
                       maxLength={1}
                       textAlign="center"
-                      onChangeText={(text) =>
-                        handleOtpChange(text, index)
-                      }
-                      onKeyPress={(e) =>
-                        handleKeyPress(e, index)
-                      }
-                      returnKeyType="next"
+                      editable={
+                          index === 0
+                            ? otp[1] === ''
+                            : index === 1
+                            ? otp[2] === '' && otp[0] !== ''
+                            : index === 2
+                            ? otp[3] === '' && otp[1] !== ''
+                            : otp[2] !== ''
+                        }
+                      onChangeText={(text) => handleOtpChange(text, index)}
+                      onKeyPress={(e) => handleKeyPress(e, index)}
+                      selectTextOnFocus
                     />
                   ))}
                 </View>

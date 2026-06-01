@@ -22,3 +22,15 @@ export const getTimeAgo = (minutesAgo: number): string => {
 export const ASSIGNED = 'ASSIGNED';
 export const ON_THE_WAY = 'ON_THE_WAY';
 export const DELIVERED = 'DELIVERED';
+
+export const getGreeting = () => {
+  const hour = new Date().getHours();
+
+  if (hour < 12) {
+    return 'Good Morning';
+  } else if (hour < 17) {
+    return 'Good Afternoon';
+  } else {
+    return 'Good Evening';
+  }
+};

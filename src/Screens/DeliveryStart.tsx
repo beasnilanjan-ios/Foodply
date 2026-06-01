@@ -378,7 +378,7 @@ export default function DeliveryStart({
                       {
                         transform: [
                           {
-                            rotate: `${markerHeading - 180}deg`,
+                            rotate: `${markerHeading - (230 * 1)}deg`,
                           },
                         ],
                       },
@@ -672,8 +672,6 @@ const styles = StyleSheet.create({
   deliveryIcon: {
     width: 42,
     height: 42,
-
-    // REMOVE THIS IF IMAGE ALREADY ORANGE
     tintColor: Colors.primary,
   },
 

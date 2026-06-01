@@ -21,6 +21,7 @@ import { DeliveryDashboardResponse }  from '../Models/DeliveryDasboard/DeliveryD
 import { AssignedOrder } from '../Models/DeliveryDasboard/AssignedOrder';
 import { DashboardData } from '../Models/DeliveryDasboard/DashboardData';
 import GlobalLoader from '../GlobalContainer/GlobalLoader';
+import { getGreeting } from '../Utils/CommonUtil';
 
 const { width, height } = Dimensions.get('window');
 const isTablet = Math.min(width, height) >= 600;
@@ -83,7 +84,7 @@ export default function DeliveryDashboard({ navigation }: any) {
         navigation={navigation}
         notificationClick={() => {}}
         text={GlobalLoginAuth.user.name}
-        subtitleText="Good Morning"
+        subtitleText={getGreeting()}
         isBackVisible={false}
         isOnlineVisible={true}
       />
