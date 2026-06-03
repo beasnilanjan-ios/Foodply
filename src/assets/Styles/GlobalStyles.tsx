@@ -1,13 +1,122 @@
 import { StyleSheet } from 'react-native';
 import Colors from '../Colors/Colors';
 
+export const FontStyles = {
+  regular: 'LeagueSpartan-Regular',
+  medium: 'LeagueSpartan-Medium',
+  semiBold: 'LeagueSpartan-SemiBold',
+  bold: 'LeagueSpartan-Bold',
+  light: 'LeagueSpartan-Light',
+};
+
+export const GlobalColors = Colors;
+
 const GlobalStyles = StyleSheet.create({
+  screenBackgroundPrimary: {
+    flex: 1,
+    backgroundColor: Colors.primary,
+  },
+
+  screenCenter: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  pageHeaderTitle: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: Colors.white,
+    fontFamily: FontStyles.bold,
+  },
+
+  overlayCard: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: Colors.white,
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
+    padding: 16,
+  },
+
+  buttonPrimary: {
+    backgroundColor: Colors.primary,
+    borderRadius: 30,
+    paddingVertical: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  buttonPrimaryText: {
+    color: Colors.white,
+    fontSize: 16,
+    fontFamily: FontStyles.semiBold,
+  },
+
+  textWhite: {
+    color: Colors.white,
+  },
+
+  textMuted: {
+    color: Colors.gray,
+  },
+
+  textPrimary: {
+    color: Colors.textColor,
+  },
+
+  iconButtonWhite: {
+    width: 26,
+    height: 26,
+    backgroundColor: Colors.white,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 10,
+  },
+
+  searchInput: {
+    flex: 1,
+    height: 40,
+    backgroundColor: Colors.searchBackground,
+    borderRadius: 25,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+  },
+
+  searchTextMuted: {
+    color: Colors.muted,
+    fontSize: 14,
+    fontFamily: FontStyles.regular,
+  },
+
+  filterButton: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: Colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 'auto',
+  },
+
+  backdropDim: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    backgroundColor: Colors.overlayBackdrop,
+  },
+
   formLabelLarge: {
     fontSize: 20,
     fontWeight: '400',
     color: Colors.black,
     marginTop: 20,
-    fontFamily: 'LeagueSpartan-Medium',
+    fontFamily: FontStyles.medium,
     marginLeft: 0,
   },
 
@@ -17,11 +126,11 @@ const GlobalStyles = StyleSheet.create({
     height: 45,
     marginTop: 0,
     borderRadius: 15,
-    backgroundColor: '#FAF0C8',
+    backgroundColor: Colors.inputBackground,
     paddingHorizontal: 10,
     fontSize: 18,
-    fontFamily: 'LeagueSpartan-Medium',
-    color: '#111',
+    fontFamily: FontStyles.medium,
+    color: Colors.black,
   },
 
   formTextInputWithRightIcon: {
@@ -73,7 +182,7 @@ const GlobalStyles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+    backgroundColor: Colors.loaderOverlay,
   },
 
   loaderBox: {

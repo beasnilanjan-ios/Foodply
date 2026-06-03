@@ -13,12 +13,23 @@ export default function CustomDrawer({ navigation, closeDrawer }: any) {
   const menu = [
     { title: 'My Orders', icon: require('../assets/images/MyOrder.png') },
     { title: 'My Profile', icon: require('../assets/images/MyProfileSide.png') },
-    { title: 'Delivery Address', icon: require('../assets/images/Deliver_Boy_Icon.png') },
+    {
+      title: 'Delivery Address',
+      icon: require('../assets/images/Deliver_Boy_Icon.png'),
+      route: 'DeliveryAddressList',
+    },
     { title: 'Payment Methods', icon: require('../assets/images/Payments.png') },
     { title: 'Contact Us', icon: require('../assets/images/Contacts.png') },
     { title: 'Help & FAQs', icon: require('../assets/images/Help.png') },
     { title: 'Settings', icon: require('../assets/images/SettingsSideMenu.png') },
   ];
+
+  const handleMenuPress = (item: { title: string; route?: string }) => {
+    closeDrawer();
+    if (item.route) {
+      navigation.navigate(item.route);
+    }
+  };
 
   const logoutClicked = () => {
     closeDrawer(); // ✅ close drawer first
@@ -44,7 +55,10 @@ export default function CustomDrawer({ navigation, closeDrawer }: any) {
       {/* MENU */}
       {menu.map((item, index) => (
         <View key={index}>
-          <TouchableOpacity style={styles.row}>
+          <TouchableOpacity
+            style={styles.row}
+            onPress={() => handleMenuPress(item)}
+          >
             <View style={styles.iconBox}>
               <Image source={item.icon} style={styles.icon} />
             </View>

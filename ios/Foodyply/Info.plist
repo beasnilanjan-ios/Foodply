@@ -34,25 +34,30 @@
   <key>LSRequiresIPhoneOS</key>
   <true/>
 
-  <!-- App Transport Security -->
+  <!-- ✅ App Transport Security (UPDATED CORRECTLY) -->
   <key>NSAppTransportSecurity</key>
   <dict>
     <key>NSAllowsArbitraryLoads</key>
-    <true/>
-    <key>NSAllowsLocalNetworking</key>
-    <true/>
+    <false/>
+    <key>NSExceptionDomains</key>
+    <dict>
+      <key>182.73.216.93</key>
+      <dict>
+        <key>NSIncludesSubdomains</key>
+        <true/>
+        <key>NSExceptionAllowsInsecureHTTPLoads</key>
+        <true/>
+      </dict>
+    </dict>
   </dict>
 
   <key>NSLocalNetworkUsageDescription</key>
   <string>Foodyply needs local network access to connect to the development API server.</string>
 
-  <!-- ✅ LOCATION PERMISSIONS -->
-
-  <!-- Foreground Location -->
+  <!-- LOCATION PERMISSIONS -->
   <key>NSLocationWhenInUseUsageDescription</key>
   <string>Foodyply uses your location to show nearby restaurants and delivery options.</string>
 
-  <!-- Background Location (only needed if tracking deliveries/live location) -->
   <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
   <string>Foodyply uses your location to provide real-time delivery tracking even when the app is in the background.</string>
 

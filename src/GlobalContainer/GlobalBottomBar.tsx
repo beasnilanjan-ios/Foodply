@@ -64,10 +64,14 @@ export default function GlobalBottomBar({ navigation, activeTab }: any) {
       {/* FAVORITES */}
       <TouchableOpacity
         style={styles.tabItem}
-        onPress={() => navigation.navigate('Favorites')}
+        onPress={() => navigation.navigate('Favorites', { fromTab: true })}
       >
         <Image
-          source={require('../assets/images/FavouritesNavBar.png')}
+           source={
+            activeTab === 'Favorites'
+              ? require('../assets/images/FavoritesNavBarSelect.png') // you can change to active icon if you have
+              : require('../assets/images/FavoritesNavBar.png')
+          }
           style={[
             styles.icon,
             activeTab === 'Favorites' && styles.activeIcon
@@ -79,17 +83,22 @@ export default function GlobalBottomBar({ navigation, activeTab }: any) {
             activeTab === 'Favorites' && styles.activeText
           ]}
         >
-          Favorites
+          ReOreder
         </Text>
       </TouchableOpacity>
 
       {/* MY ORDERS */}
       <TouchableOpacity
         style={styles.tabItem}
-        onPress={() => navigation.navigate('MyOrders')}
+        onPress={() => navigation.navigate('Trackorder',{ fromTab: true })}
       >
         <Image
-          source={require('../assets/images/MyOrdersNavBar.png')}
+          
+          source={
+            activeTab === 'MyOrders'
+              ? require('../assets/images/MyOrdersNavBarSelect.png') // you can change to active icon if you have
+              : require('../assets/images/MyOrdersNavBar.png')
+          }
           style={[
             styles.icon,
             activeTab === 'MyOrders' && styles.activeIcon
@@ -101,29 +110,34 @@ export default function GlobalBottomBar({ navigation, activeTab }: any) {
             activeTab === 'MyOrders' && styles.activeText
           ]}
         >
-          My Orders
+         Track Order
         </Text>
       </TouchableOpacity>
 
       {/* SUPPORT */}
       <TouchableOpacity
         style={styles.tabItem}
-        onPress={() => navigation.navigate('Support')}
+        onPress={() => navigation.navigate('Cart',{ fromTab: true })}
       >
         <Image
-          source={require('../assets/images/SupportNavBar.png')}
+         
+           source={
+            activeTab === 'Cart'
+              ? require('../assets/images/SupportNavBarSelect.png') // you can change to active icon if you have
+              : require('../assets/images/SupportNavBar.png')
+          }
           style={[
             styles.icon,
-            activeTab === 'Support' && styles.activeIcon
+            activeTab === 'Cart' && styles.activeIcon
           ]}
         />
         <Text
           style={[
             styles.tabText,
-            activeTab === 'Support' && styles.activeText
+            activeTab === 'Cart' && styles.activeText
           ]}
         >
-          Support
+          Cart
         </Text>
       </TouchableOpacity>
 

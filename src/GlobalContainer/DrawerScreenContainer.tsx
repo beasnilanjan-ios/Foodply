@@ -2,6 +2,7 @@ import React, { ReactNode, useMemo, useState } from 'react';
 import { PanResponder, Pressable, StyleSheet, View } from 'react-native';
 
 import CustomDrawer from './CustomDrawer';
+import GlobalStyles from '../assets/Styles/GlobalStyles';
 
 type DrawerScreenContainerProps = {
   navigation: any;
@@ -38,13 +39,15 @@ export default function DrawerScreenContainer({
   );
 
   return (
-    <View style={styles.container} {...swipeResponder.panHandlers}>
+    <View style={styles.container}>
       {children(drawerNavigation)}
+
+      <View style={styles.swipeEdge} {...swipeResponder.panHandlers} />
 
       {open && (
         <View style={styles.drawerLayer}>
           <Pressable
-            style={styles.backdrop}
+            style={GlobalStyles.backdropDim}
             onPress={() => setOpen(false)}
           />
           <View style={styles.drawer}>
@@ -86,5 +89,14 @@ const styles = StyleSheet.create({
   drawer: {
     width: 300,
     height: '100%',
+  },
+
+  swipeEdge: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    bottom: 0,
+    width: 35,
+    zIndex: 10,
   },
 });

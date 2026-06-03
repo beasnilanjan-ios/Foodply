@@ -24,21 +24,27 @@ import Cart from './src/Screens/Cart';
 import Address from './src/Screens/DeliveryAddress'; 
 import OrderConfirmed from './src/Screens/OrderConfirmed'; 
 import DeliveryOtpVerification from './src/Screens/DeliveryOtpVerification';
+import Favorites from './src/Screens/Favorites'; // adjust path if needed
+import Trackorder from './src/Screens/Trackorder';
+import DeliveryAddressList from './src/Screens/DeliveryAddressList';
 
 export type RootStackParamList = {
   Splash: undefined;
   Banner: undefined;
   Login: undefined;
+  DeliveryAddressList: undefined
   Dashboard: { fromTab?: boolean } | undefined;
   Orders: { fromTab?: boolean } | undefined;
+  Favorites: { fromTab?: boolean } | undefined;
   ViewAll: undefined;
+  Trackorder: undefined;
   MenuDetails: undefined; // ✅ ADD THIS
   Cart: undefined; // ✅ ADD THIS
   Address: undefined; // ✅ ADD THIS
   OrderConfirmed: undefined; // ✅ ADD THIS
   DeliveryDashboard: undefined;
   DeliveryOrders: undefined;
-  DeliveryProfile: undefined;
+  DeliveryProfile: undefined; 
   DeliveryOrderDetail: { orderId: string } | undefined;
   DeliveryStart: { orderDetail: DeliveryOrderDetails } | undefined;
   DeliveryOtpVerification: { orderDetail: DeliveryOrderDetails } | undefined; // ✅ ADD THIS
@@ -124,7 +130,10 @@ const App = () => {
             {props => (
               <DrawerScreenContainer navigation={props.navigation}>
                 {drawerNavigation => (
-                  <Orders navigation={drawerNavigation} />
+                  <Orders
+                    navigation={drawerNavigation}
+                    onMenuPress={() => drawerNavigation.openDrawer?.()}
+                  />
                 )}
               </DrawerScreenContainer>
             )}
@@ -132,6 +141,12 @@ const App = () => {
           <Stack.Screen
             name="ViewAll"
             component={ViewAll}
+            options={{ animation: 'none' }}
+           
+          />
+          <Stack.Screen
+            name="Trackorder"
+            component={Trackorder}
             options={{ animation: 'none' }}
            
           />
@@ -159,6 +174,11 @@ const App = () => {
             component={Address}
             options={{ animation: 'none' }}
            
+          />
+          <Stack.Screen
+            name="DeliveryAddressList"
+            component={DeliveryAddressList}
+            options={{ animation: 'none' }}
           />
           
           <Stack.Screen
@@ -194,7 +214,20 @@ const App = () => {
           <Stack.Screen
             name="DeliveryOtpVerification"
             component={DeliveryOtpVerification}
-            options={{ animation: 'none' }}/>
+            options={{ animation: 'none' }}
+          />
+          <Stack.Screen
+            name="Favorites"
+            options={{ animation: 'none' }}
+          >
+            {props => (
+              <DrawerScreenContainer navigation={props.navigation}>
+                {drawerNavigation => (
+                  <Favorites navigation={drawerNavigation} />
+                )}
+              </DrawerScreenContainer>
+            )}
+          </Stack.Screen>
         </Stack.Navigator>
       </NavigationContainer>
     </SafeAreaProvider>
