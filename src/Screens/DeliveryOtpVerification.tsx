@@ -1,25 +1,166 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, TextInput } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, TextInput, Alert } from 'react-native';
 import Colors from '../assets/Colors/Colors';
 import GlobalTopBarDelivery from '../GlobalContainer/GlobalTopBarDelivery';
-import GlobalLoginAuth from '../GlobalContainer/GlobalLoginAuth';
 import { DeliveryOrderDetails } from '../Models/DeliveryOrderDetails/DeliveryOrderDetails';
 import { DeliveryGlobalStyles } from '../assets/Styles/GlobalStyles';
 import { FontFamily } from '../assets/GlobalFont/GlobalFont';
-
+import GlobalLoginAuth from '../GlobalContainer/GlobalLoginAuth';
+import GlobalApi from '../GlobalContainer/GlobalApi';
+import { SendOtpResponse } from '../Models/SendOTP/SendOtpResponse ';
+import GlobalLoader from '../GlobalContainer/GlobalLoader';
+import { DELIVERED, ON_THE_WAY } from '../Utils/CommonUtil';
+import { DeliveryOrderDetailsResponse } from '../Models/DeliveryOrderDetails/DeliveryOrderDetailsResponse';
 
 const DeliveryOtpVerification = ({ route,
   navigation, }: any) => {
      const {
         orderDetail,
+        otp: otpFromStartScreen,
       }: {
         orderDetail: DeliveryOrderDetails;
+        otp: string;
       } = route.params;
 
       const [otp, setOtp] = useState(['', '', '', '']);
       const inputRefs = useRef<Array<TextInput | null>>([]);
       const [timer, setTimer] = useState(60);
       const [canResend, setCanResend] = useState(false);
+      const [loading, setLoading] = useState(false);
+      const [generatedOtp, setGeneratedOtp] = useState(otpFromStartScreen); // ✅ Store OTP from previous screen
+
+      const sendOTP = async () => {
+              try {
+                setLoading(true);
+                console.log('Fetching dashboard data with token:', GlobalLoginAuth.refreshToken);
+                const response = await fetch(
+                  `${GlobalApi.baseUrl}api/deliveries/me/orders/${orderDetail?.order.id}/send-otp`,
+                  {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json',
+                      Authorization: `Bearer ${GlobalLoginAuth.accessToken}`,
+                    },
+                  }
+                );
+          
+                const result = await response.json();
+                const SendOtpResponse = result as SendOtpResponse; // ✅ Type assertion to ensure it matches our model
+          
+                console.log('Generate OTP Response:', result);
+          
+                if (!response.ok) {
+                  Alert.alert('FoodyPly', result.message || 'Failed to load dashboard');
+                  return;
+                }
+          
+                if (SendOtpResponse.success) {
+                  console.log('OTP sent successfully:', SendOtpResponse.data.otp);
+                  setGeneratedOtp(SendOtpResponse.data.otp); // ✅ Store the generated OTP in state
+                }
+      
+              } catch (error) {
+                console.log(error);
+                Alert.alert('FoodyPly', 'Unable to connect to server');
+              } finally {
+                setLoading(false);
+              }
+            };
+
+      const checkOtp = () => {
+        const enteredOtp = otp.join('');
+        console.log('Entered OTP:', enteredOtp);
+        console.log('Generated OTP:', generatedOtp); // ✅ Log the generated OTP for debugging   
+        if (enteredOtp === generatedOtp) {
+          //Alert.alert('Success', 'OTP Verified! Delivery Completed.');
+          // Here you can also call an API to update delivery status to "delivered"
+          updateOrderStatus(orderDetail.order.id, DELIVERED);
+        } else {
+          Alert.alert('Error', 'Incorrect OTP. Please try again.');
+        } 
+      };   
+
+       const updateOrderStatus = async (
+          orderId: number,
+          status: string,
+          ) => {
+      
+          try {
+      
+              setLoading(true);
+      
+              const response = await fetch(
+              `${GlobalApi.baseUrl}api/deliveries/me/orders/${orderId}/status`,
+              {
+                  method: 'PATCH',
+                  headers: {
+                  'Content-Type': 'application/json',
+                  Authorization: `Bearer ${GlobalLoginAuth.accessToken}`,
+                  },
+                  body: JSON.stringify({
+                  status: status,
+                  }),
+              }
+              );
+      
+              const result: DeliveryOrderDetailsResponse =
+                      await response.json();
+      
+            console.log('Order Details:', result);
+      
+              console.log('Status Update Response:', result);
+      
+              if (!response.ok || !result.success) {
+      
+              Alert.alert(
+                  'FoodyPly',
+                  result.message || 'Failed to update status'
+              );
+      
+              return;
+              }
+      
+             if(result.data.delivery.status === DELIVERED) {
+                deliverSuccessfully();
+            }
+          } catch (error) {
+      
+              console.log(error);
+      
+              Alert.alert(
+              'FoodyPly',
+              'Unable to connect to server'
+              );
+      
+          } finally {
+              setLoading(false);
+          }
+      };
+
+      const deliverSuccessfully = () => {
+        Alert.alert(
+        'FoodyPly',
+        'Order delivered successfully.',
+        [
+          {
+            text: 'OK',
+            onPress: () => {
+              navigation.reset({
+                index: 0,
+                routes: [
+                  {
+                    name: 'DeliveryDashboard',
+                  },
+                ],
+              });
+            },
+          },
+        ],
+        {
+          cancelable: false,
+        }
+      );
+      }
 
      useEffect(() => {
         let interval: NodeJS.Timeout;
@@ -117,6 +258,7 @@ const DeliveryOtpVerification = ({ route,
           }
 
       // Call Resend OTP API here
+      sendOTP()
 
       setTimer(60);
       setCanResend(false);
@@ -314,7 +456,7 @@ const DeliveryOtpVerification = ({ route,
                   </Text>
                 )}
 
-                <TouchableOpacity style={styles.verifyButton}>
+                <TouchableOpacity style={styles.verifyButton} onPress={checkOtp}>
                   <Text style={styles.verifyButtonText}>
                     Verify & Complete Delivery
                   </Text>
@@ -322,6 +464,7 @@ const DeliveryOtpVerification = ({ route,
               </View>
             </ScrollView>
       </View>
+      <GlobalLoader visible={loading} />
     </View>
     );
 }

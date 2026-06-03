@@ -7,6 +7,7 @@ import {
   Image,
   Text,
   TouchableOpacity,
+  Alert,
 } from 'react-native';
 
 import {
@@ -24,6 +25,11 @@ import Colors from '../assets/Colors/Colors';
 import GlobalTopBarDelivery from '../GlobalContainer/GlobalTopBarDelivery';
 import { DeliveryOrderDetails } from '../Models/DeliveryOrderDetails/DeliveryOrderDetails';
 import { FontFamily } from '../assets/GlobalFont/GlobalFont';
+import GlobalLoginAuth from '../GlobalContainer/GlobalLoginAuth';
+import GlobalApi from '../GlobalContainer/GlobalApi';
+import { DeliveryDashboardResponse } from '../Models/DeliveryDasboard/DeliveryDashboardResponse';
+import GlobalLoader from '../GlobalContainer/GlobalLoader';
+import { SendOtpResponse } from '../Models/SendOTP/SendOtpResponse ';
 
 const DARK_MAP_STYLE =
   'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json';
@@ -38,6 +44,7 @@ export default function DeliveryStart({
     orderDetail: DeliveryOrderDetails;
   } = route.params;
 
+  const [loading, setLoading] = useState(false);
   const [showDetailsCard, setShowDetailsCard] =
   useState(true);
 
@@ -380,6 +387,44 @@ export default function DeliveryStart({
       ];
     };
 
+     const sendOTP = async () => {
+        try {
+          setLoading(true);
+          console.log('Fetching dashboard data with token:', GlobalLoginAuth.refreshToken);
+          const response = await fetch(
+            `${GlobalApi.baseUrl}api/deliveries/me/orders/${orderDetail?.order.id}/send-otp`,
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${GlobalLoginAuth.accessToken}`,
+              },
+            }
+          );
+    
+          const result = await response.json();
+          const SendOtpResponse = result as SendOtpResponse; // ✅ Type assertion to ensure it matches our model
+    
+          console.log('Generate OTP Response:', result);
+    
+          if (!response.ok) {
+            Alert.alert('FoodyPly', result.message || 'Failed to load dashboard');
+            return;
+          }
+    
+          if (SendOtpResponse.success) {
+            console.log('OTP sent successfully:', SendOtpResponse.data.otp);
+            navigation.navigate('DeliveryOtpVerification', { orderDetail: orderDetail, otp: SendOtpResponse.data.otp });
+          }
+
+        } catch (error) {
+          console.log(error);
+          Alert.alert('FoodyPly', 'Unable to connect to server');
+        } finally {
+          setLoading(false);
+        }
+      };
+
   return (
     <View style={styles.container}>
       <GlobalTopBarDelivery
@@ -656,7 +701,7 @@ export default function DeliveryStart({
                 </TouchableOpacity>
 
                 <TouchableOpacity style={styles.deliverBtn} onPress={() =>
-                   navigation.navigate('DeliveryOtpVerification', { orderDetail: orderDetail })
+                  sendOTP()
                 }>
                   <Text style={styles.deliverBtnText}>Order Delivered</Text>
                 </TouchableOpacity>
@@ -679,6 +724,7 @@ export default function DeliveryStart({
           </View>
         </View>
       </View>
+      <GlobalLoader visible={loading} />
     </View>
   );
 }

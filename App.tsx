@@ -41,7 +41,7 @@ export type RootStackParamList = {
   DeliveryProfile: undefined;
   DeliveryOrderDetail: { orderId: string } | undefined;
   DeliveryStart: { orderDetail: DeliveryOrderDetails } | undefined;
-  DeliveryOtpVerification: { orderDetail: DeliveryOrderDetails } | undefined; // ✅ ADD THIS
+  DeliveryOtpVerification: { orderDetail: DeliveryOrderDetails, otp: string } | undefined; // ✅ ADD THIS
 };
 
 enableScreens();
