@@ -289,10 +289,24 @@ export default function DeliveryStart({
                 );
 
               // CAMERA ROTATION
-              setCameraHeading(bearing);
+              setCameraHeading(prev => {
+                let diff = bearing - prev;
+
+                if (diff > 180) diff -= 360;
+                if (diff < -180) diff += 360;
+
+                return prev + diff * 0.15;
+              });
 
               // SCOOTER ROTATION
-              setMarkerHeading(bearing);
+              setMarkerHeading(prev => {
+                let diff = bearing - prev;
+
+                if (diff > 180) diff -= 360;
+                if (diff < -180) diff += 360;
+
+                return prev + diff * 0.25;
+              });
             }
           }
 
@@ -329,6 +343,43 @@ export default function DeliveryStart({
     };
   }, []);
 
+  const getForwardCoordinate = (
+      latitude: number,
+      longitude: number,
+      bearing: number,
+      distanceMeters: number,
+    ): [number, number] => {
+      const R = 6378137;
+
+      const brng = (bearing * Math.PI) / 180;
+
+      const lat1 = (latitude * Math.PI) / 180;
+      const lon1 = (longitude * Math.PI) / 180;
+
+      const lat2 = Math.asin(
+        Math.sin(lat1) *
+          Math.cos(distanceMeters / R) +
+          Math.cos(lat1) *
+            Math.sin(distanceMeters / R) *
+            Math.cos(brng),
+      );
+
+      const lon2 =
+        lon1 +
+        Math.atan2(
+          Math.sin(brng) *
+            Math.sin(distanceMeters / R) *
+            Math.cos(lat1),
+          Math.cos(distanceMeters / R) -
+            Math.sin(lat1) * Math.sin(lat2),
+        );
+
+      return [
+        (lon2 * 180) / Math.PI,
+        (lat2 * 180) / Math.PI,
+      ];
+    };
+
   return (
     <View style={styles.container}>
       <GlobalTopBarDelivery
@@ -353,13 +404,15 @@ export default function DeliveryStart({
               {currentLocation && (
                 <Camera
                   zoom={17}
-                  center={[
-                    currentLocation.longitude,
-                    currentLocation.latitude,
-                  ]}
-                  pitch={65}
+                  pitch={70}
                   bearing={cameraHeading}
-                  duration={1200}
+                  duration={1000}
+                  center={getForwardCoordinate(
+                    currentLocation.latitude,
+                    currentLocation.longitude,
+                    cameraHeading,
+                    90, // look 90m ahead
+                  )}
                 />
               )}
 
@@ -663,15 +716,15 @@ const styles = StyleSheet.create({
   },
 
   currentMarkerWrapper: {
-    width: 44,
-    height: 44,
-    alignItems: 'center',
+    width: 60,
+    height: 60,
     justifyContent: 'center',
+    alignItems: 'center',
   },
 
   deliveryIcon: {
-    width: 42,
-    height: 42,
+    width: 56,
+    height: 56,
     tintColor: Colors.primary,
   },
 

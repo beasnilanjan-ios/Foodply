@@ -39,30 +39,67 @@ const DeliveryOtpVerification = ({ route,
         };
       }, [timer]);
 
-   const handleOtpChange = (text: string, index: number) => {
+  const handleOtpChange = (text: string, index: number) => {
       const value = text.replace(/[^0-9]/g, '');
+
+      if (!value) {
+        return;
+      }
 
       const newOtp = [...otp];
       newOtp[index] = value;
       setOtp(newOtp);
 
-      // Move to next input
-      if (value !== '' && index < inputRefs.current.length - 1) {
-        setTimeout(() => {
-          inputRefs.current[index + 1]?.focus();
-        }, 100);
+      // Auto move next
+      if (index < 3) {
+        inputRefs.current[index + 1]?.focus();
       }
     };
 
-    const handleKeyPress = (e: any, index: number) => {
-      if (e.nativeEvent.key === 'Backspace') {
-        if (otp[index] === '' && index > 0) {
-          const previousIndex = index - 1;
+   const handleKeyPress = (e: any, index: number) => {
+      if (e.nativeEvent.key !== 'Backspace') {
+        return;
+      }
 
-          setTimeout(() => {
-            inputRefs.current[previousIndex]?.focus();
-          }, 100);
+      const newOtp = [...otp];
+
+      // Current box has value -> remove it
+      if (newOtp[index] !== '') {
+        newOtp[index] = '';
+        setOtp(newOtp);
+
+        requestAnimationFrame(() => {
+          inputRefs.current[index]?.focus();
+        });
+
+        return;
+      }
+
+      // Current box empty -> remove previous value
+      if (index > 0) {
+        newOtp[index - 1] = '';
+        setOtp(newOtp);
+
+        requestAnimationFrame(() => {
+          inputRefs.current[index - 1]?.focus();
+        });
+      }
+    };
+      
+    const handleFocus = (index: number) => {
+      const firstEmpty = otp.findIndex(v => v === '');
+
+      // All filled
+      if (firstEmpty === -1) {
+        if (index !== otp.length - 1) {
+          inputRefs.current[otp.length - 1]?.focus();
         }
+        return;
+      }
+
+      // Force focus to current active position
+      if (index !== firstEmpty) {
+        inputRefs.current[firstEmpty]?.focus();
       }
     };
     const formatTime = (seconds: number) => {
@@ -217,27 +254,25 @@ const DeliveryOtpVerification = ({ route,
                       }}
                       style={[
                         styles.otpBox,
-                        !(index === 0 || otp[index - 1] !== '') && {
-                          backgroundColor: '#EFEFEF',
-                          borderColor: '#E0E0E0',
+                        value !== '' && {
+                          borderColor: Colors.primary,
                         },
                       ]}
                       value={value}
                       keyboardType="number-pad"
                       maxLength={1}
+                      onFocus={() => handleFocus(index)}
+                      onChangeText={(text) =>
+                        handleOtpChange(text, index)
+                      }
+                      onKeyPress={(e) =>
+                        handleKeyPress(e, index)
+                      }
                       textAlign="center"
-                      editable={
-                          index === 0
-                            ? otp[1] === ''
-                            : index === 1
-                            ? otp[2] === '' && otp[0] !== ''
-                            : index === 2
-                            ? otp[3] === '' && otp[1] !== ''
-                            : otp[2] !== ''
-                        }
-                      onChangeText={(text) => handleOtpChange(text, index)}
-                      onKeyPress={(e) => handleKeyPress(e, index)}
+                      blurOnSubmit={false}
                       selectTextOnFocus
+                      cursorColor="transparent"
+                      selectionColor="transparent"
                     />
                   ))}
                 </View>
