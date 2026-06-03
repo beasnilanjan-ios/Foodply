@@ -23,21 +23,27 @@ import MenuDetails from './src/Screens/MenuDetails';
 import Cart from './src/Screens/Cart';
 import Address from './src/Screens/DeliveryAddress'; 
 import OrderConfirmed from './src/Screens/OrderConfirmed'; 
+import Favorites from './src/Screens/Favorites'; // adjust path if needed
+import Trackorder from './src/Screens/Trackorder';
+import DeliveryAddressList from './src/Screens/DeliveryAddressList';
 
 export type RootStackParamList = {
   Splash: undefined;
   Banner: undefined;
   Login: undefined;
+  DeliveryAddressList: undefined
   Dashboard: { fromTab?: boolean } | undefined;
   Orders: { fromTab?: boolean } | undefined;
+  Favorites: { fromTab?: boolean } | undefined;
   ViewAll: undefined;
+  Trackorder: undefined;
   MenuDetails: undefined; // ✅ ADD THIS
   Cart: undefined; // ✅ ADD THIS
   Address: undefined; // ✅ ADD THIS
   OrderConfirmed: undefined; // ✅ ADD THIS
   DeliveryDashboard: undefined;
   DeliveryOrders: undefined;
-  DeliveryProfile: undefined;
+  DeliveryProfile: undefined; 
   DeliveryOrderDetail: { orderId: string } | undefined;
   DeliveryStart: { orderDetail: DeliveryOrderDetails } | undefined;
 };
@@ -133,6 +139,12 @@ const App = () => {
             options={{ animation: 'none' }}
            
           />
+          <Stack.Screen
+            name="Trackorder"
+            component={Trackorder}
+            options={{ animation: 'none' }}
+           
+          />
 
           <Stack.Screen
             name="MenuDetails"
@@ -157,6 +169,11 @@ const App = () => {
             component={Address}
             options={{ animation: 'none' }}
            
+          />
+          <Stack.Screen
+            name="DeliveryAddressList"
+            component={DeliveryAddressList}
+            options={{ animation: 'none' }}
           />
           
           <Stack.Screen
@@ -187,6 +204,12 @@ const App = () => {
           <Stack.Screen
             name="DeliveryStart"
             component={DeliveryStart}
+            options={{ animation: 'none' }}
+          />
+
+          <Stack.Screen
+            name="Favorites"
+            component={Favorites}
             options={{ animation: 'none' }}
           />
         </Stack.Navigator>

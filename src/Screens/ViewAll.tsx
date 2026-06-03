@@ -145,6 +145,7 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 28,
     fontWeight: '700',
+    fontFamily: 'LeagueSpartan-Medium',
   },
 
   overlay: {
