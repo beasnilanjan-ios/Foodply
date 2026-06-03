@@ -2,14 +2,15 @@ import React from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import GlobalBackButton from '../GlobalContainer/GlobalBackButton';
 import Colors from '../assets/Colors/Colors';
+import GlobalStyles from '../assets/Styles/GlobalStyles';
 
 export default function DeliveryAddressList({ navigation }: any) {
   return (
-    <View style={styles.container}>
+    <View style={[GlobalStyles.screenBackgroundPrimary, styles.container]}>
       <GlobalBackButton onPress={() => navigation.goBack()} />
-      <Text style={styles.title}>Delivery Address</Text>
+      <Text style={[GlobalStyles.pageHeaderTitle, styles.title]}>Delivery Address</Text>
 
-      <View style={styles.overlay}>
+      <View style={[GlobalStyles.overlayCard, styles.overlay]}>
         <ScrollView showsVerticalScrollIndicator={false}>
           {/* overlay content goes here */}
         </ScrollView>

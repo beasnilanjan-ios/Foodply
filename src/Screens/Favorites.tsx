@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 
 import Colors from '../assets/Colors/Colors';
+import GlobalStyles from '../assets/Styles/GlobalStyles';
 import GlobalBottomBar from '../GlobalContainer/GlobalBottomBar';
 import GlobalTopBar from '../GlobalContainer/GlobalTopBar';
 import DeliveryOrderItemsListComponent from '../GlobalContainer/DeliveryOrderItemsListComponent';
@@ -71,7 +72,7 @@ export default function Favorites({ navigation }: any) {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[GlobalStyles.screenBackgroundPrimary, styles.container]}>
       
       {/* 🔝 TOP BAR */}
       <GlobalTopBar navigation={navigation} />
@@ -82,7 +83,7 @@ export default function Favorites({ navigation }: any) {
       </View>
 
       {/* 🔽 OVERLAY */}
-      <View style={styles.overlay}>
+      <View style={[GlobalStyles.overlayCard, styles.overlay]}>
         
         <ScrollView
           showsVerticalScrollIndicator={false}
@@ -167,7 +168,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     paddingTop: 100,
-    backgroundColor: Colors.primary,
   },
 
   headerContainer: {
@@ -179,13 +179,9 @@ const styles = StyleSheet.create({
   title: {
     fontSize: isTablet ? 40 : 34,
     fontFamily: 'LeagueSpartan-Bold',
-    color: '#fff',
   },
 
   overlay: {
-    position: 'absolute',
-    bottom: 0,
-    width: '100%',
     height:
       Platform.OS === 'ios'
         ? isTablet
@@ -194,9 +190,6 @@ const styles = StyleSheet.create({
         : isTablet
         ? '78%'
         : '92%',
-    backgroundColor: '#fff',
-    borderTopLeftRadius: 30,
-    borderTopRightRadius: 30,
     padding: 20,
   },
 
@@ -258,16 +251,9 @@ const styles = StyleSheet.create({
 
   reorderButton: {
     width: '100%',
-    backgroundColor: Colors.primary,
-    paddingVertical: 16,
-    borderRadius: 30,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
 
   reorderText: {
-    color: '#fff',
-    fontSize: 16,
     fontWeight: '700',
   },
 });

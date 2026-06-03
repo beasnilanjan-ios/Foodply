@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 
 import Colors from '../assets/Colors/Colors';
+import GlobalStyles, { FontStyles } from '../assets/Styles/GlobalStyles';
 
 const { width, height } = Dimensions.get('window');
 const isTablet = Math.min(width, height) >= 600;
@@ -41,7 +42,7 @@ export default function GlobalTopBar({
     <View style={styles.topBar}>
       {showMenu && (
         <TouchableOpacity
-          style={styles.circleButton}
+          style={[styles.circleButton, GlobalStyles.iconButtonWhite]}
           onPress={handleMenuPress}
         >
           <Image
@@ -54,13 +55,14 @@ export default function GlobalTopBar({
       {showSearch && (
         <View
           style={[
+            GlobalStyles.searchInput,
             styles.searchContainer,
             showMenu ? styles.searchWithMenu : styles.searchWithoutMenu,
           ]}
         >
-          <Text style={styles.searchText}>Search</Text>
+          <Text style={GlobalStyles.searchTextMuted}>Search</Text>
 
-          <TouchableOpacity style={styles.filterButton}>
+          <TouchableOpacity style={GlobalStyles.filterButton}>
             <Image
               source={require('../assets/images/Filtericon.png')}
               style={styles.filterIconImage}
@@ -70,21 +72,21 @@ export default function GlobalTopBar({
       )}
 
       <View style={[styles.rightIcons, !showSearch && styles.rightIconsOnly]}>
-        <TouchableOpacity style={styles.smallCircle}>
+        <TouchableOpacity style={[styles.smallCircle, GlobalStyles.iconButtonWhite]}>
           <Image
             source={require('../assets/images/Cart.png')}
             style={styles.menuIcon}
           />
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.smallCircle}>
+        <TouchableOpacity style={[styles.smallCircle, GlobalStyles.iconButtonWhite]}>
           <Image
             source={require('../assets/images/notification.png')}
             style={styles.menuIcon}
           />
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.smallCircle}>
+        <TouchableOpacity style={[styles.smallCircle, GlobalStyles.iconButtonWhite]}>
           <Image
             source={require('../assets/images/Myprofile.png')}
             style={styles.menuIcon}
@@ -109,10 +111,6 @@ const styles = StyleSheet.create({
   circleButton: {
     width: 26,
     height: 26,
-    backgroundColor: '#fff',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderRadius: 10,
   },
 
   menuIcon: {
@@ -123,13 +121,7 @@ const styles = StyleSheet.create({
 
   searchContainer: {
     flex: 1,
-    height: 40,
-    backgroundColor: '#eee',
-    borderRadius: 25,
     marginRight: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
   },
 
   searchWithMenu: {
@@ -138,22 +130,6 @@ const styles = StyleSheet.create({
 
   searchWithoutMenu: {
     marginLeft: 0,
-  },
-
-  searchText: {
-    color: '#777',
-    fontSize: 14,
-    fontFamily: 'LeagueSpartan-Regular',
-  },
-
-  filterButton: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: Colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginLeft: 'auto',
   },
 
   filterIconImage: {

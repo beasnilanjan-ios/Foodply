@@ -2,6 +2,7 @@ import React, { ReactNode, useMemo, useState } from 'react';
 import { PanResponder, Pressable, StyleSheet, View } from 'react-native';
 
 import CustomDrawer from './CustomDrawer';
+import GlobalStyles from '../assets/Styles/GlobalStyles';
 
 type DrawerScreenContainerProps = {
   navigation: any;
@@ -46,7 +47,7 @@ export default function DrawerScreenContainer({
       {open && (
         <View style={styles.drawerLayer}>
           <Pressable
-            style={styles.backdrop}
+            style={GlobalStyles.backdropDim}
             onPress={() => setOpen(false)}
           />
           <View style={styles.drawer}>
