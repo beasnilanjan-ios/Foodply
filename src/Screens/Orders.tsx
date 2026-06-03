@@ -104,7 +104,7 @@ import DeliveryOrderListComponent from '../GlobalContainer/DeliveryOrderListComp
 const { width, height } = Dimensions.get('window');
 const isTablet = Math.min(width, height) >= 600;
 
-export default function Orders({ navigation }: any) {
+export default function Orders({ navigation, onMenuPress }: any) {
   const [activeTab, setActiveTab] = useState('Active');
 
   const tabs = ['Active', 'Completed', 'Cancelled'];
@@ -168,7 +168,7 @@ export default function Orders({ navigation }: any) {
   return (
     <View style={styles.container}>
       {/* 🔝 TOP BAR */}
-      <GlobalTopBar navigation={navigation} />
+      <GlobalTopBar navigation={navigation} onMenuPress={onMenuPress} />
 
       {/* 🔥 Header */}
       <View style={styles.headerContainer}>

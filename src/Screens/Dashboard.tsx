@@ -254,7 +254,7 @@ const promoBanners: PromoBannerItem[] = [
   },
 ];
 
-export default function Dashboard({ navigation }: any) {
+export default function Dashboard({ navigation, onMenuPress }: any) {
   const [categories, setCategories] = useState<CategoryItem[]>([]);
   const [bestSellerItems, setBestSellerItems] = useState<RestaurantMenuItemModel[]>([]);
   const [recommendedItems, setRecommendedItems] = useState<RestaurantMenuItemModel[]>([]);
@@ -448,7 +448,7 @@ export default function Dashboard({ navigation }: any) {
     <View style={styles.container}>
       
       {/* 🔝 Top Bar */}
-      <GlobalTopBar navigation={navigation} />
+      <GlobalTopBar navigation={navigation} onMenuPress={onMenuPress} />
 
       {/* 🔥 Header Text */}
       <View style={styles.headerContainer}>

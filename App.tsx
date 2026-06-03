@@ -128,7 +128,10 @@ const App = () => {
             {props => (
               <DrawerScreenContainer navigation={props.navigation}>
                 {drawerNavigation => (
-                  <Orders navigation={drawerNavigation} />
+                  <Orders
+                    navigation={drawerNavigation}
+                    onMenuPress={() => drawerNavigation.openDrawer?.()}
+                  />
                 )}
               </DrawerScreenContainer>
             )}
@@ -209,9 +212,16 @@ const App = () => {
 
           <Stack.Screen
             name="Favorites"
-            component={Favorites}
             options={{ animation: 'none' }}
-          />
+          >
+            {props => (
+              <DrawerScreenContainer navigation={props.navigation}>
+                {drawerNavigation => (
+                  <Favorites navigation={drawerNavigation} />
+                )}
+              </DrawerScreenContainer>
+            )}
+          </Stack.Screen>
         </Stack.Navigator>
       </NavigationContainer>
     </SafeAreaProvider>

@@ -20,15 +20,21 @@ type GlobalTopBarProps = {
   };
   showMenu?: boolean;
   showSearch?: boolean;
+  onMenuPress?: () => void;
 };
 
 export default function GlobalTopBar({
   navigation,
   showMenu = true,
   showSearch = true,
+  onMenuPress,
 }: GlobalTopBarProps) {
   const handleMenuPress = () => {
-    navigation?.openDrawer?.();
+    if (onMenuPress) {
+      onMenuPress();
+    } else {
+      navigation?.openDrawer?.();
+    }
   };
 
   return (

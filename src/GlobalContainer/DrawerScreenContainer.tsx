@@ -38,8 +38,10 @@ export default function DrawerScreenContainer({
   );
 
   return (
-    <View style={styles.container} {...swipeResponder.panHandlers}>
+    <View style={styles.container}>
       {children(drawerNavigation)}
+
+      <View style={styles.swipeEdge} {...swipeResponder.panHandlers} />
 
       {open && (
         <View style={styles.drawerLayer}>
@@ -86,5 +88,14 @@ const styles = StyleSheet.create({
   drawer: {
     width: 300,
     height: '100%',
+  },
+
+  swipeEdge: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    bottom: 0,
+    width: 35,
+    zIndex: 10,
   },
 });
