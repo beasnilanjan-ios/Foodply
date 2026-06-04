@@ -13,13 +13,14 @@ import GlobalLoader from '../GlobalContainer/GlobalLoader';
 import { ON_THE_WAY } from '../Utils/CommonUtil';
 
 export default function DeliveryOrderDetail({ route , navigation }: any) {
-const { orderId } = route.params;
+const { orderId, from = 'Dashboard' } = route.params || {};
 const [loading, setLoading] = useState(false);
 const [orderData, setOrderData] =
     useState<DeliveryOrderDetails | null>(null);
 
 
 useEffect(() => {
+    console.log(from)
     getOrderDetails();
   }, []);
 
@@ -172,13 +173,16 @@ useEffect(() => {
                     </View>
 
                     <View style={styles.actionButtons}>
+                        {from === 'Dashboard' && (
                         <TouchableOpacity style={styles.iconButton}>
                             <Image style= {[DeliveryGlobalStyles.iconMedium]} source={require('../assets/images/call.png')} />
                         </TouchableOpacity>
-
+                        )}
+                        {from === 'Dashboard' && (
                         <TouchableOpacity style={styles.iconButton}>
                             <Image style= {[DeliveryGlobalStyles.iconMedium]} source={require('../assets/images/send.png')} />
                         </TouchableOpacity>
+                        )}
                     </View>
                     </View>
                 </View>
@@ -223,6 +227,7 @@ useEffect(() => {
                         ₹{orderData?.billing?.packagingCharge?.toFixed(2)}
                         </Text>
                     </View>
+                    {orderData?.billing?.discountAmount && orderData.billing.discountAmount > 0 && (
                      <View style={styles.summaryItem}>
                         <Text style={styles.summaryLabel}>
                         Discount
@@ -232,7 +237,7 @@ useEffect(() => {
                         -₹{orderData?.billing?.discountAmount?.toFixed(2)}
                         </Text>
                     </View>
-
+                    )}  
                     <View style={styles.divider} />
 
                     <View style={styles.summaryItem}>
@@ -254,8 +259,12 @@ useEffect(() => {
 
                     {/* Delivery Info */}
                     <View style={[styles.summaryCard1, { flex: 1 }]}>
-                    <View style={styles.deliveryCard}>
+                    <View style={styles.deliveryCard}>                    
+                        <Text style={styles.cardTitle}>
+                            Delivery Information
+                        </Text>
                         <View style={styles.deliveryTop}>
+                             {from === 'Dashboard' && (
                             <View style = {[{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }]}>
                             <View style={[styles.iconButton, { width: 32, height: 32, borderRadius: 16}]}>
                             <Image
@@ -266,7 +275,7 @@ useEffect(() => {
                                 source={require('../assets/images/scooter.png')}
                                 />
                             </View>
-
+                              
                             <View style={[{ alignItems: 'center'}, { marginLeft: 5 }]}>
 
                                 <Text style={styles.deliveryTitle}>
@@ -278,8 +287,11 @@ useEffect(() => {
                                 </Text>
                             </View>
                             </View>
+                             )} 
                         </View>
+                         {from === 'Dashboard' && (
                         <View style={styles.divider1} />
+                         )}
                         <View style={styles.infoRow}>
                             <Text style={styles.summaryLabel}>
                             Distance
@@ -306,6 +318,7 @@ useEffect(() => {
                 </View>
 
                 {/* Bottom Buttons */}
+                {from === 'Dashboard' && (
                 <View style={styles.buttonRow}>
                     <TouchableOpacity
                     style={styles.callButton}
@@ -323,6 +336,7 @@ useEffect(() => {
                     </Text>
                     </TouchableOpacity>
                 </View>
+                )}
                 </ScrollView>
         </View>
         <GlobalLoader visible={loading} />

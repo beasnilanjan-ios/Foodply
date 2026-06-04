@@ -39,7 +39,7 @@ export type RootStackParamList = {
   DeliveryDashboard: undefined;
   DeliveryOrders: undefined;
   DeliveryProfile: undefined;
-  DeliveryOrderDetail: { orderId: string } | undefined;
+  DeliveryOrderDetail: { orderId: string, from: string } | undefined;
   DeliveryStart: { orderDetail: DeliveryOrderDetails } | undefined;
   DeliveryOtpVerification: { orderDetail: DeliveryOrderDetails, otp: string } | undefined; // ✅ ADD THIS
 };
@@ -181,9 +181,7 @@ const App = () => {
           <Stack.Screen
             name="DeliveryOrderDetail"
             component={DeliveryOrderDetail}
-            options={({ route }) => ({
-              animation: route.params?.orderId ? 'none' : 'default',
-            })}
+            options={{ animation: 'none' }}
            
           />
           <Stack.Screen

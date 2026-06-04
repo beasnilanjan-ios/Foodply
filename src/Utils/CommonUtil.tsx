@@ -1,3 +1,6 @@
+import dayjs from 'dayjs';
+import customParseFormat from 'dayjs/plugin/customParseFormat';
+
 export const getTimeAgo = (minutesAgo: number): string => {
 
   if (minutesAgo < 1) {
@@ -33,4 +36,30 @@ export const getGreeting = () => {
   } else {
     return 'Good Evening';
   }
+};
+
+export const today= () => {
+  const date = new Date();
+
+  const day = date.toLocaleString('en-GB', { day: '2-digit' });
+  const month = date.toLocaleString('en-GB', { month: 'short' });
+  const year = date.toLocaleString('en-GB', { year: '2-digit' });
+
+  return `${day} ${month}, ${year}`;
+};
+
+dayjs.extend(customParseFormat);
+
+export const formatDate = (
+  date: string,
+  inputFormat?: string,
+  outputFormat?: string
+): string => {
+  if (!date) return '';
+
+  const parsedDate = inputFormat
+    ? dayjs(date, inputFormat)
+    : dayjs(date);
+
+  return parsedDate.format(outputFormat);
 };

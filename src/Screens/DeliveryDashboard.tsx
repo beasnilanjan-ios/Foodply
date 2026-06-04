@@ -159,7 +159,7 @@ export default function DeliveryDashboard({ navigation }: any) {
             <DeliveryOrderListComponent
               orders={assignedOrders}
               onPressItem={(order) => {
-                navigation.navigate('DeliveryOrderDetail', { orderId: order.orderId });
+                navigation.navigate('DeliveryOrderDetail', { orderId: order.orderId, from: 'Dashboard' });
               }}
             />
           ) : (
