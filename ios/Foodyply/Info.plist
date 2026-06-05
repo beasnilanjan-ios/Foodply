@@ -35,6 +35,12 @@
   <true/>
 
   <!-- ✅ App Transport Security (UPDATED CORRECTLY) -->
+  <!-- CAMERA + GALLERY PERMISSIONS -->
+  <key>NSCameraUsageDescription</key>
+  <string>Foodyply needs access to your camera to capture profile photos.</string>
+
+  <key>NSPhotoLibraryUsageDescription</key>
+  <string>Foodyply needs access to your photo library to select profile images.</string>
   <key>NSAppTransportSecurity</key>
   <dict>
     <key>NSAllowsArbitraryLoads</key>

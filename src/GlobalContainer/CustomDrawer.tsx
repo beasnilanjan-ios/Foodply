@@ -12,7 +12,7 @@ import GlobalLoginAuth from '../GlobalContainer/GlobalLoginAuth'; // ✅ IMPORT 
 export default function CustomDrawer({ navigation, closeDrawer }: any) {
   const menu = [
     { title: 'My Orders', icon: require('../assets/images/MyOrder.png') },
-    { title: 'My Profile', icon: require('../assets/images/MyProfileSide.png') },
+    { title: 'My Profile', icon: require('../assets/images/MyProfileSide.png'), route: 'MyProfile' },
     {
       title: 'Delivery Address',
       icon: require('../assets/images/Deliver_Boy_Icon.png'),

@@ -27,6 +27,7 @@ import DeliveryOtpVerification from './src/Screens/DeliveryOtpVerification';
 import Favorites from './src/Screens/Favorites'; // adjust path if needed
 import Trackorder from './src/Screens/Trackorder';
 import DeliveryAddressList from './src/Screens/DeliveryAddressList';
+import MyProfile from './src/Screens/MyProfile';
 
 export type RootStackParamList = {
   Splash: undefined;
@@ -36,6 +37,7 @@ export type RootStackParamList = {
   Dashboard: { fromTab?: boolean } | undefined;
   Orders: { fromTab?: boolean } | undefined;
   Favorites: { fromTab?: boolean } | undefined;
+  MyProfile: undefined;
   ViewAll: undefined;
   Trackorder: undefined;
   MenuDetails: undefined; // ✅ ADD THIS
@@ -197,6 +199,11 @@ const App = () => {
             component={DeliveryProfile}
             options={{ animation: 'none' }}
            
+          />
+          <Stack.Screen
+            name="MyProfile"
+            component={MyProfile}
+            options={{ animation: 'none' }}
           />
           <Stack.Screen
             name="DeliveryOrderDetail"
