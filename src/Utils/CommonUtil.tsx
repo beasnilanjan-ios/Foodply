@@ -51,7 +51,7 @@ export const today= () => {
 dayjs.extend(customParseFormat);
 
 export const formatDate = (
-  date: string,
+  date: string | Date,
   inputFormat?: string,
   outputFormat?: string
 ): string => {

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, Alert, Platform } from 'react-native';
 import Colors from '../assets/Colors/Colors';
 import GlobalTopBarDelivery from '../GlobalContainer/GlobalTopBarDelivery';
 import GlobalBottomBarDelivery from '../GlobalContainer/GlobalBottomBarDelivery';
@@ -11,57 +11,72 @@ import GlobalApi from '../GlobalContainer/GlobalApi';
 import { DeliveryHistoryResponse } from '../Models/DeliveryHistory/DeliveryHistoryResponse';
 import { AssignedOrder } from '../Models/DeliveryDasboard/AssignedOrder';
 import GlobalLoader from '../GlobalContainer/GlobalLoader';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 
 const DeliveryOrders = ({ navigation }: any) => {
 const [loading, setLoading] = useState(false);
 const [assignedOrders, setAssignedOrders] = useState<AssignedOrder[]>([]);
-const [date, setDate] = useState(formatDate(today(), 'DD MMM, YY', 'YYYY-MM-DD'));
+const [showPicker, setShowPicker] = useState(false);
+const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
  useEffect(() => {
     getOrderList();
   }, []);  
 
 
-const getOrderList = async () => {
-    try {
-      setLoading(true);
-      console.log('Fetching dashboard data with token:', GlobalLoginAuth.refreshToken);
-      console.log(`${GlobalApi.baseUrl}api/deliveries/me/order-history?date=${date}&page=1`);
-      const response = await fetch(
-        `${GlobalApi.baseUrl}api/deliveries/me/order-history?date=${date}&page=1`,
-        {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${GlobalLoginAuth.accessToken}`,
-          },
+    const getOrderList = async (date: Date = selectedDate) => {
+        try {
+          setLoading(true);
+          const selectedDateQuery = formatDate(date, undefined, 'YYYY-MM-DD');
+          console.log('Fetching dashboard data with token:', GlobalLoginAuth.refreshToken);
+          console.log(`${GlobalApi.baseUrl}api/deliveries/me/order-history?date=${selectedDateQuery}&page=1`);
+          const response = await fetch(
+            `${GlobalApi.baseUrl}api/deliveries/me/order-history?date=${selectedDateQuery}&page=1`,
+            {
+              method: 'GET',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${GlobalLoginAuth.accessToken}`,
+              },
+            }
+          );
+
+          const result = await response.json();
+          const deleiveryResponse = result as DeliveryHistoryResponse; // ✅ Type assertion to ensure it matches our model
+
+          console.log('Dashboard Response:', result);
+
+          if (!response.ok) {
+            Alert.alert('FoodyPly', result.message || 'Failed to load dashboard');
+            return;
+          }
+
+          // if orders available from API
+          if (deleiveryResponse.data?.items) {
+            setAssignedOrders(deleiveryResponse.data.items);
+          }
+
+        } catch (error) {
+          console.log(error);
+          Alert.alert('FoodyPly', 'Unable to connect to server');
+        } finally {
+          setLoading(false);
         }
-      );
+      };
 
-      const result = await response.json();
-      const deleiveryResponse = result as DeliveryHistoryResponse; // ✅ Type assertion to ensure it matches our model
+  const onChange = (event: any, date?: Date) => {
+    setShowPicker(false);
 
-      console.log('Dashboard Response:', result);
+    if (date) {
+      const formattedDate = formatDate(date, undefined, 'DD MMM, YY');
 
-      if (!response.ok) {
-        Alert.alert('FoodyPly', result.message || 'Failed to load dashboard');
-        return;
-      }
+      setSelectedDate(date);
+      console.log('Selected Date:', formattedDate);
 
-      // if orders available from API
-      if (deleiveryResponse.data?.items) {
-        setAssignedOrders(deleiveryResponse.data.items);
-      }
-
-    } catch (error) {
-      console.log(error);
-      Alert.alert('FoodyPly', 'Unable to connect to server');
-    } finally {
-      setLoading(false);
+      getOrderList(date);
     }
   };
-
   return (
    <View style={styles.container}>
       <GlobalTopBarDelivery
@@ -80,7 +95,30 @@ const getOrderList = async () => {
         >
            {/* My Orders Header */}
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Order on {today()}</Text>
+              <Text style={styles.sectionTitle}>
+                Order on {formatDate(selectedDate, undefined, 'DD MMM, YY')}
+              </Text>
+               {/* RIGHT ICONS */}
+              <View style={styles.rightIcons}>
+                <TouchableOpacity 
+                  style={styles.smallCircle}
+                  onPress={() => setShowPicker(true)}>
+                  <Image
+                    source={require('../assets/images/calendar.png')}
+                    style={styles.menuIcon}
+                  />
+                </TouchableOpacity>
+
+                  {showPicker && (
+                  <DateTimePicker
+                    value={selectedDate}
+                    mode="date"
+                    display="default"
+                    maximumDate={new Date()} // Prevent future dates
+                    onChange={onChange}
+                  />
+                )}
+              </View>
             </View>
           
             {/* Orders List */}
@@ -160,5 +198,27 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: '#888',
     fontWeight: '600',
+  },
+
+  rightIcons: {
+    justifyContent: 'flex-start',
+    alignItems: 'flex-end',
+    marginTop: 10,
+    marginLeft: 'auto',
+    flexShrink: 0,
+},
+  smallCircle: {
+    width: 30,
+    height: 30,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 8,
+  },
+   menuIcon: {
+    width: 30,
+    height: 30,
+    resizeMode: 'contain',
+    tintColor: Colors.primary,
   },
   });
