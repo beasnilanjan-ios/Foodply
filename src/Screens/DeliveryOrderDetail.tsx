@@ -153,9 +153,13 @@ useEffect(() => {
                     <View style={styles.customerRow}>
                     <View style={styles.customerLeft}>
                         <Image
-                            source={require('../assets/images/customer_image.png')}
-                            style={styles.profileImage}
-                            />
+                          source={
+                            orderData?.customer?.profileImageUrl
+                              ? { uri: orderData.customer.profileImageUrl }
+                              : require('../assets/images/customer_image.png')
+                          }
+                          style={styles.profileImage}
+                        />
 
                         <View style={styles.customerInfo}>
                         <Text style={styles.customerName}>

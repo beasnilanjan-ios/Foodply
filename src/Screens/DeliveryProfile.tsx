@@ -95,7 +95,7 @@ const DeliveryProfile = ({ navigation }: any) => {
                               <Image style= {[styles.verifiedIcon]} source={require('../assets/images/verified.png')} />
                             </View>
                         </View>
-                        <View style={{ flexDirection: 'row', justifyContent: 'flex-start',alignItems: 'center', marginRight: 10, marginTop: 4 }}>
+                        <View style={{ flexDirection: 'row', justifyContent: 'flex-start',alignItems: 'center', marginRight: 10 }}>
                             <Image style= {[DeliveryGlobalStyles.icon]} source={require('../assets/images/call.png')} />
                             <Text style={styles.smallText}> {profileData?.personalDetails?.phone}</Text>
                         </View>
@@ -108,59 +108,143 @@ const DeliveryProfile = ({ navigation }: any) => {
                     </View>
                 </View>
 
-          {/* Top Stats Card */}
-          <View style={styles.statsMainCard}>
+                {/* Top Stats Card */}
+                <View style={styles.statsMainCard}>
 
-            <View style={styles.statItem}>
-              <View style={styles.iconCircle}>
-                <Image
-                  style={styles.icon}
-                  source={require('../assets/images/MyOrdersNavBar.png')}
-                />
-              </View>
+                  <View style={styles.statItem}>
+                    <View style={styles.iconCircle}>
+                      <Image
+                        style={styles.icon}
+                        source={require('../assets/images/MyOrdersNavBar.png')}
+                      />
+                    </View>
 
-              <Text style={styles.statCount}>
-                {profileData?.stats?.totalOrders || 0}
-              </Text>
+                    <Text style={styles.statCount}>
+                      {profileData?.stats?.totalOrders || 0}
+                    </Text>
 
-              <Text style={styles.statTitle}>Assigned</Text>
-            </View>
+                    <Text style={styles.statTitle}>Total Orders</Text>
+                  </View>
 
-            <View style={styles.divider} />
+                  <View style={styles.divider} />
 
-            <View style={styles.statItem}>
-              <View style={styles.iconCircle}>
-                <Image
-                  style={[styles.icon, { width: 40, height: 35 }]}
-                  source={require('../assets/images/scooter.png')}
-                />
-              </View>
+                  <View style={styles.statItem}>
+                    <View style={styles.iconCircle}>
+                      <Image
+                        style={[styles.icon, { width: 40, height: 35 }]}
+                        source={require('../assets/images/scooter.png')}
+                      />
+                    </View>
 
-              <Text style={styles.statCount}>
-                {profileData?.stats?.totalOrders || 0}
-              </Text>
+                    <Text style={styles.statCount}>
+                      4.9
+                    </Text>
 
-              <Text style={styles.statTitle}>On The Way</Text>
-            </View>
+                    <Text style={styles.statTitle}>Rating</Text>
+                  </View>
 
-            <View style={styles.divider} />
+                  <View style={styles.divider} />
 
-            <View style={styles.statItem}>
-              <View style={styles.iconCircle}>
-                <Image
-                  style={[styles.icon, { width: 35, height: 35 }]}
-                  source={require('../assets/images/tick.png')}
-                />
-              </View>
+                  <View style={styles.statItem}>
+                    <View style={styles.iconCircle}>
+                      <Image
+                        style={[styles.icon, { width: 35, height: 35 }]}
+                        source={require('../assets/images/tick.png')}
+                      />
+                    </View>
 
-              <Text style={styles.statCount}>
-                {profileData?.stats?.rating || 0}
-              </Text>
+                    <Text style={styles.statCount}>
+                      {profileData?.stats?.completedOrders || 0}
+                    </Text>
 
-              <Text style={styles.statTitle}>Delivered</Text>
-            </View>
+                    <Text style={styles.statTitle}>Completed</Text>
+                  </View>
 
-          </View>                
+                </View> 
+
+                {/* Personal Details */}
+                <View style={styles.card}>
+                  <View style={styles.cardHeader}>
+                    <Text style={styles.sectionTitle}>Personal Details</Text>
+                  </View>
+
+                  <View style={styles.infoRow}>
+                    <Text style={styles.label}>Full Name</Text>
+                    <Text style={styles.value}>
+                      {profileData?.personalDetails?.fullName || '-'}
+                    </Text>
+                  </View>
+
+                  <View style={styles.infoRow}>
+                    <Text style={styles.label}>Date Of Birth</Text>
+                    <Text style={styles.value}>
+                      {profileData?.personalDetails?.dateOfBirth || '-'}
+                    </Text>
+                  </View>
+
+                  <View style={styles.infoRow}>
+                    <Text style={styles.label}>Email</Text>
+                    <Text style={styles.value}>
+                      {profileData?.personalDetails?.email || '-'}
+                    </Text>
+                  </View>
+
+                  <View style={styles.infoRow}>
+                    <Text style={styles.label}>Phone Number</Text>
+                    <Text style={styles.value}>
+                      {profileData?.personalDetails?.phone || '-'}
+                    </Text>
+                  </View>
+
+                  <View style={styles.infoRow}>
+                    <Text style={styles.label}>Gender</Text>
+                    <Text style={styles.value}>
+                      {profileData?.personalDetails?.gender || '-'}
+                    </Text>
+                  </View>
+
+                  <View style={styles.infoRow}>
+                    <Text style={styles.label}>Emergency Contact</Text>
+                    <Text style={styles.value}>
+                      {profileData?.personalDetails?.emergencyContact || '-'}
+                    </Text>
+                  </View>
+                </View>
+
+                {/* Vehicle Information */}
+                <View style={styles.card}>
+                  <View style={styles.cardHeader}>
+                    <Text style={styles.cardTitle}>Vehicle Information</Text>
+                  </View>
+
+                  <View style={styles.infoRow}>
+                    <Text style={styles.label}>Vehicle Type</Text>
+                    <Text style={styles.value}>
+                      {profileData?.vehicle?.vehicleType || '-'}
+                    </Text>
+                  </View>
+
+                  <View style={styles.infoRow}>
+                    <Text style={styles.label}>Vehicle Number</Text>
+                    <Text style={styles.value}>
+                      {profileData?.vehicle?.vehicleNumber || '-'}
+                    </Text>
+                  </View>
+
+                  <View style={styles.infoRow}>
+                    <Text style={styles.label}>Brand</Text>
+                    <Text style={styles.value}>
+                      {profileData?.vehicle?.brand || '-'}
+                    </Text>
+                  </View>
+
+                  <View style={styles.infoRow}>
+                    <Text style={styles.label}>Color</Text>
+                    <Text style={styles.value}>
+                      {profileData?.vehicle?.color || '-'}
+                    </Text>
+                  </View>
+                </View>             
         </ScrollView>
       </View>
         <View style={styles.bottomContainer}>
@@ -203,6 +287,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderRadius: 20,
     padding: 16,
+    marginBottom: 20,
     },
 
     cardTitle: {
@@ -237,7 +322,7 @@ const styles = StyleSheet.create({
     },
 
     customerName: {
-        fontSize: 16,
+        fontSize: 20,
         color: Colors.textColor,
         fontFamily: FontFamily.medium,
     },
@@ -328,5 +413,53 @@ const styles = StyleSheet.create({
     marginTop: 4,
     fontFamily: FontFamily.regular,
   },
+infoCard: {
+  backgroundColor: '#FFFFFF',
+  borderRadius: 16,
+  padding: 16,
+  marginBottom: 20,
+},
 
+cardHeader: {
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  marginBottom: 12,
+},
+
+sectionTitle: {
+  fontSize: 18,
+  fontFamily: FontFamily.medium,
+  color: Colors.black,
+},
+
+editText: {
+  fontSize: 14,
+  color: Colors.primary,
+  fontFamily: FontFamily.medium,
+},
+
+infoRow: {
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  paddingVertical: 10,
+  borderBottomWidth: 1,
+  borderBottomColor: '#F0F0F0',
+},
+
+label: {
+  flex: 1,
+  fontSize: 14,
+  color: Colors.textBrown,
+  fontFamily: FontFamily.regular,
+},
+
+value: {
+  flex: 1,
+  textAlign: 'right',
+  fontSize: 14,
+  color: Colors.black,
+  fontFamily: FontFamily.medium,
+},
   });

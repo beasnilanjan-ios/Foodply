@@ -577,9 +577,11 @@ export default function DeliveryStart({
               {/* USER INFO */}
               <View style={styles.header}>
                 <Image
-                  source={{
-                    uri: "https://i.pravatar.cc/150?img=12",
-                  }}
+                  source={
+                      orderDetail?.customer?.profileImageUrl
+                      ? { uri: orderDetail.customer.profileImageUrl }
+                      : require('../assets/images/customer_image.png')
+                    }
                   style={styles.avatar}
                 />
 
