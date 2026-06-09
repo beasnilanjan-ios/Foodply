@@ -511,7 +511,7 @@ const styles = StyleSheet.create({
 
     codText: {
         color: Colors.greenDark,
-        fontSize: 14,
+        fontSize: 12,
         fontFamily: FontFamily.medium,
     },
 

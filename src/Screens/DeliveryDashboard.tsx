@@ -8,6 +8,7 @@ import {
   ImageBackground,
   Dimensions,
   Alert,
+  RefreshControl,
 } from 'react-native';
 
 import Colors from '../assets/Colors/Colors';
@@ -29,14 +30,24 @@ const isTablet = Math.min(width, height) >= 600;
 export default function DeliveryDashboard({ navigation }: any) {
 
   const [loading, setLoading] = useState(false);
-
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
-
   const [assignedOrders, setAssignedOrders] = useState<AssignedOrder[]>([]);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     getDashboardData();
   }, []);
+
+  const onRefresh = async () => {
+      try {
+        setRefreshing(true);
+        await getDashboardData();
+      } catch (error) {
+        console.log(error);
+      } finally {
+        setRefreshing(false);
+      }
+    };
 
   const getDashboardData = async () => {
     try {
@@ -91,10 +102,17 @@ export default function DeliveryDashboard({ navigation }: any) {
 
       <View style={styles.overlay}>
         <ScrollView
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingBottom: 140 }}
-        >
-
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ paddingBottom: 140 }}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                colors={[Colors.primary]}      // Android
+                tintColor={Colors.primary}     // iOS
+              />
+            }
+          >
           {/* Top Stats Card */}
           <View style={styles.statsMainCard}>
 

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, Alert, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, Alert, Platform, RefreshControl } from 'react-native';
 import Colors from '../assets/Colors/Colors';
 import GlobalTopBarDelivery from '../GlobalContainer/GlobalTopBarDelivery';
 import GlobalBottomBarDelivery from '../GlobalContainer/GlobalBottomBarDelivery';
@@ -19,10 +19,22 @@ const [loading, setLoading] = useState(false);
 const [assignedOrders, setAssignedOrders] = useState<AssignedOrder[]>([]);
 const [showPicker, setShowPicker] = useState(false);
 const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+ const [refreshing, setRefreshing] = useState(false);
 
  useEffect(() => {
     getOrderList();
   }, []);  
+
+  const onRefresh = async () => {
+      try {
+        setRefreshing(true);
+        await  getOrderList();
+      } catch (error) {
+        console.log(error);
+      } finally {
+        setRefreshing(false);
+      }
+    };
 
 
     const getOrderList = async (date: Date = selectedDate) => {
@@ -89,10 +101,18 @@ const [selectedDate, setSelectedDate] = useState<Date>(new Date());
       />
 
       <View style={styles.overlay}>
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingBottom: 140 }}
-        >
+       <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ paddingBottom: 140 }}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                colors={[Colors.primary]}      // Android
+                tintColor={Colors.primary}     // iOS
+              />
+            }
+          >
            {/* My Orders Header */}
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>

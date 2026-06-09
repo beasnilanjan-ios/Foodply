@@ -32,7 +32,7 @@ const OrderCard = ({ item, onPressItem }: { item: AssignedOrder; onPressItem?: (
         <View style={styles.rowBetween}>
           <Text style={styles.customerName}>{item.customerName}</Text>
 
-          <Text style={styles.amount}>₹{item.finalAmount}</Text>
+          <Text style={styles.amount}>₹{item.finalAmount.toFixed(2)}</Text>
         </View>
 
         <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'flex-start' }}>

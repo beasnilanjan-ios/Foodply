@@ -178,7 +178,7 @@ const styles = StyleSheet.create({
   },
 
   detailsContainer: {
-    flex: 2.2,
+    flex: 1.5,
   },
 
   itemName: {
