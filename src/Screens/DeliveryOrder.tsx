@@ -19,7 +19,7 @@ const [loading, setLoading] = useState(false);
 const [assignedOrders, setAssignedOrders] = useState<AssignedOrder[]>([]);
 const [showPicker, setShowPicker] = useState(false);
 const [selectedDate, setSelectedDate] = useState<Date>(new Date());
- const [refreshing, setRefreshing] = useState(false);
+const [refreshing, setRefreshing] = useState(false);
 
  useEffect(() => {
     getOrderList();
