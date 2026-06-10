@@ -7,6 +7,7 @@ import {
   Image,
   Text,
   TouchableOpacity,
+  ToastAndroid,
   Alert,
 } from 'react-native';
 
@@ -27,59 +28,55 @@ import { DeliveryOrderDetails } from '../Models/DeliveryOrderDetails/DeliveryOrd
 import { FontFamily } from '../assets/GlobalFont/GlobalFont';
 import GlobalLoginAuth from '../GlobalContainer/GlobalLoginAuth';
 import GlobalApi from '../GlobalContainer/GlobalApi';
-import { DeliveryDashboardResponse } from '../Models/DeliveryDasboard/DeliveryDashboardResponse';
 import GlobalLoader from '../GlobalContainer/GlobalLoader';
 import { SendOtpResponse } from '../Models/SendOTP/SendOtpResponse ';
 
 const DARK_MAP_STYLE =
   'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json';
 
-export default function DeliveryStart({
-  route,
-  navigation,
-}: any) {
+export default function DeliveryStart({ route, navigation }: any) {
   const {
     orderDetail,
   }: {
     orderDetail: DeliveryOrderDetails;
   } = route.params;
 
-  const [loading, setLoading] = useState(false);
-  const [showDetailsCard, setShowDetailsCard] =
-  useState(true);
-
+  const [showDetailsCard, setShowDetailsCard] = useState(true);
+  const lastSnappedIndexRef = useRef(-1);
   // DESTINATION
   const [destinationLocation] = useState({
-    latitude:
-      orderDetail.customer.address.latitude ||
-      22.8948,
+    latitude: orderDetail.customer.address.latitude || 22.8948,
 
-    longitude:
-      orderDetail.customer.address.longitude ||
-      88.4100,
+    longitude: orderDetail.customer.address.longitude || 88.41,
   });
 
   // CURRENT LOCATION
-  const [
-    currentLocation,
-    setCurrentLocation,
-  ] = useState<{
+  const [currentLocation, setCurrentLocation] = useState<{
     latitude: number;
     longitude: number;
   } | null>(null);
 
   // ROUTE
-  const [routeCoordinates, setRouteCoordinates] =
-    useState<any[]>([]);
-
+  const [routeCoordinates, setRouteCoordinates] = useState<any[]>([]);
+  const routeCoordinatesRef = useRef<any[]>([]);
+  const [remainingRoute, setRemainingRoute] = useState<any[]>([]);
+  const headingRef = useRef(0);
+  const cameraHeadingRef = useRef(0);
+  const [riderPosition, setRiderPosition] = useState<{
+    latitude: number;
+    longitude: number;
+  } | null>(null);
   // CAMERA HEADING
-  const [cameraHeading, setCameraHeading] =
-    useState(0);
+  const [cameraHeading, setCameraHeading] = useState(0);
 
   // SCOOTER HEADING
-  const [markerHeading, setMarkerHeading] =
-    useState(0);
+  const [markerHeading, setMarkerHeading] = useState(0);
+const [loading, setLoading] = useState(false);
 
+
+  const [locationHistory, setLocationHistory] = useState<
+    { latitude: number; longitude: number }[]
+  >([]);
   // PREVIOUS LOCATION
   const previousCoordinateRef = useRef<{
     latitude: number;
@@ -87,103 +84,149 @@ export default function DeliveryStart({
   } | null>(null);
 
   // REQUEST LOCATION PERMISSION
-  const requestLocationPermission =
-    async () => {
-      if (Platform.OS === 'android') {
-        const granted =
-          await PermissionsAndroid.request(
-            PermissionsAndroid.PERMISSIONS
-              .ACCESS_FINE_LOCATION,
-          );
+  const requestLocationPermission = async () => {
+    if (Platform.OS === 'android') {
+      const granted = await PermissionsAndroid.request(
+        PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+      );
 
-        if (
-          granted !==
-          PermissionsAndroid.RESULTS.GRANTED
-        ) {
-          console.log(
-            'Location permission denied',
-          );
-        }
+      if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
+        console.log('Location permission denied');
       }
-    };
+    }
+  };
 
-  // GET BEARING
   const calculateBearing = (
+    startLat: number,
+
+    startLng: number,
+
+    endLat: number,
+
+    endLng: number,
+  ) => {
+    const dLon = ((endLng - startLng) * Math.PI) / 180;
+
+    const y = Math.sin(dLon) * Math.cos((endLat * Math.PI) / 180);
+
+    const x =
+      Math.cos((startLat * Math.PI) / 180) *
+        Math.sin((endLat * Math.PI) / 180) -
+      Math.sin((startLat * Math.PI) / 180) *
+        Math.cos((endLat * Math.PI) / 180) *
+        Math.cos(dLon);
+
+    const brng = (Math.atan2(y, x) * 180) / Math.PI;
+
+    return (brng + 360) % 360;
+  };
+
+  // DISTANCE BETWEEN TWO POINTS
+    const getDistance = (
+      lat1: number,
+      lon1: number,
+      lat2: number,
+      lon2: number,
+    ) => {
+      const R = 6371e3;
+  
+      const φ1 = (lat1 * Math.PI) / 180;
+      const φ2 = (lat2 * Math.PI) / 180;
+  
+      const Δφ = ((lat2 - lat1) * Math.PI) / 180;
+  
+      const Δλ = ((lon2 - lon1) * Math.PI) / 180;
+  
+      const a =
+        Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+        Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+  
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  
+      return R * c;
+  };
+ 
+
+  const getProjectedPointOnSegment = (
+    lat: number,
+    lng: number,
     startLat: number,
     startLng: number,
     endLat: number,
     endLng: number,
   ) => {
-    const startLatRad =
-      (startLat * Math.PI) / 180;
+    const dx = endLng - startLng;
+    const dy = endLat - startLat;
 
-    const startLngRad =
-      (startLng * Math.PI) / 180;
+    const lengthSquared = dx * dx + dy * dy;
 
-    const endLatRad =
-      (endLat * Math.PI) / 180;
+    if (lengthSquared === 0) {
+      return {
+        latitude: startLat,
+        longitude: startLng,
+        t: 0,
+      };
+    }
 
-    const endLngRad =
-      (endLng * Math.PI) / 180;
+    let t = ((lng - startLng) * dx + (lat - startLat) * dy) / lengthSquared;
 
-    const dLng = endLngRad - startLngRad;
+    t = Math.max(0, Math.min(1, t));
 
-    const y =
-      Math.sin(dLng) *
-      Math.cos(endLatRad);
-
-    const x =
-      Math.cos(startLatRad) *
-        Math.sin(endLatRad) -
-      Math.sin(startLatRad) *
-        Math.cos(endLatRad) *
-        Math.cos(dLng);
-
-    let bearing =
-      (Math.atan2(y, x) * 180) /
-      Math.PI;
-
-    bearing = (bearing + 360) % 360;
-
-    return bearing;
+    return {
+      latitude: startLat + t * dy,
+      longitude: startLng + t * dx,
+      t,
+    };
   };
 
-  // DISTANCE BETWEEN TWO POINTS
-  const getDistance = (
-    lat1: number,
-    lon1: number,
-    lat2: number,
-    lon2: number,
+  const getNearestPointOnRoute = (
+    latitude: number,
+    longitude: number,
+    route: any[],
   ) => {
-    const R = 6371e3;
+    if (route.length < 2) {
+      return null;
+    }
 
-    const φ1 = (lat1 * Math.PI) / 180;
-    const φ2 = (lat2 * Math.PI) / 180;
+    let minDistance = Infinity;
 
-    const Δφ =
-      ((lat2 - lat1) * Math.PI) / 180;
+    let nearestIndex = 0;
 
-    const Δλ =
-      ((lon2 - lon1) * Math.PI) / 180;
+    let projectedPoint: any = null;
 
-    const a =
-      Math.sin(Δφ / 2) *
-        Math.sin(Δφ / 2) +
-      Math.cos(φ1) *
-        Math.cos(φ2) *
-        Math.sin(Δλ / 2) *
-        Math.sin(Δλ / 2);
+    for (let i = 0; i < route.length - 1; i++) {
+      const start = route[i];
+      const end = route[i + 1];
 
-    const c =
-      2 *
-      Math.atan2(
-        Math.sqrt(a),
-        Math.sqrt(1 - a),
+      const projected = getProjectedPointOnSegment(
+        latitude,
+        longitude,
+        start[1],
+        start[0],
+        end[1],
+        end[0],
       );
 
-    return R * c;
-  };
+      const distance = getDistance(
+        latitude,
+        longitude,
+        projected.latitude,
+        projected.longitude,
+      );
 
+      if (distance < minDistance) {
+        minDistance = distance;
+        nearestIndex = i;
+        projectedPoint = projected;
+      }
+    }
+
+    return {
+      index: nearestIndex,
+      distance: minDistance,
+      point: projectedPoint,
+    };
+  };
   // ROUTE API
   const getRoute = async (
     startLat: number,
@@ -201,10 +244,45 @@ export default function DeliveryStart({
         response.data.routes &&
         response.data.routes.length > 0
       ) {
-        const coordinates =
-          response.data.routes[0].geometry.coordinates;
+        const osrmCoordinates = response.data.routes[0].geometry.coordinates;
 
+        // Insert actual GPS as first point
+        const coordinates = [[startLng, startLat], ...osrmCoordinates];
+
+        for (let i = 0; i < 5; i++) {
+          const dist = getDistance(
+            coordinates[i][1],
+            coordinates[i][0],
+            coordinates[i + 1][1],
+            coordinates[i + 1][0],
+          );
+
+          console.log(`Distance ${i} -> ${i + 1}:`, dist);
+        }
         setRouteCoordinates(coordinates);
+        routeCoordinatesRef.current = coordinates;
+
+        console.log('Route Length:', coordinates.length);
+
+        console.log('First Route Point:', coordinates[0]);
+
+        console.log('Start GPS:', startLat, startLng);
+
+        console.log(
+          'Distance Between Start And Route Point:',
+          getDistance(startLat, startLng, coordinates[0][1], coordinates[0][0]),
+        );
+
+        if (!riderPosition && coordinates.length > 0) {
+          setRiderPosition({
+            latitude: coordinates[0][1],
+            longitude: coordinates[0][0],
+          });
+
+          lastSnappedIndexRef.current = 0;
+
+          setRemainingRoute(coordinates);
+        }
       }
     } catch (error) {
       console.log('ROUTE ERROR', error);
@@ -215,11 +293,9 @@ export default function DeliveryStart({
   const getCurrentLocation = async () => {
     Geolocation.getCurrentPosition(
       async position => {
-        const latitude =
-          position.coords.latitude;
+        const latitude = position.coords.latitude;
 
-        const longitude =
-          position.coords.longitude;
+        const longitude = position.coords.longitude;
 
         setCurrentLocation({
           latitude,
@@ -257,173 +333,224 @@ export default function DeliveryStart({
 
     getCurrentLocation();
 
-    const watchId =
-      Geolocation.watchPosition(
-        async position => {
-          const latitude =
-            position.coords.latitude;
+    const animateMarker = (
+      startLat: number,
+      startLng: number,
+      endLat: number,
+      endLng: number,
+    ) => {
+      const steps = 20;
+      let currentStep = 0;
 
-          const longitude =
-            position.coords.longitude;
+      const interval = setInterval(() => {
+        currentStep++;
 
-          const previous =
-            previousCoordinateRef.current;
+        const progress = currentStep / steps;
 
-          // UPDATE LOCATION
-          setCurrentLocation({
+        setRiderPosition({
+          latitude: startLat + (endLat - startLat) * progress,
+          longitude: startLng + (endLng - startLng) * progress,
+        });
+
+        if (currentStep >= steps) {
+          clearInterval(interval);
+        }
+      }, 50);
+    };
+    const watchId = Geolocation.watchPosition(
+      async position => {
+        const latitude = position.coords.latitude;
+
+        const longitude = position.coords.longitude;
+
+        const previous = previousCoordinateRef.current;
+
+        if (previous) {
+          const movedDistance = getDistance(
+            previous.latitude,
+            previous.longitude,
             latitude,
             longitude,
-          });
+          );
 
-          // CALCULATE HEADING
-          if (previous) {
-            const movedDistance =
-              getDistance(
-                previous.latitude,
-                previous.longitude,
-                latitude,
-                longitude,
-              );
+          console.log('GPS Move Distance:', movedDistance);
+        }
 
-            // IGNORE GPS SHAKE
-            if (movedDistance > 5) {
-              const bearing =
-                calculateBearing(
-                  previous.latitude,
-                  previous.longitude,
-                  latitude,
-                  longitude,
+        // UPDATE LOCATION
+        setCurrentLocation({
+          latitude,
+          longitude,
+        });
+        // ARRAY ME STORE KARO
+        setLocationHistory(prev => {
+          const updated = [
+            ...prev,
+            {
+              latitude,
+              longitude,
+            },
+          ];
+
+          // // TOAST ME DIKHAO
+          // ToastAndroid.show(
+          //   JSON.stringify(updated),
+          //   ToastAndroid.SHORT,
+          // );
+
+          return updated;
+        });
+
+        const route = routeCoordinatesRef.current;
+
+        if (route.length < 2) {
+          return;
+        }
+        // CALCULATE HEADING
+        if (previous) {
+          const movedDistance = getDistance(
+            previous.latitude,
+            previous.longitude,
+            latitude,
+            longitude,
+          );
+          ToastAndroid.show(
+            `Rider moved: ${movedDistance.toFixed(1)} meter`,
+            ToastAndroid.SHORT,
+          );
+
+          console.log('GPS Move Distance:', movedDistance);
+          // if (movedDistance < 3) {
+          //   return;
+          // }
+          const route = routeCoordinatesRef.current;
+          if (route.length > 1) {
+            const snapped = getNearestPointOnRoute(latitude, longitude, route);
+
+            if (snapped) {
+              if (riderPosition) {
+                animateMarker(
+                  riderPosition.latitude,
+                  riderPosition.longitude,
+                  snapped.point.latitude,
+                  snapped.point.longitude,
+                );
+              } else {
+                setRiderPosition({
+                  latitude: snapped.point.latitude,
+                  longitude: snapped.point.longitude,
+                });
+              }
+
+              const currentMatchedPoint = [
+                snapped.point.longitude,
+                snapped.point.latitude,
+              ];
+
+              setRemainingRoute([
+                currentMatchedPoint,
+                ...route.slice(snapped.index + 1),
+              ]);
+
+              if (snapped.index !== lastSnappedIndexRef.current) {
+                lastSnappedIndexRef.current = snapped.index;
+              }
+
+              if (snapped.index < route.length - 1) {
+                const current = route[snapped.index];
+                const next = route[snapped.index + 1];
+
+                const routeBearing = calculateBearing(
+                  current[1],
+                  current[0],
+                  next[1],
+                  next[0],
                 );
 
-              // CAMERA ROTATION
-              setCameraHeading(prev => {
-                let diff = bearing - prev;
-
-                if (diff > 180) diff -= 360;
-                if (diff < -180) diff += 360;
-
-                return prev + diff * 0.15;
-              });
-
-              // SCOOTER ROTATION
-              setMarkerHeading(prev => {
-                let diff = bearing - prev;
-
-                if (diff > 180) diff -= 360;
-                if (diff < -180) diff += 360;
-
-                return prev + diff * 0.25;
-              });
+                if (Math.abs(routeBearing - markerHeading) > 5) {
+                  setMarkerHeading(routeBearing);
+                  setCameraHeading(routeBearing);
+                }
+              }
             }
           }
+        }
 
-          previousCoordinateRef.current = {
-            latitude,
-            longitude,
-          };
+        previousCoordinateRef.current = {
+          latitude,
+          longitude,
+        };
+      },
 
-          // UPDATE ROUTE
-          await getRoute(
-            latitude,
-            longitude,
-            destinationLocation.latitude,
-            destinationLocation.longitude,
-          );
-        },
+      error => {
+        console.log(error);
+      },
 
-        error => {
-          console.log(error);
-        },
-
-        {
-          enableHighAccuracy: true,
-          distanceFilter: 5,
-          interval: 2500,
-          fastestInterval: 2000,
-          showLocationDialog: true,
-          forceRequestLocation: true,
-        },
-      );
+      {
+        enableHighAccuracy: true,
+        distanceFilter: 1,
+        interval: 1000,
+        fastestInterval: 500,
+        showLocationDialog: true,
+        forceRequestLocation: true,
+      },
+    );
 
     return () => {
       Geolocation.clearWatch(watchId);
     };
   }, []);
 
-  const getForwardCoordinate = (
-      latitude: number,
-      longitude: number,
-      bearing: number,
-      distanceMeters: number,
-    ): [number, number] => {
-      const R = 6378137;
+  const sendOTP = async () => {
+    try {
+      setLoading(true);
 
-      const brng = (bearing * Math.PI) / 180;
-
-      const lat1 = (latitude * Math.PI) / 180;
-      const lon1 = (longitude * Math.PI) / 180;
-
-      const lat2 = Math.asin(
-        Math.sin(lat1) *
-          Math.cos(distanceMeters / R) +
-          Math.cos(lat1) *
-            Math.sin(distanceMeters / R) *
-            Math.cos(brng),
+      console.log(
+        'Fetching dashboard data with token:',
+        GlobalLoginAuth.refreshToken,
       );
 
-      const lon2 =
-        lon1 +
-        Math.atan2(
-          Math.sin(brng) *
-            Math.sin(distanceMeters / R) *
-            Math.cos(lat1),
-          Math.cos(distanceMeters / R) -
-            Math.sin(lat1) * Math.sin(lat2),
-        );
+      const response = await fetch(
+        `${GlobalApi.baseUrl}api/deliveries/me/orders/${orderDetail?.order.id}/send-otp`,
 
-      return [
-        (lon2 * 180) / Math.PI,
-        (lat2 * 180) / Math.PI,
-      ];
-    };
+        {
+          method: 'POST',
 
-     const sendOTP = async () => {
-        try {
-          setLoading(true);
-          console.log('Fetching dashboard data with token:', GlobalLoginAuth.refreshToken);
-          const response = await fetch(
-            `${GlobalApi.baseUrl}api/deliveries/me/orders/${orderDetail?.order.id}/send-otp`,
-            {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                Authorization: `Bearer ${GlobalLoginAuth.accessToken}`,
-              },
-            }
-          );
-    
-          const result = await response.json();
-          const SendOtpResponse = result as SendOtpResponse; // ✅ Type assertion to ensure it matches our model
-    
-          console.log('Generate OTP Response:', result);
-    
-          if (!response.ok) {
-            Alert.alert('FoodyPly', result.message || 'Failed to load dashboard');
-            return;
-          }
-    
-          if (SendOtpResponse.success) {
-            console.log('OTP sent successfully:', SendOtpResponse.data.otp);
-            navigation.navigate('DeliveryOtpVerification', { orderDetail: orderDetail, otp: SendOtpResponse.data.otp });
-          }
+          headers: {
+            'Content-Type': 'application/json',
 
-        } catch (error) {
-          console.log(error);
-          Alert.alert('FoodyPly', 'Unable to connect to server');
-        } finally {
-          setLoading(false);
-        }
-      };
+            Authorization: `Bearer ${GlobalLoginAuth.accessToken}`,
+          },
+        },
+      );
+
+      const result = await response.json();
+
+      const SendOtpResponse = result as SendOtpResponse; // âœ… Type assertion to ensure it matches our model
+
+      console.log('Generate OTP Response:', result);
+
+      if (!response.ok) {
+        Alert.alert('FoodyPly', result.message || 'Failed to load dashboard');
+
+        return;
+      }
+
+      if (SendOtpResponse.success) {
+        console.log('OTP sent successfully:', SendOtpResponse.data.otp);
+
+        navigation.navigate('DeliveryOtpVerification', {
+          orderDetail: orderDetail,
+          otp: SendOtpResponse.data.otp,
+        });
+      }
+    } catch (error) {
+      console.log(error);
+
+      Alert.alert('FoodyPly', 'Unable to connect to server');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -446,44 +573,41 @@ export default function DeliveryStart({
               compass={true}
             >
               {/* CAMERA */}
-              {currentLocation && (
+              {riderPosition && (
                 <Camera
-                  zoom={17}
+                  zoom={19}
                   pitch={70}
-                  bearing={cameraHeading}
-                  duration={1000}
-                  center={getForwardCoordinate(
-                    currentLocation.latitude,
-                    currentLocation.longitude,
-                    cameraHeading,
-                    90, // look 90m ahead
-                  )}
+                  bearing={markerHeading}
+                  center={[riderPosition.longitude, riderPosition.latitude]}
+                  padding={{
+                    top: 800,
+                    bottom: 500,
+                    left: 0,
+                    right: 0,
+                  }}
                 />
               )}
 
               {/* DELIVERY BOY MARKER */}
-              {currentLocation && (
+              {riderPosition && (
                 <Marker
                   anchor="center"
-                  lngLat={[
-                    currentLocation.longitude,
-                    currentLocation.latitude,
-                  ]}
+                  lngLat={[riderPosition.longitude, riderPosition.latitude]}
                 >
                   <View
                     style={[
                       styles.currentMarkerWrapper,
                       {
                         transform: [
-                          {
-                            rotate: `${markerHeading - (230 * 1)}deg`,
-                          },
+                          // {
+                          //   rotate: `${markerHeading}deg`,
+                          // },
                         ],
                       },
                     ]}
                   >
                     <Image
-                      source={require('../assets/images/delivery_person.png')}
+                      source={require('../assets/images/dman.png')}
                       style={styles.deliveryIcon}
                       resizeMode="contain"
                     />
@@ -499,16 +623,8 @@ export default function DeliveryStart({
                   destinationLocation.latitude,
                 ]}
               >
-                <View
-                  style={
-                    styles.destinationMarkerWrapper
-                  }
-                >
-                  <View
-                    style={
-                      styles.destinationMarker
-                    }
-                  />
+                <View style={styles.destinationMarkerWrapper}>
+                  <View style={styles.destinationMarker} />
                 </View>
               </Marker>
 
@@ -524,8 +640,7 @@ export default function DeliveryStart({
                         properties: {},
                         geometry: {
                           type: 'LineString',
-                          coordinates:
-                            routeCoordinates,
+                          coordinates: remainingRoute,
                         },
                       },
                     ],
@@ -536,16 +651,13 @@ export default function DeliveryStart({
                     id="routeLayerBg"
                     type="line"
                     paint={{
-                      'line-color':
-                        '#0B3B2E',
+                      'line-color': '#0B3B2E',
                       'line-width': 10,
                       'line-opacity': 0.7,
                     }}
                     layout={{
-                      'line-cap':
-                        'round',
-                      'line-join':
-                        'round',
+                      'line-cap': 'round',
+                      'line-join': 'round',
                     }}
                   />
 
@@ -554,175 +666,199 @@ export default function DeliveryStart({
                     id="routeLayer"
                     type="line"
                     paint={{
-                      'line-color':
-                        '#00FF9D',
+                      'line-color': '#00FF9D',
                       'line-width': 6,
                       'line-opacity': 1,
                     }}
                     layout={{
-                      'line-cap':
-                        'round',
-                      'line-join':
-                        'round',
+                      'line-cap': 'round',
+                      'line-join': 'round',
                     }}
                   />
                 </GeoJSONSource>
               )}
             </Map>
 
-
             {/* FLOATING CARD */}
             {showDetailsCard ? (
-            <View style={styles.card1}>
-              {/* USER INFO */}
-              <View style={styles.header}>
-                <Image
-                  source={
+              <View style={styles.card1}>
+                {/* USER INFO */}
+                <View style={styles.header}>
+                  <Image
+                    source={
                       orderDetail?.customer?.profileImageUrl
-                      ? { uri: orderDetail.customer.profileImageUrl }
-                      : require('../assets/images/customer_image.png')
+                        ? { uri: orderDetail.customer.profileImageUrl }
+                        : require('../assets/images/customer_image.png')
                     }
-                  style={styles.avatar}
-                />
+                    style={styles.avatar}
+                  />
 
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.name}>{orderDetail.customer.name}</Text>
-                  <Text style={styles.phone}>{orderDetail.customer.phone}</Text>
-                  <Text style={styles.address}>
-                   {orderDetail.customer.address.fullText}
-                  </Text>
-                </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.name}>{orderDetail.customer.name}</Text>
+                    <Text style={styles.phone}>
+                      {orderDetail.customer.phone}
+                    </Text>
+                    <Text style={styles.address}>
+                      {orderDetail.customer.address.fullText}
+                    </Text>
+                  </View>
 
-                <View style={styles.iconColumn}>
-                  <TouchableOpacity style={styles.circleBtn}>
-                    <Image source={require('../assets/images/call.png')} style={styles.smallIcon} />
-                  </TouchableOpacity>
-                </View>
-              </View>
-
-              {/* ORDER INFO */}
-              <View style={styles.orderRow}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-                  <Image source={require('../assets/images/shopping_bag.png')} style={styles.smallIconOrange} />
-               
-                  <View>
-                    <Text style={styles.smallLabel}>{orderDetail.items.length} Items • {orderDetail.items.reduce((acc, item) => acc + item.quantity, 0)} Qty</Text>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 }}>
-                      <Text style={styles.smallLabel}>Payment Status</Text>
-                       <View style={styles.codBadge}>
-                          <Text style={styles.codText}>{orderDetail.billing.paymentStatus}</Text>
-                        </View>
-                    </View>
+                  <View style={styles.iconColumn}>
+                    <TouchableOpacity style={styles.circleBtn}>
+                      <Image
+                        source={require('../assets/images/call.png')}
+                        style={styles.smallIcon}
+                      />
+                    </TouchableOpacity>
                   </View>
                 </View>
-                <View>
-                  <Text style={styles.smallLabel}>Order Amount</Text>
+
+                {/* ORDER INFO */}
+                <View style={styles.orderRow}>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 5,
+                    }}
+                  >
+                    <Image
+                      source={require('../assets/images/shopping_bag.png')}
+                      style={styles.smallIconOrange}
+                    />
+
+                    <View>
+                      <Text style={styles.smallLabel}>{orderDetail.items.length} Items • {orderDetail.items.reduce((acc, item) => acc + item.quantity, 0)} Qty</Text>
+                      <View
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 4,
+                          marginTop: 2,
+                        }}
+                      >
+                        <Text style={styles.smallLabel}>Payment Status</Text>
+                        <View style={styles.codBadge}>
+                          <Text style={styles.codText}>
+                            {orderDetail.billing.paymentStatus}
+                          </Text>
+                        </View>
+                      </View>
+                    </View>
+                  </View>
+                  <View>
+                   <Text style={styles.smallLabel}>Order Amount</Text>
                   <Text style={styles.amount}>₹{orderDetail.billing.finalAmount.toFixed(2)}</Text>
+                  </View>
                 </View>
-              </View>
 
-              {/* LIVE STATUS */}
-              <View style={styles.liveBox}>
-                <View style={styles.iconCircle}>
-                  <Image source={require('../assets/images/scooter.png')} style={styles.bikeIcon} />
+                {/* LIVE STATUS */}
+                <View style={styles.liveBox}>
+                  <View style={styles.iconCircle}>
+                    <Image
+                      source={require('../assets/images/scooter.png')}
+                      style={styles.bikeIcon}
+                    />
+                  </View>
+                  <View style={{ marginLeft: 10 }}>
+                    <Text style={styles.liveTitle}>Live Status</Text>
+                    <Text style={styles.liveText}>
+                      You are on the way to the customer
+                    </Text>
+                  </View>
                 </View>
-                <View style={{ marginLeft: 10 }}>
-                  <Text style={styles.liveTitle}>Live Status</Text>
-                  <Text style={styles.liveText}>
-                    You are on the way to the customer
-                  </Text>
-                </View>
-              </View>
 
-              {/* PROGRESS */}
-              <View style={{ marginTop: 20 }}>
-                <Text style={styles.progressTitle}>Order Progress</Text>
+                {/* PROGRESS */}
+                <View style={{ marginTop: 20 }}>
+                  <Text style={styles.progressTitle}>Order Progress</Text>
 
-                <View style={styles.progressRow}>
-                    {["Assigned", "Accepted", "Picked", "On The Way", "Delivered"].map(
-                      (item, index) => {
-                        const isActive = index <= 3;
-                        const isOnWay = item === "On The Way";
+                  <View style={styles.progressRow}>
+                    {[
+                      'Assigned',
+                      'Accepted',
+                      'Picked',
+                      'On The Way',
+                      'Delivered',
+                    ].map((item, index) => {
+                      const isActive = index <= 3;
+                      const isOnWay = item === 'On The Way';
 
-                        return (
-                          <View key={index} style={styles.stepContainer}>
-                            <View
-                              style={[
-                                styles.stepCircle,
-                                isActive && styles.activeStep,
+                      return (
+                        <View key={index} style={styles.stepContainer}>
+                          <View
+                            style={[
+                              styles.stepCircle,
+                              isActive && styles.activeStep,
 
-                                // LIGHT ORANGE BACKGROUND FOR ON WAY
-                                isOnWay && styles.onWayStep,
-                              ]}
-                            >
-                              {isOnWay ? (
-                                <Image
-                                  source={require('../assets/images/scooter.png')}
-                                  style={styles.scooterIcon}
-                                />
-                              ) : (
-                                <Image
-                                  source={require('../assets/images/check.png')}
-                                  style={[
-                                    styles.checkIcon,
-                                    {
-                                      tintColor: isActive
-                                        ?Colors.primary
-                                        : "#bbb",
-                                    },
-                                  ]}
-                                />
-                              )}
-                            </View>
-
-                            <Text style={styles.stepText}>
-                              {item}
-                            </Text>
-
-                            {index !== 4 && (
-                              <View
+                              // LIGHT ORANGE BACKGROUND FOR ON WAY
+                              isOnWay && styles.onWayStep,
+                            ]}
+                          >
+                            {isOnWay ? (
+                              <Image
+                                source={require('../assets/images/scooter.png')}
+                                style={styles.scooterIcon}
+                              />
+                            ) : (
+                              <Image
+                                source={require('../assets/images/check.png')}
                                 style={[
-                                  styles.line,
-                                  index < 3 && styles.activeLine,
+                                  styles.checkIcon,
+                                  {
+                                    tintColor: isActive
+                                      ? Colors.primary
+                                      : '#bbb',
+                                  },
                                 ]}
                               />
                             )}
                           </View>
-                        );
-                      }
-                    )}
+
+                          <Text style={styles.stepText}>{item}</Text>
+
+                          {index !== 4 && (
+                            <View
+                              style={[
+                                styles.line,
+                                index < 3 && styles.activeLine,
+                              ]}
+                            />
+                          )}
+                        </View>
+                      );
+                    })}
                   </View>
-              </View>
+                </View>
 
-              {/* BUTTONS */}
-              <View style={styles.buttonRow}>
-                <TouchableOpacity style={styles.mapBtn}  onPress={() =>
-                     setShowDetailsCard(false)
-                }>
-                  <Text style={styles.mapBtnText}>Open in Maps</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity style={styles.deliverBtn} onPress={() =>
-                  sendOTP()
-                }>
-                  <Text style={styles.deliverBtnText}>Order Delivered</Text>
-                </TouchableOpacity>
-              </View>
-             </View>
-                ) : (
+                {/* BUTTONS */}
+                <View style={styles.buttonRow}>
                   <TouchableOpacity
-                    activeOpacity={0.8}
-                    style={styles.floatingShowButton}
-                    onPress={() =>
-                      setShowDetailsCard(true)
-                    }
+                    style={styles.mapBtn}
+                    onPress={() => setShowDetailsCard(false)}
                   >
-                    <Image
-                      source={require('../assets/images/shopping_bag.png')}
-                      style={styles.floatingArrow}
-                    />
+                    <Text style={styles.mapBtnText}>Open in Maps</Text>
                   </TouchableOpacity>
-                )}
+
+                  <TouchableOpacity
+                    style={styles.deliverBtn}
+                    onPress={() => sendOTP()}
+                  >
+                    <Text style={styles.deliverBtnText}>Order Delivered</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ) : (
+              <TouchableOpacity
+                activeOpacity={0.8}
+                style={styles.floatingShowButton}
+                onPress={() => setShowDetailsCard(true)}
+              >
+                <Image
+                  source={require('../assets/images/shopping_bag.png')}
+                  style={styles.floatingArrow}
+                />
+              </TouchableOpacity>
+            )}
           </View>
         </View>
       </View>
@@ -764,16 +900,18 @@ const styles = StyleSheet.create({
   },
 
   currentMarkerWrapper: {
-    width: 60,
-    height: 60,
-    justifyContent: 'center',
+    width: 44,
+    height: 44,
     alignItems: 'center',
+    justifyContent: 'center',
   },
 
   deliveryIcon: {
-    width: 56,
-    height: 56,
-    tintColor: Colors.primary,
+    width: 80,
+    height: 80,
+
+    // REMOVE THIS IF IMAGE ALREADY ORANGE
+    // tintColor: Colors.primary,
   },
 
   destinationMarkerWrapper: {
@@ -791,16 +929,16 @@ const styles = StyleSheet.create({
     borderWidth: 3,
     borderColor: '#fff',
   },
-    card1: {
-    position: "absolute",
+  card1: {
+    position: 'absolute',
     bottom: 20,
     left: 15,
     right: 15,
-    backgroundColor: "#fff",
+    backgroundColor: '#fff',
     borderRadius: 25,
     padding: 18,
 
-    shadowColor: "#000",
+    shadowColor: '#000',
     shadowOpacity: 0.15,
     shadowRadius: 10,
     shadowOffset: {
@@ -811,9 +949,9 @@ const styles = StyleSheet.create({
   },
 
   header: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    justifyContent: "space-between",
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
   },
 
   avatar: {
@@ -851,14 +989,14 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 19,
-    backgroundColor: "#7bc043",
-    justifyContent: "center",
-    alignItems: "center",
+    backgroundColor: '#7bc043',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 
   orderRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     marginTop: 20,
   },
 
@@ -882,12 +1020,12 @@ const styles = StyleSheet.create({
   },
 
   liveBox: {
-    flexDirection: "row",
+    flexDirection: 'row',
     backgroundColor: '#FEF6F3',
     padding: 6,
     borderRadius: 10,
     marginTop: 18,
-    alignItems: "center",
+    alignItems: 'center',
   },
 
   liveTitle: {
@@ -909,37 +1047,37 @@ const styles = StyleSheet.create({
   },
 
   progressRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
+    flexDirection: 'row',
+    justifyContent: 'space-between',
   },
 
   stepContainer: {
-    alignItems: "center",
+    alignItems: 'center',
     flex: 1,
-    position: "relative",
-    justifyContent: "flex-start",
+    position: 'relative',
+    justifyContent: 'flex-start',
   },
 
- stepCircle: {
-  width: 30,
-  height: 30,
-  borderRadius: 15,
-  backgroundColor: "#e5e5e5",
-  justifyContent: "center",
-  alignItems: "center",
-  zIndex: 2,
-},
+  stepCircle: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: '#e5e5e5',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 2,
+  },
   activeStep: {
     backgroundColor: Colors.lightOrange,
   },
 
   line: {
-    position: "absolute",
+    position: 'absolute',
     top: 12,
-    left: "50%",
-    width: "100%",
+    left: '50%',
+    width: '100%',
     height: 3,
-    backgroundColor: "#ddd",
+    backgroundColor: '#ddd',
     zIndex: 1,
   },
 
@@ -951,12 +1089,12 @@ const styles = StyleSheet.create({
     fontSize: 10,
     marginTop: 10,
     color: Colors.textBrown,
-    textAlign: "center",
+    textAlign: 'center',
     fontFamily: FontFamily.regular,
   },
 
   buttonRow: {
-    flexDirection: "row",
+    flexDirection: 'row',
     marginTop: 25,
     gap: 12,
   },
@@ -966,7 +1104,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.buttonLight,
     paddingVertical: 14,
     borderRadius: 14,
-    alignItems: "center",
+    alignItems: 'center',
   },
 
   deliverBtn: {
@@ -974,7 +1112,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary,
     paddingVertical: 14,
     borderRadius: 14,
-    alignItems: "center",
+    alignItems: 'center',
   },
 
   mapBtnText: {
@@ -984,7 +1122,7 @@ const styles = StyleSheet.create({
   },
 
   deliverBtnText: {
-    color: "#fff",
+    color: '#fff',
     fontFamily: FontFamily.regular,
     fontSize: 16,
   },
@@ -992,26 +1130,26 @@ const styles = StyleSheet.create({
   smallIcon: {
     width: 18,
     height: 18,
-    tintColor: "#fff",
-},
+    tintColor: '#fff',
+  },
 
-smallIconOrange: {
+  smallIconOrange: {
     width: 30,
     height: 30,
     tintColor: Colors.primary,
-},
+  },
 
-bikeIcon: {
-  width: 24,
-  height: 24,
-  tintColor: Colors.primary,
-},
+  bikeIcon: {
+    width: 24,
+    height: 24,
+    tintColor: Colors.primary,
+  },
 
-checkIcon: {
-  width: 16,
-  height: 16,
-},
- iconCircle: {
+  checkIcon: {
+    width: 16,
+    height: 16,
+  },
+  iconCircle: {
     width: 60,
     height: 60,
     borderRadius: 30,
@@ -1019,7 +1157,7 @@ checkIcon: {
     justifyContent: 'center',
     alignItems: 'center',
   },
-   codBadge: {
+  codBadge: {
     backgroundColor: Colors.lightBackground,
     paddingHorizontal: 8,
     paddingVertical: 3,
@@ -1038,60 +1176,60 @@ checkIcon: {
     borderRadius: 15,
     backgroundColor: Colors.lightOrange,
 
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: 'center',
+    alignItems: 'center',
 
     zIndex: 3,
-},
-
-scooterIcon: {
-  width: 20,
-  height: 20,
-  tintColor: Colors.primary,
-},
-hideButton: {
-  width: 32,
-  height: 32,
-  borderRadius: 16,
-  backgroundColor: "#F5F5F5",
-  justifyContent: "center",
-  alignItems: "center",
-  marginLeft: 10,
-},
-
-hideIcon: {
-  width: 16,
-  height: 16,
-  tintColor: Colors.textColor,
-},
-
-floatingShowButton: {
-  position: "absolute",
-  bottom: 30,
-  right: 20,
-  width: 40,
-  height: 40,
-  borderRadius: 20,
-
-  backgroundColor: Colors.primary,
-
-  justifyContent: "center",
-  alignItems: "center",
-
-  shadowColor: "#000",
-  shadowOpacity: 0.2,
-  shadowRadius: 8,
-  shadowOffset: {
-    width: 0,
-    height: 4,
   },
 
-  elevation: 10,
-},
+  scooterIcon: {
+    width: 20,
+    height: 20,
+    tintColor: Colors.primary,
+  },
+  hideButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#F5F5F5',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 10,
+  },
 
-floatingArrow: {
-  width: 24,
-  height: 24,
-  tintColor: "#fff",
-},
+  hideIcon: {
+    width: 16,
+    height: 16,
+    tintColor: Colors.textColor,
+  },
+
+  floatingShowButton: {
+    position: 'absolute',
+    bottom: 30,
+    right: 20,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+
+    backgroundColor: Colors.primary,
+
+    justifyContent: 'center',
+    alignItems: 'center',
+
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+
+    elevation: 10,
+  },
+
+  floatingArrow: {
+    width: 24,
+    height: 24,
+    tintColor: '#fff',
+  },
 });
