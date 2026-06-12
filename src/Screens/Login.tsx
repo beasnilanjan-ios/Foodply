@@ -121,7 +121,7 @@ export default function Login({ navigation }: any) {
           />
         </GlobalTextInput>
 
-        <TouchableOpacity style={styles.forgetButton}>
+        <TouchableOpacity style={styles.forgetButton} onPress={() => navigation.navigate('ForgotPassword')}>
           <Text style={styles.forgetText}>Forget Password</Text>
         </TouchableOpacity>
 
@@ -135,7 +135,7 @@ export default function Login({ navigation }: any) {
 
         <View style={styles.socialContainer}>
           <Text style={styles.TextNew}>Don't have an account? </Text>
-          <TouchableOpacity>
+          <TouchableOpacity onPress={() => navigation.navigate('Registration')}>
             <Text style={styles.TextSignUp}>Sign Up</Text>
           </TouchableOpacity>
         </View>

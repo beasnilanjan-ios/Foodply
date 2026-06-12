@@ -57,7 +57,9 @@ import {
   ScrollView,
   TouchableOpacity,
   Image,
+  Alert,
 } from 'react-native';
+import RazorpayCheckout from 'react-native-razorpay';
 import GlobalBackButton from '../GlobalContainer/GlobalBackButton';
 import Colors from '../assets/Colors/Colors';
 import GlobalBottomBar from '../GlobalContainer/GlobalBottomBar';
@@ -93,6 +95,32 @@ export default function Cart({ navigation, route }: any) {
 
   // ✅ KEY LOGIC
   const showBottomBar = route?.params?.fromTab === true;
+
+  const startPayment = async () => {
+    const options = {
+      key: 'rzp_test_SmSTwiKHdNaqc8',
+      amount: 50000,
+      currency: 'INR',
+      name: 'Restaurant App',
+      description: 'Order Payment',
+      prefill: {
+        name: 'John Doe',
+        email: 'john.doe@example.com',
+        contact: '9999999999',
+      },
+    };
+
+    try {
+      const data = await RazorpayCheckout.open(options);
+      if (data?.razorpay_payment_id) {
+        navigation.navigate('OrderConfirmed');
+      } else {
+        Alert.alert('Payment pending', 'Payment was not completed. Please try again.');
+      }
+    } catch (error: any) {
+      Alert.alert('Payment failed', error?.description || error?.message || 'Something went wrong.');
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -226,7 +254,7 @@ export default function Cart({ navigation, route }: any) {
 
             <TouchableOpacity
               style={styles.addToCartButton}
-              onPress={() => navigation.navigate('OrderConfirmed')}
+              onPress={startPayment}
             >
               <Text style={styles.addToCartText}>Pay Now</Text>
             </TouchableOpacity>

@@ -28,11 +28,15 @@ import Favorites from './src/Screens/Favorites'; // adjust path if needed
 import Trackorder from './src/Screens/Trackorder';
 import DeliveryAddressList from './src/Screens/DeliveryAddressList';
 import MyProfile from './src/Screens/MyProfile';
+import Registration from './src/Screens/Registration';
+import ForgotPassword from './src/Screens/ForgotPassword';
 
 export type RootStackParamList = {
   Splash: undefined;
   Banner: undefined;
   Login: undefined;
+  Registration: undefined;
+  ForgotPassword: undefined;
   DeliveryAddressList: undefined
   Dashboard: { fromTab?: boolean } | undefined;
   Orders: { fromTab?: boolean } | undefined;
@@ -114,6 +118,9 @@ const App = () => {
           />
 
           <Stack.Screen name="Login" component={Login} />
+
+          <Stack.Screen name="Registration" component={Registration} />
+          <Stack.Screen name="ForgotPassword" component={ForgotPassword} />
 
           <Stack.Screen
             name="Dashboard"
