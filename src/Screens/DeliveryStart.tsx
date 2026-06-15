@@ -30,6 +30,8 @@ import GlobalLoginAuth from '../GlobalContainer/GlobalLoginAuth';
 import GlobalApi from '../GlobalContainer/GlobalApi';
 import GlobalLoader from '../GlobalContainer/GlobalLoader';
 import { SendOtpResponse } from '../Models/SendOTP/SendOtpResponse ';
+import socket from '../services/socketService';
+
 
 const DARK_MAP_STYLE =
   'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json';
@@ -45,9 +47,9 @@ export default function DeliveryStart({ route, navigation }: any) {
   const lastSnappedIndexRef = useRef(-1);
   // DESTINATION
   const [destinationLocation] = useState({
-    latitude: orderDetail.customer.address.latitude || 22.8948,
+    latitude: orderDetail.customer.address.latitude,
 
-    longitude: orderDetail.customer.address.longitude || 88.41,
+    longitude: orderDetail.customer.address.longitude,
   });
 
   // CURRENT LOCATION
@@ -324,6 +326,11 @@ export default function DeliveryStart({ route, navigation }: any) {
           destinationLocation.latitude,
           destinationLocation.longitude,
         );
+
+        console.log('Location:',   latitude,
+          longitude,
+          destinationLocation.latitude,
+          destinationLocation.longitude, )
       },
 
       error => {
@@ -337,6 +344,19 @@ export default function DeliveryStart({ route, navigation }: any) {
       },
     );
   };
+
+ const sendLocation = (
+  latitude: number,
+  longitude: number,
+  orderId: string | number,
+) => {
+  socket.emit('locationUpdate', {
+    orderId,
+    latitude,
+    longitude,
+    timestamp: Date.now(),
+  });
+};
 
   // LIVE TRACKING
   useEffect(() => {
@@ -562,8 +582,20 @@ export default function DeliveryStart({ route, navigation }: any) {
       },
     );
 
+     socket.connect();
+
+      socket.on('connect', () => {
+        console.log('Connected:', socket.id);
+      });
+
+      socket.on('message', data => {
+        console.log('Message:', data);
+      });
+
     return () => {
       Geolocation.clearWatch(watchId);
+      socket.off('message');
+      socket.disconnect();
     };
   }, []);
 
@@ -774,7 +806,19 @@ export default function DeliveryStart({ route, navigation }: any) {
                   </View>
 
                   <View style={styles.iconColumn}>
-                    <TouchableOpacity style={styles.circleBtn}>
+                    <TouchableOpacity style={styles.circleBtn}   
+                     onPress={() => {
+                          const { latitude, longitude } = currentLocation || {};
+
+                          if (
+                            latitude === undefined ||
+                            longitude === undefined
+                          ) {
+                            return;
+                          }
+
+                          sendLocation(latitude, longitude, orderDetail.order.id);
+                        }}>
                       <Image
                         source={require('../assets/images/call.png')}
                         style={styles.smallIcon}
