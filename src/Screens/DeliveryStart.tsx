@@ -62,6 +62,10 @@ export default function DeliveryStart({ route, navigation }: any) {
   const [remainingRoute, setRemainingRoute] = useState<any[]>([]);
   const headingRef = useRef(0);
   const cameraHeadingRef = useRef(0);
+  const markerAnimationRef = useRef<any>(null);   // cancel old animation before new one
+  const headingAnimationRef = useRef<any>(null);  // cancel old heading animation
+  const riderPositionRef = useRef<{ latitude: number; longitude: number } | null>(null); // always fresh position
+  const lastAnimatedBearingRef = useRef<number>(-1); // last bearing jo animate hua â€” dobara same pe na karo
   const [riderPosition, setRiderPosition] = useState<{
     latitude: number;
     longitude: number;
@@ -71,8 +75,7 @@ export default function DeliveryStart({ route, navigation }: any) {
 
   // SCOOTER HEADING
   const [markerHeading, setMarkerHeading] = useState(0);
-const [loading, setLoading] = useState(false);
-
+  const [loading, setLoading] = useState(false);
 
   const [locationHistory, setLocationHistory] = useState<
     { latitude: number; longitude: number }[]
@@ -122,29 +125,30 @@ const [loading, setLoading] = useState(false);
   };
 
   // DISTANCE BETWEEN TWO POINTS
-    const getDistance = (
-      lat1: number,
-      lon1: number,
-      lat2: number,
-      lon2: number,
-    ) => {
-      const R = 6371e3;
-  
-      const φ1 = (lat1 * Math.PI) / 180;
-      const φ2 = (lat2 * Math.PI) / 180;
-  
-      const Δφ = ((lat2 - lat1) * Math.PI) / 180;
-  
-      const Δλ = ((lon2 - lon1) * Math.PI) / 180;
-  
-      const a =
-        Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
-        Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
-  
-      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  
-      return R * c;
+  const getDistance = (
+    lat1: number,
+    lon1: number,
+    lat2: number,
+    lon2: number,
+  ) => {
+    const R = 6371e3;
+ 
+    const φ1 = (lat1 * Math.PI) / 180;
+    const φ2 = (lat2 * Math.PI) / 180;
+ 
+    const Δφ = ((lat2 - lat1) * Math.PI) / 180;
+ 
+    const Δλ = ((lon2 - lon1) * Math.PI) / 180;
+ 
+    const a =
+      Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+      Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+ 
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+ 
+    return R * c;
   };
+ 
  
 
   const getProjectedPointOnSegment = (
@@ -274,10 +278,12 @@ const [loading, setLoading] = useState(false);
         );
 
         if (!riderPosition && coordinates.length > 0) {
-          setRiderPosition({
+          const initialPos = {
             latitude: coordinates[0][1],
             longitude: coordinates[0][0],
-          });
+          };
+          riderPositionRef.current = initialPos;
+          setRiderPosition(initialPos);
 
           lastSnappedIndexRef.current = 0;
 
@@ -296,6 +302,11 @@ const [loading, setLoading] = useState(false);
         const latitude = position.coords.latitude;
 
         const longitude = position.coords.longitude;
+
+         ToastAndroid.show(
+            `Current Location: Latitude ${latitude} Longitude ${longitude}`,
+            ToastAndroid.SHORT,
+          );
 
         setCurrentLocation({
           latitude,
@@ -339,23 +350,70 @@ const [loading, setLoading] = useState(false);
       endLat: number,
       endLng: number,
     ) => {
-      const steps = 20;
+      // CANCEL previous animation â€” nahi to purani aur nayi dono chalti hain
+      if (markerAnimationRef.current) {
+        clearInterval(markerAnimationRef.current);
+        markerAnimationRef.current = null;
+      }
+
+      // Bike fast ho to kam steps â€” marker peeche nahi rahega
+      const distance = Math.sqrt(
+        Math.pow(endLat - startLat, 2) + Math.pow(endLng - startLng, 2)
+      );// Fast movement = fewer steps (snap quickly), slow = more steps (smooth)
+      
+      const steps = distance > 0.0005 ? 6 : 10; // ~55m threshold
       let currentStep = 0;
 
       const interval = setInterval(() => {
         currentStep++;
-
         const progress = currentStep / steps;
-
-        setRiderPosition({
+        const newPos = {
           latitude: startLat + (endLat - startLat) * progress,
           longitude: startLng + (endLng - startLng) * progress,
-        });
+        };
+        riderPositionRef.current = newPos;
+        setRiderPosition(newPos);
 
         if (currentStep >= steps) {
           clearInterval(interval);
+          markerAnimationRef.current = null;
         }
       }, 50);
+
+      markerAnimationRef.current = interval;
+    };
+
+    // SMOOTH HEADING ANIMATION
+    const animateHeading = (fromBearing: number, toBearing: number) => {
+      // CANCEL previous heading animation
+      if (headingAnimationRef.current) {
+        clearInterval(headingAnimationRef.current);
+        headingAnimationRef.current = null;
+      }
+
+      let delta = toBearing - fromBearing;
+      if (delta > 180) delta -= 360;
+      if (delta < -180) delta += 360;
+
+      const steps = 15; // fast turn â€” heading peeche nahi rahegi
+      let currentStep = 0;
+
+      const interval = setInterval(() => {
+        currentStep++;
+        const progress = currentStep / steps;
+        const newHeading = (fromBearing + delta * progress + 360) % 360;
+        headingRef.current = newHeading;
+        setMarkerHeading(newHeading);
+        setCameraHeading(newHeading);
+        cameraHeadingRef.current = newHeading;
+
+        if (currentStep >= steps) {
+          clearInterval(interval);
+          headingAnimationRef.current = null;
+        }
+      }, 50);
+
+      headingAnimationRef.current = interval;
     };
     const watchId = Geolocation.watchPosition(
       async position => {
@@ -413,10 +471,10 @@ const [loading, setLoading] = useState(false);
             latitude,
             longitude,
           );
-          ToastAndroid.show(
-            `Rider moved: ${movedDistance.toFixed(1)} meter`,
-            ToastAndroid.SHORT,
-          );
+          // ToastAndroid.show(
+          //   `Rider moved: ${movedDistance.toFixed(1)} meter`,
+          //   ToastAndroid.SHORT,
+          // );
 
           console.log('GPS Move Distance:', movedDistance);
           // if (movedDistance < 3) {
@@ -427,18 +485,21 @@ const [loading, setLoading] = useState(false);
             const snapped = getNearestPointOnRoute(latitude, longitude, route);
 
             if (snapped) {
-              if (riderPosition) {
+              // riderPositionRef use karo â€” state stale hoti hai closure mein
+              if (riderPositionRef.current) {
                 animateMarker(
-                  riderPosition.latitude,
-                  riderPosition.longitude,
+                  riderPositionRef.current.latitude,
+                  riderPositionRef.current.longitude,
                   snapped.point.latitude,
                   snapped.point.longitude,
                 );
               } else {
-                setRiderPosition({
+                const pos = {
                   latitude: snapped.point.latitude,
                   longitude: snapped.point.longitude,
-                });
+                };
+                riderPositionRef.current = pos;
+                setRiderPosition(pos);
               }
 
               const currentMatchedPoint = [
@@ -466,9 +527,15 @@ const [loading, setLoading] = useState(false);
                   next[0],
                 );
 
-                if (Math.abs(routeBearing - markerHeading) > 5) {
-                  setMarkerHeading(routeBearing);
-                  setCameraHeading(routeBearing);
+                const bearingDiff = Math.abs(routeBearing - headingRef.current);
+
+                // 15Â° threshold â€” choti GPS jitter pe animate nahi hoga
+                // lastAnimatedBearing check â€” same bearing pe dobara animate nahi hoga (vibration fix)
+                const alreadyAnimated = Math.abs(routeBearing - lastAnimatedBearingRef.current) < 5;
+
+                if (bearingDiff > 15 && !alreadyAnimated) {
+                  lastAnimatedBearingRef.current = routeBearing;
+                  animateHeading(headingRef.current, routeBearing);
                 }
               }
             }
@@ -487,9 +554,9 @@ const [loading, setLoading] = useState(false);
 
       {
         enableHighAccuracy: true,
-        distanceFilter: 1,
-        interval: 1000,
-        fastestInterval: 500,
+        distanceFilter: 1,       // walk: 1m theek, bike: 5m better â€” kam spam
+        interval: 1000,          // har 2 sec update â€” animation complete hone ka time milta hai
+        fastestInterval: 1000,
         showLocationDialog: true,
         forceRequestLocation: true,
       },
@@ -525,7 +592,7 @@ const [loading, setLoading] = useState(false);
 
       const result = await response.json();
 
-      const SendOtpResponse = result as SendOtpResponse; // âœ… Type assertion to ensure it matches our model
+      const SendOtpResponse = result as SendOtpResponse; // Ã¢Å“â€¦ Type assertion to ensure it matches our model
 
       console.log('Generate OTP Response:', result);
 
@@ -552,6 +619,9 @@ const [loading, setLoading] = useState(false);
     }
   };
 
+
+
+
   return (
     <View style={styles.container}>
       <GlobalTopBarDelivery
@@ -575,13 +645,13 @@ const [loading, setLoading] = useState(false);
               {/* CAMERA */}
               {riderPosition && (
                 <Camera
-                  zoom={19}
-                  pitch={70}
-                  bearing={markerHeading}
+                  zoom={18}
+                  pitch={0}
+                  bearing={cameraHeading}
                   center={[riderPosition.longitude, riderPosition.latitude]}
                   padding={{
-                    top: 800,
-                    bottom: 500,
+                    top: 100,
+                    bottom: 300,
                     left: 0,
                     right: 0,
                   }}
@@ -598,11 +668,11 @@ const [loading, setLoading] = useState(false);
                     style={[
                       styles.currentMarkerWrapper,
                       {
-                        transform: [
-                          // {
-                          //   rotate: `${markerHeading}deg`,
-                          // },
-                        ],
+                        // transform: [
+                        //   {
+                        //     rotate: `${markerHeading}deg`,
+                        //   },
+                        // ],
                       },
                     ]}
                   >
@@ -728,7 +798,14 @@ const [loading, setLoading] = useState(false);
                     />
 
                     <View>
-                      <Text style={styles.smallLabel}>{orderDetail.items.length} Items • {orderDetail.items.reduce((acc, item) => acc + item.quantity, 0)} Qty</Text>
+                      <Text style={styles.smallLabel}>
+                        {orderDetail.items.length} Items â€¢{' '}
+                        {orderDetail.items.reduce(
+                          (acc, item) => acc + item.quantity,
+                          0,
+                        )}{' '}
+                        Qty
+                      </Text>
                       <View
                         style={{
                           flexDirection: 'row',
@@ -747,8 +824,10 @@ const [loading, setLoading] = useState(false);
                     </View>
                   </View>
                   <View>
-                   <Text style={styles.smallLabel}>Order Amount</Text>
-                  <Text style={styles.amount}>₹{orderDetail.billing.finalAmount.toFixed(2)}</Text>
+                    <Text style={styles.smallLabel}>Order Amount</Text>
+                    <Text style={styles.amount}>
+                      â‚¹{orderDetail.billing.finalAmount.toFixed(2)}
+                    </Text>
                   </View>
                 </View>
 

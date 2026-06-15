@@ -27,7 +27,9 @@ const DeliveryOtpVerification = ({ route,
       const [timer, setTimer] = useState(60);
       const [canResend, setCanResend] = useState(false);
       const [loading, setLoading] = useState(false);
-      const [generatedOtp, setGeneratedOtp] = useState(otpFromStartScreen); // ✅ Store OTP from previous screen
+      const [generatedOtp, setGeneratedOtp] = useState(otpFromStartScreen); // ✅ Store OTP from previous 
+      const [isOtpComplete, setisOtpComplete] = useState(false);
+
 
       const sendOTP = async () => {
               try {
@@ -224,7 +226,7 @@ const DeliveryOtpVerification = ({ route,
         requestAnimationFrame(() => {
           inputRefs.current[index - 1]?.focus();
         });
-      }
+      }   
     };
       
     const handleFocus = (index: number) => {
@@ -411,10 +413,15 @@ const DeliveryOtpVerification = ({ route,
                         handleKeyPress(e, index)
                       }
                       textAlign="center"
-                      blurOnSubmit={false}
                       selectTextOnFocus
                       cursorColor="transparent"
                       selectionColor="transparent"
+                      returnKeyType={isOtpComplete ? 'done' : 'next'}
+                      onSubmitEditing={() => {
+                          if (isOtpComplete) {
+                            checkOtp; // Call your API or submit action
+                          }
+                      }}
                     />
                   ))}
                 </View>
