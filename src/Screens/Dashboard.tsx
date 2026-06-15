@@ -181,6 +181,8 @@ import {
   ImageSourcePropType,
   ScrollView,
   TouchableOpacity,
+  Modal,
+  FlatList,
 } from 'react-native';
 import Colors from '../assets/Colors/Colors';
 import GlobalBottomBar from '../GlobalContainer/GlobalBottomBar';
@@ -188,7 +190,10 @@ import GlobalTopBar from '../GlobalContainer/GlobalTopBar';
 import GlobalLocationPermission from '../GlobalContainer/GlobalLocationPermission';
 import GlobalApi from '../GlobalContainer/GlobalApi';
 import GlobalLoginAuth from '../GlobalContainer/GlobalLoginAuth';
-import { NearbyRestaurantsResponseModel } from '../Models/NearbyRestaurantsModel';
+import {
+  NearbyRestaurantModel,
+  NearbyRestaurantsResponseModel,
+} from '../Models/NearbyRestaurantsModel';
 import {
   RestaurantMenuItemModel,
   RestaurantMenuResponseModel,
@@ -258,6 +263,14 @@ export default function Dashboard({ navigation, onMenuPress }: any) {
   const [categories, setCategories] = useState<CategoryItem[]>([]);
   const [bestSellerItems, setBestSellerItems] = useState<RestaurantMenuItemModel[]>([]);
   const [recommendedItems, setRecommendedItems] = useState<RestaurantMenuItemModel[]>([]);
+  const [nearbyRestaurants, setNearbyRestaurants] = useState<NearbyRestaurantModel[]>([]);
+  const [selectedRestaurantIndex, setSelectedRestaurantIndex] = useState(0);
+  const [selectedRestaurantName, setSelectedRestaurantName] = useState('');
+  const [selectedRestaurantAddress, setSelectedRestaurantAddress] = useState('');
+  const [restaurantId, setRestaurantId] = useState<number | null>(null);
+  const [restaurantModalVisible, setRestaurantModalVisible] = useState(false);
+  const [latitude, setLatitude] = useState<number | null>(null);
+  const [longitude, setLongitude] = useState<number | null>(null);
   const [activeBannerIndex, setActiveBannerIndex] = useState(0);
   const bannerScrollRef = useRef<ScrollView>(null);
   const categoryCount = Math.max(categories.length, 1);
@@ -267,6 +280,90 @@ export default function Dashboard({ navigation, onMenuPress }: any) {
   const categoryIconSize = Math.min(isTablet ? 78 : 72, categoryItemWidth);
   const categoryIconRadius = categoryIconSize * 0.28;
   const categoryNeedsScroll = categories.length > categoryColumns;
+
+  const fetchRestaurantMenu = async (
+    selectedRestaurantId: number,
+    lat: number,
+    lng: number,
+  ) => {
+    try {
+      const menuUrl =
+        `${GlobalApi.baseUrl}api/v1/restaurants/${selectedRestaurantId}/menu?` +
+        `lat=${lat}&` +
+        `lng=${lng}&` +
+        `latitude=${lat}&` +
+        `longitude=${lng}&` +
+        `limit=20&` +
+        `offset=0`;
+
+      const headers: Record<string, string> = {
+        Accept: 'application/json',
+        'X-Client-Type': 'mobile',
+      };
+
+      if (GlobalLoginAuth.accessToken) {
+        headers.Authorization = `Bearer ${GlobalLoginAuth.accessToken}`;
+      }
+
+      const menuResponse = await fetch(menuUrl, {
+        method: 'GET',
+        headers,
+      });
+
+      const menuResult = await menuResponse.json();
+      const restaurantMenu = RestaurantMenuResponseModel.fromJson(menuResult);
+
+      if (!menuResponse.ok) {
+        console.log('Restaurant menu error:', JSON.stringify(restaurantMenu, null, 2));
+        return;
+      }
+
+      const items = restaurantMenu.data?.items ?? [];
+      const categoriesFromItems = items
+        .map(item => item.category?.name)
+        .filter((name): name is string => Boolean(name));
+
+      const categoriesFromData = (restaurantMenu.data?.categories ?? [])
+        .map((c: any) => (typeof c === 'string' ? c : c?.name))
+        .filter((name: any): name is string => Boolean(name));
+
+      const menuCategoryNames = Array.from(
+        new Set([...categoriesFromItems, ...categoriesFromData]),
+      );
+
+      setCategories(
+        menuCategoryNames.map(name => ({
+          name,
+          icon: getCategoryIcon(name),
+        })),
+      );
+
+      const bestSellers = items.filter(item => item.isBestSelling) ?? [];
+      setBestSellerItems(
+        (bestSellers.length > 0 ? bestSellers : items).slice(0, 6),
+      );
+      setRecommendedItems(items.slice(0, 4));
+    } catch (error) {
+      console.log('fetchRestaurantMenu failed:', error);
+    }
+  };
+
+  const onSelectRestaurant = (index: number) => {
+    const selected = nearbyRestaurants[index];
+    if (!selected) {
+      return;
+    }
+
+    setSelectedRestaurantIndex(index);
+    setRestaurantId(selected.id);
+    setSelectedRestaurantName(selected.name);
+    setSelectedRestaurantAddress(selected.address);
+    setRestaurantModalVisible(false);
+
+    if (latitude !== null && longitude !== null) {
+      fetchRestaurantMenu(selected.id, latitude, longitude);
+    }
+  };
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -295,16 +392,13 @@ export default function Dashboard({ navigation, onMenuPress }: any) {
           console.log('Location permission granted, fetching current location');
 
           const position = await GlobalLocationPermission.getCurrentLocation();
-          //const latitude = position.coords.latitude;
-         // const longitude = position.coords.longitude;
-          const latitude =  22.5726;
-          const longitude = 88.3639;
-         
+          const latitude = position.coords.latitude;
+          const longitude = position.coords.longitude;
+         // const latitude =  22.5726;
+         // const longitude = 88.3639;
 
-          console.log('Latitude:', latitude);
-          console.log('Longitude:', longitude);
-          console.log('Testing API with latitude:', latitude);
-          console.log('Testing API with longitude:', longitude);
+          setLatitude(latitude);
+          setLongitude(longitude);
 
           const nearbyRestaurantsUrl =
   `${GlobalApi.baseUrl}api/v1/restaurants/nearby?` +
@@ -339,6 +433,16 @@ export default function Dashboard({ navigation, onMenuPress }: any) {
             console.log('Nearby restaurants status:', response.status);
 
             const result = await response.json();
+            console.log('Raw nearby restaurants response:', JSON.stringify(result, null, 2));
+            try {
+              console.log(
+                'Nearby restaurants response headers:',
+                Array.from((response.headers || new Headers()).entries()),
+              );
+            } catch (e) {
+              console.log('Could not read response headers', e);
+            }
+
             const nearbyRestaurants =
               NearbyRestaurantsResponseModel.fromJson(result);
 
@@ -355,77 +459,35 @@ export default function Dashboard({ navigation, onMenuPress }: any) {
               JSON.stringify(nearbyRestaurants, null, 2),
             );
 
-           // const restaurantId = nearbyRestaurants.data[0]?.id;
-          const restaurantId = 1
+            const restaurants = nearbyRestaurants.data;
+            setNearbyRestaurants(restaurants);
 
-            if (!restaurantId) {
+            const initializeSelection = (items: NearbyRestaurantModel[], index = 0) => {
+              const selected = items[index];
+              if (!selected) {
+                return;
+              }
+              setSelectedRestaurantIndex(index);
+              setRestaurantId(selected.id);
+              setSelectedRestaurantName(selected.name);
+              setSelectedRestaurantAddress(selected.address);
+            };
+
+            if (restaurants.length === 0) {
+              console.log('No nearby restaurants returned');
+              return;
+            }
+
+            initializeSelection(restaurants, 0);
+            const selectedRestaurantId = restaurants[0]?.id;
+
+            if (!selectedRestaurantId) {
               console.log('No nearby restaurant id found');
               return;
             }
 
-            console.log('Selected restaurant id:', restaurantId);
-
-            const restaurantMenuUrl =
-  `${GlobalApi.baseUrl}api/v1/restaurants/${restaurantId}/menu?` +
-  `lat=${latitude}&` +
-  `lng=${longitude}&` +
-  `latitude=${latitude}&` +
-  `longitude=${longitude}&` +   // ✅ FIXED
-  `limit=20&` +
-  `offset=0`;
-
-            console.log('Calling restaurant menu API:', restaurantMenuUrl);
-
-            const menuResponse = await fetch(restaurantMenuUrl, {
-              method: 'GET',
-              headers,
-            });
-
-            console.log('Restaurant menu status:', menuResponse.status);
-
-            const menuResult = await menuResponse.json();
-            const restaurantMenu =
-              RestaurantMenuResponseModel.fromJson(menuResult);
-
-            if (!menuResponse.ok) {
-              console.log(
-                'Restaurant menu error:',
-                JSON.stringify(restaurantMenu, null, 2),
-              );
-              return;
-            }
-
-            const menuCategoryNames = Array.from(
-              new Set(
-                restaurantMenu.data?.items
-                  .map(item => item.category?.name)
-                  .filter((name): name is string => Boolean(name)) ?? [],
-              ),
-            );
-
-            console.log('Menu category names:', menuCategoryNames);
-            console.log('Menu category names count:', menuCategoryNames.length);
-            setCategories(
-              menuCategoryNames.map(name => ({
-                name,
-                icon: getCategoryIcon(name),
-              })),
-            );
-            const bestSellers = restaurantMenu.data?.items.filter(
-              item => item.isBestSelling,
-            ) ?? [];
-            setBestSellerItems(
-              (bestSellers.length > 0
-                ? bestSellers
-                : restaurantMenu.data?.items ?? []
-              ).slice(0, 6),
-            );
-            setRecommendedItems((restaurantMenu.data?.items ?? []).slice(0, 4));
-
-            console.log(
-              'Restaurant menu:',
-              JSON.stringify(restaurantMenu, null, 2),
-            );
+            console.log('Selected restaurant id:', selectedRestaurantId);
+            await fetchRestaurantMenu(selectedRestaurantId, latitude, longitude);
           } catch (apiError) {
             console.log('Nearby restaurants request failed:', {
               url: nearbyRestaurantsUrl,
@@ -452,9 +514,30 @@ export default function Dashboard({ navigation, onMenuPress }: any) {
 
       {/* 🔥 Header Text */}
       <View style={styles.headerContainer}>
-        <Text style={styles.title}>Good Morning</Text>
-        <Text style={styles.subtitle}>
-          Rise And Shine! It's Breakfast Time
+        <View style={styles.selectorRow}>
+          <Text
+            style={[styles.title, styles.selectorTitle]}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.85}>
+            {selectedRestaurantName || 'Select Restaurant'}
+          </Text>
+          <TouchableOpacity
+            activeOpacity={0.8}
+            style={styles.selectorIconButton}
+            onPress={() => setRestaurantModalVisible(true)}>
+            <Image
+              source={require('../assets/images/Writeicon.png')}
+              style={styles.selectorIcon}
+            />
+          </TouchableOpacity>
+        </View>
+        <Text
+          style={styles.subtitle}
+          numberOfLines={2}
+          adjustsFontSizeToFit
+          minimumFontScale={0.8}>
+          {selectedRestaurantAddress || 'Choose from nearby restaurants'}
         </Text>
       </View>
 
@@ -637,6 +720,70 @@ export default function Dashboard({ navigation, onMenuPress }: any) {
             </ScrollView>
           </View>
         </ScrollView>
+
+        {/* Restaurant selector modal */}
+        <Modal
+          visible={restaurantModalVisible}
+          animationType="slide"
+          transparent>
+          <View style={styles.modalBackdrop}>
+            <TouchableOpacity
+              style={styles.modalOverlay}
+              activeOpacity={1}
+              onPress={() => setRestaurantModalVisible(false)}
+            />
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Choose Restaurant</Text>
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  onPress={() => setRestaurantModalVisible(false)}>
+                  <Text style={styles.modalCloseText}>Close</Text>
+                </TouchableOpacity>
+              </View>
+
+              <FlatList
+                data={nearbyRestaurants}
+                keyExtractor={(item) => String(item.id)}
+                contentContainerStyle={styles.modalListContent}
+                ItemSeparatorComponent={() => <View style={styles.itemSeparator} />}
+                renderItem={({ item, index }) => {
+                  const isSelected = index === selectedRestaurantIndex;
+                  return (
+                    <TouchableOpacity
+                      activeOpacity={0.8}
+                      style={[
+                        styles.restaurantItem,
+                        isSelected && styles.restaurantItemSelected,
+                      ]}
+                      onPress={() => {
+                        onSelectRestaurant(index);
+                      }}>
+                      <View style={styles.restaurantItemText}>
+                        <Text
+                          style={[
+                            styles.restaurantItemTitle,
+                            isSelected && styles.restaurantItemTitleSelected,
+                          ]}
+                          numberOfLines={1}>
+                          {item.name}
+                        </Text>
+                        <Text style={styles.restaurantItemAddress} numberOfLines={2}>
+                          {item.address}
+                        </Text>
+                      </View>
+                      {isSelected && (
+                        <Text style={styles.restaurantItemSelectedLabel}>
+                          Selected
+                        </Text>
+                      )}
+                    </TouchableOpacity>
+                  );
+                }}
+              />
+            </View>
+          </View>
+        </Modal>
 
         {/* Bottom Bar */}
         <GlobalBottomBar navigation={navigation} activeTab="Home" />
@@ -904,6 +1051,205 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     backgroundColor: '#E8D9A8',
     marginHorizontal: 4,
+  },
+
+  restaurantCardWrapper: {
+    paddingHorizontal: 0,
+    marginTop: 10,
+    marginBottom: 14,
+  },
+
+  restaurantCard: {
+    backgroundColor: '#fff',
+    borderRadius: 22,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 6,
+  },
+
+  restaurantCardContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+
+  restaurantIconWrapper: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: '#F5F7FB',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  restaurantIcon: {
+    width: 18,
+    height: 18,
+    resizeMode: 'contain',
+  },
+
+  restaurantTextBlock: {
+    flex: 1,
+    marginLeft: 14,
+    marginRight: 10,
+  },
+
+  restaurantTitle: {
+    fontSize: isTablet ? 17 : 15,
+    fontFamily: 'LeagueSpartan-Bold',
+    color: '#202A3A',
+    includeFontPadding: false,
+  },
+
+  restaurantSubtitle: {
+    marginTop: 4,
+    fontSize: isTablet ? 14 : 12,
+    fontFamily: 'LeagueSpartan-Regular',
+    color: '#6B7280',
+    includeFontPadding: false,
+  },
+
+  selectorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
+  },
+
+  selectorIconButton: {
+    width: 34,
+    height: 34,
+    borderRadius: 12,
+    backgroundColor: '#F5F7FB',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 8,
+  },
+
+  selectorIcon: {
+    width: 16,
+    height: 16,
+    resizeMode: 'contain',
+  },
+
+  selectorTitle: {
+    flex: 1,
+    marginRight: 8,
+    minWidth: 0,
+  },
+
+  changeIconButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 14,
+    backgroundColor: '#F5F7FB',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  changeIcon: {
+    width: 18,
+    height: 18,
+    resizeMode: 'contain',
+  },
+
+  modalBackdrop: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0,0,0,0.35)',
+  },
+
+  modalOverlay: {
+    ...StyleSheet.absoluteFill,
+  },
+
+  modalContent: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 20,
+    paddingTop: 18,
+    paddingBottom: 32,
+    maxHeight: '78%',
+  },
+
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+
+  modalTitle: {
+    fontSize: 20,
+    fontFamily: 'LeagueSpartan-Bold',
+    color: '#202A3A',
+    includeFontPadding: false,
+  },
+
+  modalCloseText: {
+    fontSize: 14,
+    fontFamily: 'LeagueSpartan-Medium',
+    color: Colors.primary,
+    includeFontPadding: false,
+  },
+
+  modalListContent: {
+    paddingBottom: 24,
+  },
+
+  restaurantItem: {
+    backgroundColor: '#F7F9FC',
+    borderRadius: 18,
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+
+  restaurantItemSelected: {
+    borderWidth: 1,
+    borderColor: Colors.primary,
+    backgroundColor: '#EFF6FF',
+  },
+
+  restaurantItemText: {
+    flex: 1,
+    paddingRight: 10,
+  },
+
+  restaurantItemTitle: {
+    fontSize: 15,
+    fontFamily: 'LeagueSpartan-medium',
+    color: '#202A3A',
+    includeFontPadding: false,
+  },
+
+  restaurantItemTitleSelected: {
+    color: Colors.primary,
+    fontFamily: 'LeagueSpartan-Bold',
+  },
+
+  restaurantItemAddress: {
+    marginTop: 6,
+    fontSize: 13,
+    fontFamily: 'LeagueSpartan-Regular',
+    color: '#6B7280',
+    includeFontPadding: false,
+  },
+
+  restaurantItemSelectedLabel: {
+    color: Colors.primary,
+    fontSize: 12,
+    fontFamily: 'LeagueSpartan-Bold',
+    includeFontPadding: false,
+  },
+
+  itemSeparator: {
+    height: 10,
   },
 
   bannerDotActive: {
