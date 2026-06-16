@@ -14,9 +14,15 @@ const Colors = {
   greenLight: '#E4F5CD',
   greenLightCard: '#F5FBF2',
   greenDark: '#54B648',
-  tableHeader : '#565A5C',
+  tableHeader: '#565A5C',
   textColorLight: '#565A5C',
   buttonLight: '#FFDECF',
+  muted: '#777777',
+  searchBackground: '#EEEEEE',
+  inputBackground: '#FAF0C8',
+  overlayBackdrop: 'rgba(0,0,0,0.25)',
+  loaderOverlay: 'rgba(0,0,0,0.45)',
+  dividerLight: '#EEEEEE',
 };
 
 export default Colors;

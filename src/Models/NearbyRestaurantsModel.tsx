@@ -140,12 +140,22 @@ export class NearbyRestaurantsResponseModel {
   }
 
   static fromJson(json: any): NearbyRestaurantsResponseModel {
+    // The API sometimes returns `data` as a paginated object { items: [...] }
+    // and sometimes as a plain array. Handle both shapes.
+    let restaurants: NearbyRestaurantModel[] = [];
+
+    if (Array.isArray(json?.data)) {
+      restaurants = json.data.map(NearbyRestaurantModel.fromJson);
+    } else if (json?.data && Array.isArray(json.data.items)) {
+      restaurants = json.data.items.map(NearbyRestaurantModel.fromJson);
+    } else {
+      restaurants = [];
+    }
+
     return new NearbyRestaurantsResponseModel({
       success: Boolean(json?.success),
       message: String(json?.message ?? ''),
-      data: Array.isArray(json?.data)
-        ? json.data.map(NearbyRestaurantModel.fromJson)
-        : [],
+      data: restaurants,
     });
   }
 }

@@ -57,9 +57,12 @@ import {
   ScrollView,
   TouchableOpacity,
   Image,
+  Alert,
 } from 'react-native';
+import RazorpayCheckout from 'react-native-razorpay';
 import GlobalBackButton from '../GlobalContainer/GlobalBackButton';
 import Colors from '../assets/Colors/Colors';
+import GlobalBottomBar from '../GlobalContainer/GlobalBottomBar';
 
 const CART_ITEMS = [
   {
@@ -86,17 +89,53 @@ const CART_ITEMS = [
     quantity: 1,
     image: require('../assets/images/banner1.png'),
   },
-  
 ];
 
-export default function Cart({ navigation }: any) {
+export default function Cart({ navigation, route }: any) {
+
+  // ✅ KEY LOGIC
+  const showBottomBar = route?.params?.fromTab === true;
+
+  const startPayment = async () => {
+    const options = {
+      key: 'rzp_test_SmSTwiKHdNaqc8',
+      amount: 50000,
+      currency: 'INR',
+      name: 'Restaurant App',
+      description: 'Order Payment',
+      prefill: {
+        name: 'John Doe',
+        email: 'john.doe@example.com',
+        contact: '9999999999',
+      },
+    };
+
+    try {
+      const data = await RazorpayCheckout.open(options);
+      if (data?.razorpay_payment_id) {
+        navigation.navigate('OrderConfirmed');
+      } else {
+        Alert.alert('Payment pending', 'Payment was not completed. Please try again.');
+      }
+    } catch (error: any) {
+      Alert.alert('Payment failed', error?.description || error?.message || 'Something went wrong.');
+    }
+  };
+
   return (
     <View style={styles.container}>
+      
       <GlobalBackButton onPress={() => navigation.goBack()} />
       <Text style={styles.title}>Cart</Text>
 
       <View style={styles.overlay}>
-        <ScrollView showsVerticalScrollIndicator={false}>
+        
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{
+            paddingBottom: showBottomBar ? 160 : 40, // ✅ dynamic spacing
+          }}
+        >
 
           {/* 🔥 ADDRESS */}
           <View style={styles.addressContainer}>
@@ -125,10 +164,7 @@ export default function Cart({ navigation }: any) {
           {/* 🔥 CART LIST */}
           {CART_ITEMS.map((item, index) => (
             <View key={item.id}>
-
               <View style={styles.cartItem}>
-
-                {/* 🗑 DELETE BUTTON */}
                 <TouchableOpacity style={styles.deleteButton}>
                   <Image
                     source={require('../assets/images/Delete.png')}
@@ -136,19 +172,15 @@ export default function Cart({ navigation }: any) {
                   />
                 </TouchableOpacity>
 
-                {/* IMAGE */}
                 <Image source={item.image} style={styles.itemImage} />
 
-                {/* CONTENT */}
                 <View style={styles.itemContent}>
 
-                  {/* TITLE + PRICE */}
                   <View style={styles.rowBetween}>
                     <Text style={styles.itemTitle}>{item.title}</Text>
                     <Text style={styles.itemPrice}>{item.price}</Text>
                   </View>
 
-                  {/* DATE + COUNT */}
                   <View style={styles.rowBetween}>
                     <Text style={styles.itemDate}>{item.date}</Text>
                     <Text style={styles.itemCount}>
@@ -156,18 +188,13 @@ export default function Cart({ navigation }: any) {
                     </Text>
                   </View>
 
-                  {/* ACTION ROW */}
                   <View style={styles.actionRow}>
 
-                    {/* CANCEL */}
                     <TouchableOpacity style={styles.cancelButton}>
                       <Text style={styles.cancelText}>Cancel Order</Text>
                     </TouchableOpacity>
 
-                    {/* RIGHT SIDE CONTROLS */}
                     <View style={styles.rightControls}>
-
-                      {/* ✏️ EDIT */}
                       <TouchableOpacity style={styles.editQtyButton}>
                         <Image
                           source={require('../assets/images/Writeicon.png')}
@@ -175,21 +202,17 @@ export default function Cart({ navigation }: any) {
                         />
                       </TouchableOpacity>
 
-                      {/* ➖ */}
                       <TouchableOpacity style={styles.minusButton}>
                         <Text style={styles.minusText}>-</Text>
                       </TouchableOpacity>
 
-                      {/* 🔢 */}
                       <View style={styles.qtyBox}>
                         <Text style={styles.qtyText}>{item.quantity}</Text>
                       </View>
 
-                      {/* ➕ */}
                       <TouchableOpacity style={styles.plusButton}>
                         <Text style={styles.plusText}>+</Text>
                       </TouchableOpacity>
-
                     </View>
                   </View>
 
@@ -199,50 +222,52 @@ export default function Cart({ navigation }: any) {
               {index !== CART_ITEMS.length - 1 && (
                 <View style={styles.dividerLine} />
               )}
-
             </View>
           ))}
+
           <View style={[styles.dividerLine, { marginTop: 20 }]} />
+
           {/* 💰 BILL SUMMARY */}
-<View style={styles.billContainer}>
+          <View style={styles.billContainer}>
 
-  <View style={styles.billRow}>
-    <Text style={styles.billLabel}>Subtotal</Text>
-    <Text style={styles.billValue}>₹32.00</Text>
-  </View>
+            <View style={styles.billRow}>
+              <Text style={styles.billLabel}>Subtotal</Text>
+              <Text style={styles.billValue}>₹32.00</Text>
+            </View>
 
-  <View style={styles.billRow}>
-    <Text style={styles.billLabel}>Tax and Fees</Text>
-    <Text style={styles.billValue}>₹5.00</Text>
-  </View>
+            <View style={styles.billRow}>
+              <Text style={styles.billLabel}>Tax and Fees</Text>
+              <Text style={styles.billValue}>₹5.00</Text>
+            </View>
 
-  <View style={styles.billRow}>
-    <Text style={styles.billLabel}>Delivery</Text>
-    <Text style={styles.billValue}>₹3.00</Text>
-  </View>
+            <View style={styles.billRow}>
+              <Text style={styles.billLabel}>Delivery</Text>
+              <Text style={styles.billValue}>₹3.00</Text>
+            </View>
 
-  {/* 🔸 DOTTED LINE */}
-  <View style={styles.dottedDivider} />
+            <View style={styles.dottedDivider} />
 
-  <View style={styles.billRow}>
-    <Text style={styles.totalLabel}>Total</Text>
-    <Text style={styles.totalValue}>₹40.00</Text>
-  </View>
+            <View style={styles.billRow}>
+              <Text style={styles.totalLabel}>Total</Text>
+              <Text style={styles.totalValue}>₹40.00</Text>
+            </View>
 
-  <TouchableOpacity
-    style={styles.addToCartButton}
-    activeOpacity={0.8}
-    onPress={() => navigation.navigate('OrderConfirmed')} // 👈 IMPORTANT
-  >
-    {/* <Image
-      source={require('../assets/images/CartAnother.png')}
-      style={styles.cartIcon}
-    /> */}
-    <Text style={styles.addToCartText}>Pay Now</Text>
-  </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.addToCartButton}
+              onPress={startPayment}
+            >
+              <Text style={styles.addToCartText}>Pay Now</Text>
+            </TouchableOpacity>
 
-</View>
+          </View>
+
         </ScrollView>
+
+        {/* ✅ CONDITIONAL BOTTOM BAR */}
+        {showBottomBar && (
+          <GlobalBottomBar navigation={navigation} activeTab="Cart" />
+        )}
+
       </View>
     </View>
   );
@@ -259,6 +284,7 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 28,
     fontWeight: '700',
+    fontFamily: 'LeagueSpartan-Medium',
   },
 
   overlay: {
