@@ -1,9 +1,17 @@
 import { io } from 'socket.io-client';
 import GlobalApi  from '../GlobalContainer/GlobalApi'
+import GlobalLoginAuth from '../GlobalContainer/GlobalLoginAuth';
+
+// const socket = io(`${GlobalApi.socket_url}`, {
+//   transports: ['websocket'],
+//   autoConnect: false,
+// });
 
 const socket = io(`${GlobalApi.socket_url}`, {
   transports: ['websocket'],
-  autoConnect: false,
+  auth: {
+    token: `${GlobalLoginAuth.accessToken}`,
+  },
 });
 
 socket.on('connect', () => {

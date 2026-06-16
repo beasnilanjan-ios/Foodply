@@ -61,7 +61,7 @@
 
 
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import socket, { connectSocket, disconnectSocket } from '../services/socketService';
 import {
   View,
@@ -70,22 +70,27 @@ import {
   ScrollView,
   Image,
   TouchableOpacity,
+  ToastAndroid,
 } from 'react-native';
 
 import GlobalBackButton from '../GlobalContainer/GlobalBackButton';
 import GlobalBottomBar from '../GlobalContainer/GlobalBottomBar';
 import Colors from '../assets/Colors/Colors';
 import { FontFamily } from '../assets/GlobalFont/GlobalFont';
+import GlobalLoginAuth from '../GlobalContainer/GlobalLoginAuth';
 
 export default function TrackOrder({ navigation, route }: any) {
 
   // ✅ SHOW BOTTOM BAR ONLY WHEN FROM TAB
   const showBottomBar = route?.params?.fromTab === true;
 
+  const [riderLocation, setRiderLocation] = useState<
+    { latitude: number; longitude: number } | null
+  >(null);
 
   useEffect(() => {
     console.log('Track order')
-
+    console.log(GlobalLoginAuth.accessToken)
     // use helper to connect; service will log connect/connect_error
     connectSocket();
 
@@ -96,18 +101,39 @@ export default function TrackOrder({ navigation, route }: any) {
       console.log('socket event:', event, args);
     });
 
-    socket.on('newMessage', data => {
-      console.log('Connected:', socket.id);
-      console.log('newMessage:', data);
-    });
 
-    socket.on('message', data => {
-      console.log('Message:', data);
-    });
+    // subscribe to order-scoped location updates (if an order id is provided)
+    // const trackedOrderId =
+    //   route?.params?.orderId ??
+    //   route?.params?.orderDetail?.order?.id ??
+    //   route?.params?.order?.id ??
+    //   null;
+
+    const trackedOrderId = 43
+
+    let orderEventName: string | null = null;
+    let orderHandler: any = null;
+
+    if (trackedOrderId) {
+      orderEventName = `order:${trackedOrderId}`;
+      console.log("Socket Room", orderEventName);
+      orderHandler = (data: any) => {
+        console.log('order location update:', trackedOrderId, data);
+        ToastAndroid.show('order location update:',
+                    ToastAndroid.SHORT);
+        setRiderLocation({
+          latitude: data.latitude,
+          longitude: data.longitude,
+        });
+      };
+
+      socket.on(orderEventName, orderHandler);
+    }
 
     return () => {
       socket.off('message');
       socket.off('newMessage');
+      if (orderEventName && orderHandler) socket.off(orderEventName, orderHandler);
       // remove onAny listeners
       // socket.io v3+ supports offAny()
       // if unavailable in your version, restart app to clear listeners
@@ -152,6 +178,14 @@ export default function TrackOrder({ navigation, route }: any) {
             source={require('../assets/images/map.png')}
             style={styles.mapImage}
           />
+
+          {riderLocation && (
+            <View style={styles.locationBox}>
+              <Text style={styles.locationText}>
+                Rider: {riderLocation.latitude.toFixed(6)}, {riderLocation.longitude.toFixed(6)}
+              </Text>
+            </View>
+          )}
 
           {/* 🚚 Delivery Time */}
           <View style={styles.deliveryHeader}>
@@ -368,5 +402,17 @@ const styles = StyleSheet.create({
     lineHeight: 16,
     color: Colors.primary,
     fontFamily: FontFamily.medium,
+  },
+  locationBox: {
+    backgroundColor: '#F3F7FF',
+    padding: 8,
+    borderRadius: 8,
+    marginBottom: 12,
+  },
+
+  locationText: {
+    color: '#0B3B2E',
+    fontSize: 14,
+    fontFamily: FontFamily.regular,
   },
 });

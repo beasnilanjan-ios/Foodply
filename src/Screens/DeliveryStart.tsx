@@ -30,7 +30,7 @@ import GlobalLoginAuth from '../GlobalContainer/GlobalLoginAuth';
 import GlobalApi from '../GlobalContainer/GlobalApi';
 import GlobalLoader from '../GlobalContainer/GlobalLoader';
 import { SendOtpResponse } from '../Models/SendOTP/SendOtpResponse ';
-import socket from '../services/socketService';
+import socket, { connectSocketWithToken, disconnectSocket, connectSocket } from '../services/socketService';
 
 
 const DARK_MAP_STYLE =
@@ -345,17 +345,32 @@ export default function DeliveryStart({ route, navigation }: any) {
     );
   };
 
- const sendLocation = (
+const sendLocation = (
   latitude: number,
   longitude: number,
   orderId: string | number,
 ) => {
-  socket.emit('locationUpdate', {
-    orderId,
-    latitude,
-    longitude,
-    timestamp: Date.now(),
-  });
+  const payload = {
+    orderId:orderId,
+    latitude:latitude,
+    longitude:longitude,
+    speed:20,
+    heading:150
+  };
+
+  try {
+    console.log('Emitting location update', payload);
+
+    // Also emit order-scoped event name (some setups forward custom events)
+    //const eventName = `locationUpdate:${orderId}`;
+    socket.emit('delivery:location', payload);
+
+    // socket.emit('locationUpdate', payload, (response: any) => {
+    //   console.log('ACK:', response);
+    // });
+  } catch (e) {
+    console.log('sendLocation emit error', e);
+  }
 };
 
   // LIVE TRACKING
@@ -478,6 +493,16 @@ export default function DeliveryStart({ route, navigation }: any) {
           return updated;
         });
 
+          // emit live location for this order so TrackOrder (or other listeners)
+          // subscribed to `locationUpdate:{orderId}` receive updates
+          try {
+            if (orderDetail?.order?.id) {
+              sendLocation(latitude, longitude, orderDetail.order.id);
+            }
+          } catch (e) {
+            console.log('sendLocation error', e);
+          }
+
         const route = routeCoordinatesRef.current;
 
         if (route.length < 2) {
@@ -582,20 +607,30 @@ export default function DeliveryStart({ route, navigation }: any) {
       },
     );
 
-     socket.connect();
+    // connect using helper so auth token is attached (if available)
+      // use helper to connect; service will log connect/connect_error
+    connectSocket();
 
-      socket.on('connect', () => {
-        console.log('Connected:', socket.id);
-      });
+    console.log('socket status:', socket.connected, 'id:', socket.id);
 
-      socket.on('message', data => {
-        console.log('Message:', data);
-      });
+    // log any incoming event to help debug which events arrive
+    socket.onAny((event, ...args) => {
+      console.log('socket event:', event, args);
+    });
+
+    socket.on('newMessage', data => {
+      console.log('Connected:', socket.id);
+      console.log('newMessage:', data);
+    });
+
+    socket.on('message', data => {
+      console.log('Message:', data);
+    });
 
     return () => {
       Geolocation.clearWatch(watchId);
       socket.off('message');
-      socket.disconnect();
+      disconnectSocket();
     };
   }, []);
 
@@ -843,7 +878,7 @@ export default function DeliveryStart({ route, navigation }: any) {
 
                     <View>
                       <Text style={styles.smallLabel}>
-                        {orderDetail.items.length} Items â€¢{' '}
+                        {orderDetail.items.length} Items •{' '}
                         {orderDetail.items.reduce(
                           (acc, item) => acc + item.quantity,
                           0,
@@ -870,7 +905,7 @@ export default function DeliveryStart({ route, navigation }: any) {
                   <View>
                     <Text style={styles.smallLabel}>Order Amount</Text>
                     <Text style={styles.amount}>
-                      â‚¹{orderDetail.billing.finalAmount.toFixed(2)}
+                      ₹{orderDetail.billing.finalAmount.toFixed(2)}
                     </Text>
                   </View>
                 </View>
