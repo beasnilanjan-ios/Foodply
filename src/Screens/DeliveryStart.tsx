@@ -1,3 +1,4 @@
+//re-route rnd 1
 import React, { useEffect, useState, useRef } from 'react';
 import {
   View,
@@ -18,7 +19,7 @@ import {
   GeoJSONSource,
   Layer,
 } from '@maplibre/maplibre-react-native';
-
+import { OSM_STYLE } from '../GlobalContainer/mapStyle';
 import Geolocation from 'react-native-geolocation-service';
 import axios from 'axios';
 
@@ -47,9 +48,9 @@ export default function DeliveryStart({ route, navigation }: any) {
   const lastSnappedIndexRef = useRef(-1);
   // DESTINATION
   const [destinationLocation] = useState({
-    latitude: orderDetail.customer.address.latitude,
+    latitude: orderDetail.customer.address.latitude || 22.8948,
 
-    longitude: orderDetail.customer.address.longitude,
+    longitude: orderDetail.customer.address.longitude || 88.41,
   });
 
   // CURRENT LOCATION
@@ -64,10 +65,15 @@ export default function DeliveryStart({ route, navigation }: any) {
   const [remainingRoute, setRemainingRoute] = useState<any[]>([]);
   const headingRef = useRef(0);
   const cameraHeadingRef = useRef(0);
-  const markerAnimationRef = useRef<any>(null);   // cancel old animation before new one
-  const headingAnimationRef = useRef<any>(null);  // cancel old heading animation
-  const riderPositionRef = useRef<{ latitude: number; longitude: number } | null>(null); // always fresh position
-  const lastAnimatedBearingRef = useRef<number>(-1); // last bearing jo animate hua â€” dobara same pe na karo
+  const markerAnimationRef = useRef<any>(null); // cancel old animation before new one
+  const headingAnimationRef = useRef<any>(null); // cancel old heading animation
+  const riderPositionRef = useRef<{
+    latitude: number;
+    longitude: number;
+  } | null>(null); // always fresh position
+  const lastAnimatedBearingRef = useRef<number>(-1);
+  const isReroutingRef = useRef(false);
+  const offRouteCountRef = useRef(0); // last bearing jo animate hua — dobara same pe na karo
   const [riderPosition, setRiderPosition] = useState<{
     latitude: number;
     longitude: number;
@@ -78,7 +84,10 @@ export default function DeliveryStart({ route, navigation }: any) {
   // SCOOTER HEADING
   const [markerHeading, setMarkerHeading] = useState(0);
   const [loading, setLoading] = useState(false);
-
+  // FREE CAMERA MODE — jab user zoom/pan kare to rider follow band ho jaye
+  const [isFollowingRider, setIsFollowingRider] = useState(true);
+  const userInteractingRef = useRef(false);
+  const interactionTimerRef = useRef<any>(null);
   const [locationHistory, setLocationHistory] = useState<
     { latitude: number; longitude: number }[]
   >([]);
@@ -134,24 +143,22 @@ export default function DeliveryStart({ route, navigation }: any) {
     lon2: number,
   ) => {
     const R = 6371e3;
- 
+
     const φ1 = (lat1 * Math.PI) / 180;
     const φ2 = (lat2 * Math.PI) / 180;
- 
+
     const Δφ = ((lat2 - lat1) * Math.PI) / 180;
- 
+
     const Δλ = ((lon2 - lon1) * Math.PI) / 180;
- 
+
     const a =
       Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
       Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
- 
+
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
- 
+
     return R * c;
   };
- 
- 
 
   const getProjectedPointOnSegment = (
     lat: number,
@@ -297,6 +304,84 @@ export default function DeliveryStart({ route, navigation }: any) {
     }
   };
 
+  // RE-ROUTE — rider off-route ho gaya, current position se naya route fetch karo
+  const reRoute = async (currentLat: number, currentLng: number) => {
+    if (isReroutingRef.current) return;
+    isReroutingRef.current = true;
+
+    ToastAndroid.show('Re-routing...', ToastAndroid.SHORT);
+
+    try {
+      const response = await axios.get(
+        `https://router.project-osrm.org/route/v1/driving/${currentLng},${currentLat};${destinationLocation.longitude},${destinationLocation.latitude}?overview=full&geometries=geojson`,
+      );
+
+      if (response.data?.routes?.length > 0) {
+        const osrmCoordinates = response.data.routes[0].geometry.coordinates;
+
+        // Naye route ka pehla snapped point nikalo
+        const firstSnapped = osrmCoordinates[0]; // [lng, lat]
+
+        // ── SMOOTH ANIMATION: rider current pos → naye route ke pehle point tak ──
+        // Rider abhi jahan hai wahan se naye route pe smoothly leke jao
+        const currentRiderPos = riderPositionRef.current;
+        if (currentRiderPos) {
+          const SMOOTH_STEPS = 20;
+          const SMOOTH_INTERVAL = 50; // ms — total ~1 second smooth slide
+          let step = 0;
+
+          const fromLat = currentRiderPos.latitude;
+          const fromLng = currentRiderPos.longitude;
+          const toLat = firstSnapped[1];
+          const toLng = firstSnapped[0];
+
+          const slideInterval = setInterval(() => {
+            step++;
+            const progress = step / SMOOTH_STEPS;
+            const easedProgress = 1 - Math.pow(1 - progress, 3); // ease-out cubic
+
+            const newPos = {
+              latitude: fromLat + (toLat - fromLat) * easedProgress,
+              longitude: fromLng + (toLng - fromLng) * easedProgress,
+            };
+            riderPositionRef.current = newPos;
+            setRiderPosition(newPos);
+
+            if (step >= SMOOTH_STEPS) {
+              clearInterval(slideInterval);
+
+              // Animation complete — ab naya route set karo
+              const newCoordinates = [
+                firstSnapped,
+                ...osrmCoordinates.slice(1),
+              ];
+              setRouteCoordinates(newCoordinates);
+              routeCoordinatesRef.current = newCoordinates;
+              setRemainingRoute(newCoordinates);
+              lastSnappedIndexRef.current = 0;
+              offRouteCountRef.current = 0;
+
+              ToastAndroid.show('Route updated!', ToastAndroid.SHORT);
+            }
+          }, SMOOTH_INTERVAL);
+        } else {
+          // Agar riderPosition nahi hai — directly set karo
+          const newCoordinates = [firstSnapped, ...osrmCoordinates.slice(1)];
+          setRouteCoordinates(newCoordinates);
+          routeCoordinatesRef.current = newCoordinates;
+          setRemainingRoute(newCoordinates);
+          lastSnappedIndexRef.current = 0;
+          offRouteCountRef.current = 0;
+          ToastAndroid.show('Route updated!', ToastAndroid.SHORT);
+        }
+      }
+    } catch (error) {
+      console.log('Re-route error:', error);
+    } finally {
+      isReroutingRef.current = false;
+    }
+  };
+
   // INITIAL LOCATION
   const getCurrentLocation = async () => {
     Geolocation.getCurrentPosition(
@@ -309,6 +394,8 @@ export default function DeliveryStart({ route, navigation }: any) {
             `Current Location: Latitude ${latitude} Longitude ${longitude}`,
             ToastAndroid.SHORT,
           );
+
+          sendLocation(latitude, longitude, orderDetail.order.id);
 
         setCurrentLocation({
           latitude,
@@ -326,11 +413,6 @@ export default function DeliveryStart({ route, navigation }: any) {
           destinationLocation.latitude,
           destinationLocation.longitude,
         );
-
-        console.log('Location:',   latitude,
-          longitude,
-          destinationLocation.latitude,
-          destinationLocation.longitude, )
       },
 
       error => {
@@ -345,7 +427,7 @@ export default function DeliveryStart({ route, navigation }: any) {
     );
   };
 
-const sendLocation = (
+  const sendLocation = (
   latitude: number,
   longitude: number,
   orderId: string | number,
@@ -357,14 +439,14 @@ const sendLocation = (
     speed:20,
     heading:150
   };
-
+ 
   try {
     console.log('Emitting location update', payload);
-
+ 
     // Also emit order-scoped event name (some setups forward custom events)
     //const eventName = `locationUpdate:${orderId}`;
     socket.emit('delivery:location', payload);
-
+ 
     // socket.emit('locationUpdate', payload, (response: any) => {
     //   console.log('ACK:', response);
     // });
@@ -385,17 +467,17 @@ const sendLocation = (
       endLat: number,
       endLng: number,
     ) => {
-      // CANCEL previous animation â€” nahi to purani aur nayi dono chalti hain
+      // CANCEL previous animation — nahi to purani aur nayi dono chalti hain
       if (markerAnimationRef.current) {
         clearInterval(markerAnimationRef.current);
         markerAnimationRef.current = null;
       }
 
-      // Bike fast ho to kam steps â€” marker peeche nahi rahega
+      // Bike fast ho to kam steps — marker peeche nahi rahega
       const distance = Math.sqrt(
-        Math.pow(endLat - startLat, 2) + Math.pow(endLng - startLng, 2)
-      );// Fast movement = fewer steps (snap quickly), slow = more steps (smooth)
-      
+        Math.pow(endLat - startLat, 2) + Math.pow(endLng - startLng, 2),
+      ); // Fast movement = fewer steps (snap quickly), slow = more steps (smooth)
+
       const steps = distance > 0.0005 ? 6 : 10; // ~55m threshold
       let currentStep = 0;
 
@@ -430,7 +512,7 @@ const sendLocation = (
       if (delta > 180) delta -= 360;
       if (delta < -180) delta += 360;
 
-      const steps = 15; // fast turn â€” heading peeche nahi rahegi
+      const steps = 15; // fast turn — heading peeche nahi rahegi
       let currentStep = 0;
 
       const interval = setInterval(() => {
@@ -493,16 +575,6 @@ const sendLocation = (
           return updated;
         });
 
-          // emit live location for this order so TrackOrder (or other listeners)
-          // subscribed to `locationUpdate:{orderId}` receive updates
-          try {
-            if (orderDetail?.order?.id) {
-              sendLocation(latitude, longitude, orderDetail.order.id);
-            }
-          } catch (e) {
-            console.log('sendLocation error', e);
-          }
-
         const route = routeCoordinatesRef.current;
 
         if (route.length < 2) {
@@ -530,7 +602,23 @@ const sendLocation = (
             const snapped = getNearestPointOnRoute(latitude, longitude, route);
 
             if (snapped) {
-              // riderPositionRef use karo â€” state stale hoti hai closure mein
+              // ── OFF-ROUTE CHECK ──────────────────────────────────────────
+              const OFF_ROUTE_THRESHOLD_METERS = 40;
+              const OFF_ROUTE_CONFIRM_COUNT = 3;
+
+              if (snapped.distance > OFF_ROUTE_THRESHOLD_METERS) {
+                offRouteCountRef.current += 1;
+                if (offRouteCountRef.current >= OFF_ROUTE_CONFIRM_COUNT) {
+                  // Smooth re-route — current GPS se, animation ke saath
+                  reRoute(latitude, longitude);
+                  return; // Is update skip karo, naya route aane do
+                }
+              } else {
+                offRouteCountRef.current = 0; // on-route — reset
+              }
+              // ─────────────────────────────────────────────────────────────
+
+              // riderPositionRef use karo — state stale hoti hai closure mein
               if (riderPositionRef.current) {
                 animateMarker(
                   riderPositionRef.current.latitude,
@@ -574,9 +662,10 @@ const sendLocation = (
 
                 const bearingDiff = Math.abs(routeBearing - headingRef.current);
 
-                // 15Â° threshold â€” choti GPS jitter pe animate nahi hoga
-                // lastAnimatedBearing check â€” same bearing pe dobara animate nahi hoga (vibration fix)
-                const alreadyAnimated = Math.abs(routeBearing - lastAnimatedBearingRef.current) < 5;
+                // 15° threshold — choti GPS jitter pe animate nahi hoga
+                // lastAnimatedBearing check — same bearing pe dobara animate nahi hoga (vibration fix)
+                const alreadyAnimated =
+                  Math.abs(routeBearing - lastAnimatedBearingRef.current) < 5;
 
                 if (bearingDiff > 15 && !alreadyAnimated) {
                   lastAnimatedBearingRef.current = routeBearing;
@@ -599,30 +688,31 @@ const sendLocation = (
 
       {
         enableHighAccuracy: true,
-        distanceFilter: 1,       // walk: 1m theek, bike: 5m better â€” kam spam
-        interval: 1000,          // har 2 sec update â€” animation complete hone ka time milta hai
+        distanceFilter: 1, // walk: 1m theek, bike: 5m better — kam spam
+        interval: 1000, // har 2 sec update — animation complete hone ka time milta hai
         fastestInterval: 1000,
         showLocationDialog: true,
         forceRequestLocation: true,
       },
     );
 
-    // connect using helper so auth token is attached (if available)
+    console.log("Auth", GlobalLoginAuth.accessToken)
+     // connect using helper so auth token is attached (if available)
       // use helper to connect; service will log connect/connect_error
     connectSocket();
-
+ 
     console.log('socket status:', socket.connected, 'id:', socket.id);
-
+ 
     // log any incoming event to help debug which events arrive
     socket.onAny((event, ...args) => {
       console.log('socket event:', event, args);
     });
-
+ 
     socket.on('newMessage', data => {
       console.log('Connected:', socket.id);
       console.log('newMessage:', data);
     });
-
+ 
     socket.on('message', data => {
       console.log('Message:', data);
     });
@@ -659,7 +749,7 @@ const sendLocation = (
 
       const result = await response.json();
 
-      const SendOtpResponse = result as SendOtpResponse; // Ã¢Å“â€¦ Type assertion to ensure it matches our model
+      const SendOtpResponse = result as SendOtpResponse; // âœ… Type assertion to ensure it matches our model
 
       console.log('Generate OTP Response:', result);
 
@@ -686,9 +776,6 @@ const sendLocation = (
     }
   };
 
-
-
-
   return (
     <View style={styles.container}>
       <GlobalTopBarDelivery
@@ -705,16 +792,28 @@ const sendLocation = (
           <View style={styles.mapContainer}>
             <Map
               style={styles.map}
-              mapStyle={DARK_MAP_STYLE}
+              mapStyle={OSM_STYLE}
               logo={false}
-              compass={true}
+              compass={false}
+              onTouchStart={() => {
+                // User ne map touch kiya — free camera mode ON
+                userInteractingRef.current = true;
+                setIsFollowingRider(false);
+
+                // Pehla timer clear karo
+                if (interactionTimerRef.current) {
+                  clearTimeout(interactionTimerRef.current);
+                }
+              }}
             >
               {/* CAMERA */}
-              {riderPosition && (
+              {riderPosition && isFollowingRider && (
                 <Camera
                   zoom={18}
                   pitch={0}
                   bearing={cameraHeading}
+                  animationMode="none"
+                  animationDuration={0}
                   center={[riderPosition.longitude, riderPosition.latitude]}
                   padding={{
                     top: 100,
@@ -744,7 +843,7 @@ const sendLocation = (
                     ]}
                   >
                     <Image
-                      source={require('../assets/images/dman.png')}
+                      source={require('../assets/images/delivery-foodyply-rider.png')}
                       style={styles.deliveryIcon}
                       resizeMode="contain"
                     />
@@ -803,7 +902,7 @@ const sendLocation = (
                     id="routeLayer"
                     type="line"
                     paint={{
-                      'line-color': '#00FF9D',
+                      'line-color': '#440DFA',
                       'line-width': 6,
                       'line-opacity': 1,
                     }}
@@ -815,7 +914,22 @@ const sendLocation = (
                 </GeoJSONSource>
               )}
             </Map>
-
+            {!isFollowingRider && (
+              <TouchableOpacity
+                activeOpacity={0.85}
+                style={styles.reCenterBtn}
+                onPress={() => {
+                  userInteractingRef.current = false;
+                  setIsFollowingRider(true);
+                }}
+              >
+                <Image
+                  source={require('../assets/images/map-point.png')}
+                  style={styles.mapPoint}
+                />
+                {/* <Text style={styles.reCenterText}>Re-center</Text> */}
+              </TouchableOpacity>
+            )}
             {/* FLOATING CARD */}
             {showDetailsCard ? (
               <View style={styles.card1}>
@@ -841,17 +955,17 @@ const sendLocation = (
                   </View>
 
                   <View style={styles.iconColumn}>
-                    <TouchableOpacity style={styles.circleBtn}   
+                    <TouchableOpacity style={styles.circleBtn}  
                      onPress={() => {
                           const { latitude, longitude } = currentLocation || {};
-
+ 
                           if (
                             latitude === undefined ||
                             longitude === undefined
                           ) {
                             return;
                           }
-
+ 
                           sendLocation(latitude, longitude, orderDetail.order.id);
                         }}>
                       <Image
@@ -1056,7 +1170,10 @@ const styles = StyleSheet.create({
   map: {
     flex: 1,
   },
-
+ mapPoint: {
+    width: 20,
+    height: 20,
+  },
   currentMarkerWrapper: {
     width: 44,
     height: 44,
@@ -1065,8 +1182,8 @@ const styles = StyleSheet.create({
   },
 
   deliveryIcon: {
-    width: 80,
-    height: 80,
+    width: 60,
+    height: 60,
 
     // REMOVE THIS IF IMAGE ALREADY ORANGE
     // tintColor: Colors.primary,
@@ -1389,5 +1506,30 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     tintColor: '#fff',
+    
+  },
+  // RE-CENTER BUTTON
+  reCenterBtn: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+    backgroundColor: '#fff',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+
+  reCenterText: {
+    color: Colors.primary,
+    fontSize: 13,
+    fontFamily: FontFamily.semiBold,
   },
 });
