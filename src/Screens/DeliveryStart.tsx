@@ -699,6 +699,13 @@ export default function DeliveryStart({ route, navigation }: any) {
     console.log("Auth", GlobalLoginAuth.accessToken)
      // connect using helper so auth token is attached (if available)
       // use helper to connect; service will log connect/connect_error
+      if (!GlobalLoginAuth.accessToken) {
+        console.log('Token is missing');
+        return;
+      }
+    console.log('Access Token:', GlobalLoginAuth.accessToken);
+    console.log('Type:', typeof GlobalLoginAuth.accessToken);
+    console.log('Parts:', GlobalLoginAuth.accessToken?.split('.').length);  
     connectSocket();
  
     console.log('socket status:', socket.connected, 'id:', socket.id);
