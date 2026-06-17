@@ -1,0 +1,30 @@
+pluginManagement {
+    includeBuild("../node_modules/@react-native/gradle-plugin")
+    repositories {
+        google()
+        mavenCentral()
+        gradlePluginPortal()
+    }
+}
+
+plugins {
+    id("com.facebook.react.settings")
+}
+
+extensions.configure(com.facebook.react.ReactSettingsExtension) { ex ->
+    ex.autolinkLibrariesFromCommand()
+}
+
+rootProject.name = 'Foodyply'
+
+include ':app'
+includeBuild('../node_modules/@react-native/gradle-plugin')
+
+// ✅ FIXED BLOCK
+// dependencyResolutionManagement {
+//     repositoriesMode.set(RepositoriesMode.PREFER_PROJECT) // 🔥 THIS IS THE FIX
+//     repositories {
+//         google()
+//         mavenCentral()
+//     }
+// }
