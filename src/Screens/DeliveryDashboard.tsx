@@ -120,7 +120,7 @@ export default function DeliveryDashboard({ navigation }: any) {
               <View style={styles.iconCircle}>
                 <Image
                   style={styles.icon}
-                  source={require('../assets/images/MyOrdersNavBar.png')}
+                  source={require('../assets/images/order_list.png')}
                 />
               </View>
 

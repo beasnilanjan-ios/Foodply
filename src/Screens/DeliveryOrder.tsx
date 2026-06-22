@@ -135,7 +135,7 @@ const [refreshing, setRefreshing] = useState(false);
                     mode="date"
                     display="default"
                     maximumDate={new Date()} // Prevent future dates
-                    onChange={onChange}
+                    onValueChange={onChange}
                   />
                 )}
               </View>

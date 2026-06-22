@@ -31,7 +31,7 @@ import GlobalLoginAuth from '../GlobalContainer/GlobalLoginAuth';
 import GlobalApi from '../GlobalContainer/GlobalApi';
 import GlobalLoader from '../GlobalContainer/GlobalLoader';
 import { SendOtpResponse } from '../Models/SendOTP/SendOtpResponse ';
-import socket, { connectSocketWithToken, disconnectSocket, connectSocket } from '../services/socketService';
+import getSocket, { connectSocket, disconnectSocket } from '../services/socketService';
 
 
 const DARK_MAP_STYLE =
@@ -445,11 +445,15 @@ export default function DeliveryStart({ route, navigation }: any) {
  
     // Also emit order-scoped event name (some setups forward custom events)
     //const eventName = `locationUpdate:${orderId}`;
-    socket.emit('delivery:location', payload);
- 
-    // socket.emit('locationUpdate', payload, (response: any) => {
-    //   console.log('ACK:', response);
-    // });
+    //socket.emit('delivery:location', payload);
+    const s = getSocket();
+    if (s && typeof s.emit === 'function') {
+      s.emit('delivery:location', payload, (response: any) => {
+        console.log('ACK:', response);
+      });
+    } else {
+      console.log('sendLocation: socket not available');
+    }
   } catch (e) {
     console.log('sendLocation emit error', e);
   }
@@ -705,28 +709,35 @@ export default function DeliveryStart({ route, navigation }: any) {
       }
     console.log('Access Token:', GlobalLoginAuth.accessToken);
     console.log('Type:', typeof GlobalLoginAuth.accessToken);
-    console.log('Parts:', GlobalLoginAuth.accessToken?.split('.').length);  
-    connectSocket();
- 
-    console.log('socket status:', socket.connected, 'id:', socket.id);
- 
+    console.log('Parts:', GlobalLoginAuth.accessToken?.split('.').length);
+    const s = connectSocket();
+
+    console.log('socket status:', s ? s.connected : 'no-socket', 'id:', s?.id);
+
     // log any incoming event to help debug which events arrive
-    socket.onAny((event, ...args) => {
-      console.log('socket event:', event, args);
-    });
- 
-    socket.on('newMessage', data => {
-      console.log('Connected:', socket.id);
-      console.log('newMessage:', data);
-    });
- 
-    socket.on('message', data => {
-      console.log('Message:', data);
-    });
+    if (s && typeof s.onAny === 'function') {
+      s.onAny((event, ...args) => {
+        console.log('socket event:', event, args);
+      });
+    }
+
+    if (s) {
+      s.on('newMessage', data => {
+        console.log('Connected:', s.id);
+        console.log('newMessage:', data);
+      });
+
+      s.on('message', data => {
+        console.log('Message:', data);
+      });
+    }
 
     return () => {
       Geolocation.clearWatch(watchId);
-      socket.off('message');
+      const s = getSocket();
+      if (s) {
+        s.off('message');
+      }
       disconnectSocket();
     };
   }, []);

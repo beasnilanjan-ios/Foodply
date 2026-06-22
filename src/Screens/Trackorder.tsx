@@ -62,7 +62,7 @@
 
 
 import React, { useEffect, useState } from 'react';
-import socket, { connectSocket, disconnectSocket } from '../services/socketService';
+import getSocket, { connectSocket, disconnectSocket } from '../services/socketService';
 import {
   View,
   Text,
@@ -78,6 +78,7 @@ import GlobalBottomBar from '../GlobalContainer/GlobalBottomBar';
 import Colors from '../assets/Colors/Colors';
 import { FontFamily } from '../assets/GlobalFont/GlobalFont';
 import GlobalLoginAuth from '../GlobalContainer/GlobalLoginAuth';
+import {Socket, DefaultEventsMap} from 'socket.io-client';
 
 export default function TrackOrder({ navigation, route }: any) {
 
@@ -88,62 +89,94 @@ export default function TrackOrder({ navigation, route }: any) {
     { latitude: number; longitude: number } | null
   >(null);
 
-  useEffect(() => {
-    console.log('Track order')
-    console.log(GlobalLoginAuth.accessToken)
-    // use helper to connect; service will log connect/connect_error
-    connectSocket();
 
-    console.log('socket status:', socket.connected, 'id:', socket.id);
+useEffect(() => {
+  const trackedOrderId = 43;
 
-    // log any incoming event to help debug which events arrive
-    socket.onAny((event, ...args) => {
-      console.log('socket event:', event, args);
+  const socket = connectSocket();
+
+  if (!socket) {
+    console.log('Socket is null');
+    return;
+  }
+
+  const onConnect = () => {
+    console.log('✅ Connected:', socket.id);
+
+    // Join tracking room
+    socket.emit('track:join', {
+      orderId: trackedOrderId,
     });
 
+    console.log('track:join emitted');
+  };
 
-    // subscribe to order-scoped location updates (if an order id is provided)
-    // const trackedOrderId =
-    //   route?.params?.orderId ??
-    //   route?.params?.orderDetail?.order?.id ??
-    //   route?.params?.order?.id ??
-    //   null;
+  const onSnapshot = (data: any) => {
+    console.log('📍 Tracking Snapshot:', data);
 
-    const trackedOrderId = 43
-
-    let orderEventName: string | null = null;
-    let orderHandler: any = null;
-
-    if (trackedOrderId) {
-      orderEventName = `order:${trackedOrderId}`;
-      console.log("Socket Room", orderEventName);
-      orderHandler = (data: any) => {
-        console.log('order location update:', trackedOrderId, data);
-        ToastAndroid.show('order location update:',
-                    ToastAndroid.SHORT);
-        setRiderLocation({
-          latitude: data.latitude,
-          longitude: data.longitude,
-        });
-      };
-
-      socket.on(orderEventName, orderHandler);
+    if (data?.latitude && data?.longitude) {
+      setRiderLocation({
+        latitude: data.latitude,
+        longitude: data.longitude,
+      });
     }
+  };
 
-    return () => {
-      socket.off('message');
-      socket.off('newMessage');
-      if (orderEventName && orderHandler) socket.off(orderEventName, orderHandler);
-      // remove onAny listeners
-      // socket.io v3+ supports offAny()
-      // if unavailable in your version, restart app to clear listeners
-      // or track the handler reference and remove via offAny(handler)
-      // here we attempt to remove any registered onAny listeners
-      // @ts-ignore
-      if (typeof socket.offAny === 'function') socket.offAny();
-      disconnectSocket();
-    };
-  }, []);
+  const onLocationUpdated = (data: any) => {
+    console.log('🚚 Live Location:', data);
+
+    ToastAndroid.show(
+      'Location Updated',
+      ToastAndroid.SHORT,
+    );
+
+    if (data?.latitude && data?.longitude) {
+      setRiderLocation({
+        latitude: data.latitude,
+        longitude: data.longitude,
+      });
+    }
+  };
+
+  const onTrackingError = (err: any) => {
+    console.log('Tracking Error:', err);
+  };
+
+  socket.onAny((event, ...args) => {
+    console.log('EVENT =>', event, args);
+  });
+
+  socket.on('connect', onConnect);
+
+  socket.on('tracking:snapshot', onSnapshot);
+
+  socket.on('delivery:location:updated', onLocationUpdated);
+
+  socket.on('tracking:error', onTrackingError);
+
+  socket.on('disconnect', reason => {
+    console.log('Disconnected:', reason);
+  });
+
+  socket.on('connect_error', err => {
+    console.log('Connect Error:', err.message);
+  });
+
+  if (socket.connected) {
+    onConnect();
+  }
+
+  return () => {
+    socket.off('connect', onConnect);
+    socket.off('tracking:snapshot', onSnapshot);
+    socket.off('delivery:location:updated', onLocationUpdated);
+    socket.off('tracking:error', onTrackingError);
+    socket.offAny();
+
+    disconnectSocket();
+  };
+}, []);
+
 
   return (
     <View style={styles.container}>
