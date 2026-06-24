@@ -8,6 +8,7 @@ import {
   Image,
   TouchableOpacity,
   ToastAndroid,
+  Alert,
 } from 'react-native';
 
 import GlobalBackButton from '../GlobalContainer/GlobalBackButton';
@@ -25,22 +26,33 @@ import {
   Layer,
 } from '@maplibre/maplibre-react-native';
 import { OSM_STYLE } from '../GlobalContainer/mapStyle';
-import { DeliveryOrderDetails } from '../Models/DeliveryOrderDetails/DeliveryOrderDetails';
+import { DeliveryTrackingData } from '../Models/CustomerTrackOrder/DeliveryTrackingData';
+import { DeliveryTrackingResponse } from '../Models/CustomerTrackOrder/DeliveryTrackingResponse'
+import GlobalApi from '../GlobalContainer/GlobalApi';
 
 export default function TrackOrder({ navigation, route }: any) {
-const { orderDetail: initialOrderDetail } = route.params as {
-  orderDetail: DeliveryOrderDetails;
-};
+
   // ✅ SHOW BOTTOM BAR ONLY WHEN FROM TAB
   const showBottomBar = route?.params?.fromTab === true;
   const [showDetailsCard, setShowDetailsCard] = useState(true);
-  const [orderDetail, setOrderDetail] = useState<DeliveryOrderDetails>(initialOrderDetail);
+  const [orderDetail, setOrderDetail] = useState<DeliveryTrackingData>();
+  const [loading, setLoading] = useState(false);
+  const [currentIndex, setcurrentIndex] = useState<number>(0);
+  const [liveStatus, setLiveStatus] = useState<String>();
+  const steps = [
+      { label: 'Accepted', status: 'ACCEPTED' },
+      { label: 'Preparing', status: 'PREPARING' },
+      { label: 'On The Way', status: 'ON_THE_WAY' },
+      { label: 'Delivered', status: 'DELIVERED' },
+    ];
+  
 
   const [riderLocation, setRiderLocation] = useState<
     { latitude: number; longitude: number } | null
   >(null);
 
-const socket = useRef<Socket | null>(null);
+
+  const socket = useRef<Socket | null>(null);
 const handleSocket = (trackedOrderId: number) => {
   socket.current = connectSocket();
 
@@ -127,15 +139,152 @@ const handleSocket = (trackedOrderId: number) => {
   };
 }
 
+
+const getOrderDetails = async (trackedOrderId: number) => {
+
+    try {
+      setLoading(true);
+
+      const response = await fetch(
+        `${GlobalApi.baseUrl}api/deliveries/order/${trackedOrderId}/track`,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${GlobalLoginAuth.accessToken}`,
+          },
+        }
+      );
+
+      const result: DeliveryTrackingResponse =
+        await response.json();
+
+      console.log('Order Details:', result);
+
+      if (!response.ok || !result.success) {
+        Alert.alert(
+          'FoodyPly',
+          result.message || 'Failed to load order details'
+        );
+        return;
+      }
+
+      setOrderDetail(result.data);
+     
+      const currentStatus = result.data?.order?.status ?? '';
+
+      setcurrentIndex(steps.findIndex(
+          item => item.status === currentStatus,
+        ));
+
+      console.log("CurrentStatus", result.data?.status);
+
+
+    } catch (error) {
+
+      console.log(error);
+
+      Alert.alert(
+        'FoodyPly',
+        'Unable to connect to server'
+      );
+
+    } finally {
+
+      setLoading(false);
+
+    }
+  }
+
 useEffect(() => {
   const trackedOrderId = 43;
-
+  getOrderDetails(trackedOrderId)
   const cleanup = handleSocket(trackedOrderId);
 
   return cleanup;
 }, []);
 
-  return (
+
+const getStepIcon = (status: string, isCurrent: boolean) => {
+  if (!isCurrent) {
+    return require('../assets/images/check.png');
+  }
+
+  switch (status) {
+    case 'PREPARING':
+      return require('../assets/images/preparing.png');
+
+    case 'ON_THE_WAY':
+      return require('../assets/images/scooter.png');
+
+    default:
+      return require('../assets/images/check.png');
+  }
+};
+
+const getStepIconStyle = (
+  status: string,
+  isCurrent: boolean,
+  isActive: boolean,
+) => {
+  if (isCurrent) {
+    switch (status) {
+      case 'PREPARING':
+        return styles.preparingIcon;
+
+      case 'ON_THE_WAY':
+        return styles.scooterIcon;
+
+      default:
+        return [
+          styles.checkIcon,
+          {
+            tintColor: Colors.primary,
+          },
+        ];
+    }
+  }
+  return [
+    styles.checkIcon,
+    {
+      tintColor: isActive ? Colors.primary : '#bbb',
+    },
+  ];
+};
+
+const getLiveStatus = (status: string) => {
+      switch (status) {
+        case 'PREPARING':
+          return {
+            icon: require('../assets/images/preparing.png'),
+            message: 'Your order is being prepared',
+          };
+
+        case 'ON_THE_WAY':
+          return {
+            icon: require('../assets/images/scooter.png'),
+            message: 'Your order is on the way',
+          };
+
+        case 'DELIVERED':
+          return {
+            icon: require('../assets/images/check.png'),
+            message: 'Your order has been delivered',
+          };
+
+        case 'ACCEPTED':
+        default:
+          return {
+            icon: require('../assets/images/check.png'),
+            message: 'Your order has been accepted',
+          };
+      }
+    };
+
+      // compute current live status object safely
+      const currentLive = getLiveStatus(orderDetail?.order?.status ?? '');
+
+      return (
     <View style={styles.container}>
       
       {/* 🔙 Back */}
@@ -165,14 +314,14 @@ useEffect(() => {
                   <Image
                     source={
                       orderDetail?.customer?.profileImageUrl
-                        ? { uri: orderDetail.customer.profileImageUrl }
+                        ? { uri: orderDetail?.customer?.profileImageUrl }
                         : require('../assets/images/customer_image.png')
                     }
                     style={styles.avatar}
                   />
 
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.name}>John Customer</Text>
+                    <Text style={styles.name}>{orderDetail?.agent?.name || ''}</Text>
                     <Text style={styles.address}>
                       Honda shine Wb04-1234
                     </Text>
@@ -219,7 +368,7 @@ useEffect(() => {
                         <Text style={styles.smallLabel}>Payment Status</Text>
                         <View style={styles.codBadge}>
                           <Text style={styles.codText}>
-                            Payment Done
+                            {orderDetail?.order.paymentStatus}
                           </Text>
                         </View>
                       </View>
@@ -228,7 +377,7 @@ useEffect(() => {
                   <View>
                     <Text style={styles.smallLabel}>Order Amount</Text>
                     <Text style={styles.amount}>
-                      ₹100.00
+                      ₹{orderDetail?.order.totalAmount.toFixed(2)}
                     </Text>
                   </View>
                 </View>
@@ -237,15 +386,20 @@ useEffect(() => {
                 <View style={styles.liveBox}>
                   <View style={styles.iconCircle}>
                     <Image
-                      source={require('../assets/images/scooter.png')}
-                      style={styles.bikeIcon}
+                      source={currentLive.icon}
+                      style={
+                        orderDetail?.order?.status === 'ON_THE_WAY'
+                          ? styles.bikeIcon
+                          : orderDetail?.order?.status === 'PREPARING'
+                          ? styles.preparingIcon
+                          : styles.checkIcon
+                      }
                     />
                   </View>
+
                   <View style={{ marginLeft: 10 }}>
                     <Text style={styles.liveTitle}>Live Status</Text>
-                    <Text style={styles.liveText}>
-                      You are on the way to the customer
-                    </Text>
+                    <Text style={styles.liveText}>{currentLive.message}</Text>
                   </View>
                 </View>
 
@@ -254,54 +408,46 @@ useEffect(() => {
                   <Text style={styles.progressTitle}>Order Progress</Text>
 
                   <View style={styles.progressRow}>
-                    {[
-                      'Assigned',
-                      'Accepted',
-                      'Picked',
-                      'On The Way',
-                      'Delivered',
-                    ].map((item, index) => {
-                      const isActive = index <= 3;
-                      const isOnWay = item === 'On The Way';
+                  {steps.map((step, index) => {
+                      const isCompleted = index < currentIndex;
+                      const isCurrent = index === currentIndex;
 
                       return (
                         <View key={index} style={styles.stepContainer}>
                           <View
                             style={[
                               styles.stepCircle,
-                              isActive && styles.activeStep,
-
-                              // LIGHT ORANGE BACKGROUND FOR ON WAY
-                              isOnWay && styles.onWayStep,
-                            ]}
-                          >
-                            {isOnWay ? (
-                              <Image
-                                source={require('../assets/images/scooter.png')}
-                                style={styles.scooterIcon}
-                              />
-                            ) : (
-                              <Image
-                                source={require('../assets/images/check.png')}
-                                style={[
-                                  styles.checkIcon,
-                                  {
-                                    tintColor: isActive
-                                      ? Colors.primary
-                                      : '#bbb',
-                                  },
-                                ]}
-                              />
-                            )}
+                              (isCompleted || isCurrent) && styles.activeStep,
+                              isCurrent &&
+                                step.status === 'ON_THE_WAY' &&
+                                styles.onWayStep,
+                            ]}>
+                            <Image
+                              source={getStepIcon(step.status, isCurrent)}
+                              style={getStepIconStyle(
+                                step.status,
+                                isCurrent,
+                                isCompleted || isCurrent,
+                              )}
+                            />
                           </View>
 
-                          <Text style={styles.stepText}>{item}</Text>
+                          <Text
+                            style={[
+                              styles.stepText,
+                              (isCompleted || isCurrent) && {
+                                color: Colors.primary,
+                                fontWeight: '600',
+                              },
+                            ]}>
+                            {step.label}
+                          </Text>
 
-                          {index !== 4 && (
+                          {index < steps.length - 1 && (
                             <View
                               style={[
                                 styles.line,
-                                index < 3 && styles.activeLine,
+                                index < currentIndex && styles.activeLine,
                               ]}
                             />
                           )}
@@ -708,6 +854,11 @@ const styles = StyleSheet.create({
   },
 
   scooterIcon: {
+    width: 20,
+    height: 20,
+    tintColor: Colors.primary,
+  },
+  preparingIcon: {
     width: 20,
     height: 20,
     tintColor: Colors.primary,

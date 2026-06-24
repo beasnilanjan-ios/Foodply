@@ -27,7 +27,6 @@ useEffect(() => {
   const getOrderDetails = async () => {
 
     try {
-
       setLoading(true);
 
       const response = await fetch(
