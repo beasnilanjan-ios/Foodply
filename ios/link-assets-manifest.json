@@ -1,0 +1,29 @@
+{
+  "migIndex": 1,
+  "data": [
+    {
+      "path": "src/fonts/.gitkeep",
+      "sha1": "da39a3ee5e6b4b0d3255bfef95601890afd80709"
+    },
+    {
+      "path": "src/fonts/LeagueSpartan-Bold.ttf",
+      "sha1": "bad7aae7db483cb6ada0072092ac8465f769ee99"
+    },
+    {
+      "path": "src/fonts/LeagueSpartan-Medium.ttf",
+      "sha1": "17479f710fc43b05b3c1255fd584b856ac9b1bf7"
+    },
+    {
+      "path": "src/fonts/LeagueSpartan-Regular.ttf",
+      "sha1": "7c073b62b62b82dc2e506ba60b9aa3cb1c86889d"
+    },
+    {
+      "path": "src/fonts/LeagueSpartan-SemiBold.ttf",
+      "sha1": "814bc40eee1b53ec7775df4b03301bb2ed00a414"
+    },
+    {
+      "path": "src/fonts/README.md",
+      "sha1": "7cb2694d7d269850c0a74821133fe2c3a3bda9a8"
+    }
+  ]
+}

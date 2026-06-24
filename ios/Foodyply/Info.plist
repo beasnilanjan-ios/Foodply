@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+
+  <!-- App Basic Info -->
+  <key>CFBundleDevelopmentRegion</key>
+  <string>en</string>
+
+  <key>CFBundleDisplayName</key>
+  <string>Foodyply</string>
+
+  <key>CFBundleExecutable</key>
+  <string>$(EXECUTABLE_NAME)</string>
+
+  <key>CFBundleIdentifier</key>
+  <string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+
+  <key>CFBundleInfoDictionaryVersion</key>
+  <string>6.0</string>
+
+  <key>CFBundleName</key>
+  <string>$(PRODUCT_NAME)</string>
+
+  <key>CFBundlePackageType</key>
+  <string>APPL</string>
+
+  <key>CFBundleShortVersionString</key>
+  <string>$(MARKETING_VERSION)</string>
+
+  <key>CFBundleVersion</key>
+  <string>$(CURRENT_PROJECT_VERSION)</string>
+
+  <key>LSRequiresIPhoneOS</key>
+  <true/>
+
+  <!-- ✅ App Transport Security (UPDATED CORRECTLY) -->
+  <!-- CAMERA + GALLERY PERMISSIONS -->
+  <key>NSCameraUsageDescription</key>
+  <string>Foodyply needs access to your camera to capture profile photos.</string>
+
+  <key>NSPhotoLibraryUsageDescription</key>
+  <string>Foodyply needs access to your photo library to select profile images.</string>
+  <key>NSAppTransportSecurity</key>
+  <dict>
+    <key>NSAllowsArbitraryLoads</key>
+    <false/>
+    <key>NSAllowsLocalNetworking</key>
+    <true/>
+    <key>NSExceptionDomains</key>
+    <dict>
+      <key>182.73.216.93</key>
+      <dict>
+        <key>NSIncludesSubdomains</key>
+        <true/>
+        <key>NSExceptionAllowsInsecureHTTPLoads</key>
+        <true/>
+      </dict>
+      <key>192.168.1.93</key>
+      <dict>
+        <key>NSIncludesSubdomains</key>
+        <true/>
+        <key>NSExceptionAllowsInsecureHTTPLoads</key>
+        <true/>
+      </dict>
+      <key>192.168.1.18</key>
+      <dict>
+        <key>NSIncludesSubdomains</key>
+        <true/>
+        <key>NSExceptionAllowsInsecureHTTPLoads</key>
+        <true/>
+      </dict>
+    </dict>
+  </dict>
+
+  <key>NSLocalNetworkUsageDescription</key>
+  <string>Foodyply needs local network access to connect to the development API server.</string>
+
+  <!-- LOCATION PERMISSIONS -->
+  <key>NSLocationWhenInUseUsageDescription</key>
+  <string>Foodyply uses your location to show nearby restaurants and delivery options.</string>
+
+  <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+  <string>Foodyply uses your location to provide real-time delivery tracking even when the app is in the background.</string>
+
+  <key>NSLocationAlwaysUsageDescription</key>
+  <string>Foodyply needs continuous location access for accurate delivery tracking.</string>
+
+  <!-- UI / Launch -->
+  <key>UILaunchStoryboardName</key>
+  <string>LaunchScreen</string>
+
+  <key>UIViewControllerBasedStatusBarAppearance</key>
+  <false/>
+
+  <!-- Device Requirements -->
+  <key>UIRequiredDeviceCapabilities</key>
+  <array>
+    <string>arm64</string>
+  </array>
+
+  <!-- Orientation -->
+  <key>UISupportedInterfaceOrientations</key>
+  <array>
+    <string>UIInterfaceOrientationPortrait</string>
+  </array>
+
+  <key>UISupportedInterfaceOrientations~ipad</key>
+  <array>
+    <string>UIInterfaceOrientationLandscapeLeft</string>
+    <string>UIInterfaceOrientationLandscapeRight</string>
+    <string>UIInterfaceOrientationPortrait</string>
+    <string>UIInterfaceOrientationPortraitUpsideDown</string>
+  </array>
+
+  <!-- Custom Fonts -->
+  <key>UIAppFonts</key>
+  <array>
+    <string>LeagueSpartan-Medium.ttf</string>
+    <string>LeagueSpartan-Regular.ttf</string>
+    <string>LeagueSpartan-SemiBold.ttf</string>
+    <string>LeagueSpartan-Bold.ttf</string>
+  </array>
+
+  <!-- React Native -->
+  <key>RCTNewArchEnabled</key>
+  <true/>
+
+  <!-- Performance -->
+  <key>CADisableMinimumFrameDurationOnPhone</key>
+  <true/>
+
+</dict>
+</plist>
