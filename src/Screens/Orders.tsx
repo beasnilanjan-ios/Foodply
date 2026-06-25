@@ -195,7 +195,7 @@ export default function Orders({ navigation, onMenuPress }: any) {
               showAmountInItemBadge
               showTrackOrderButton={activeTab === 'Active'}
               onPressItem={item => {
-                console.log('Clicked Order:', item);
+                navigation.navigate('OrderDetails', { orderId: item.orderId });
               }}
               onPressTrackOrder={item => {
                 navigation.navigate('Trackorder', { orderId: item.orderId });

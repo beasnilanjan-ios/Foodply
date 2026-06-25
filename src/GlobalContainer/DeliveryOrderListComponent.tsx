@@ -39,6 +39,7 @@ const OrderCard = ({
   return (
     <TouchableOpacity
       style={styles.orderCard}
+      activeOpacity={0.9}
       onPress={() => onPressItem?.(item)}
     >
       <View style={styles.orderLeft}>
@@ -91,6 +92,7 @@ const OrderCard = ({
           <View style={styles.actionsRow}>
             <TouchableOpacity
               style={styles.viewButton}
+              activeOpacity={0.8}
               onPress={() => onPressItem?.(item)}
             >
               <Text style={styles.viewButtonText}>View Details</Text>

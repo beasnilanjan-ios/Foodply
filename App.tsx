@@ -10,6 +10,7 @@ import Banner from './src/Screens/Banner';
 import Login from './src/Screens/Login';
 import MainScreen from './src/GlobalContainer/MainScreen';
 import Orders from './src/Screens/Orders';
+import OrderDetails from './src/Screens/OrderDetails';
 import DrawerScreenContainer from './src/GlobalContainer/DrawerScreenContainer';
 import ViewAll from './src/Screens/ViewAll';
 import GlobalLoginAuth from './src/GlobalContainer/GlobalLoginAuth'; // ✅ ADD THIS
@@ -41,6 +42,7 @@ export type RootStackParamList = {
   DeliveryAddressList: undefined
   Dashboard: { fromTab?: boolean } | undefined;
   Orders: { fromTab?: boolean } | undefined;
+  OrderDetails: { orderId: number };
   Favorites: { fromTab?: boolean } | undefined;
   MyProfile: undefined;
   ViewAll:
@@ -162,6 +164,11 @@ const App = () => {
               </DrawerScreenContainer>
             )}
           </Stack.Screen>
+          <Stack.Screen
+            name="OrderDetails"
+            component={OrderDetails}
+            options={{ animation: 'none' }}
+          />
           <Stack.Screen
             name="ViewAll"
             component={ViewAll}
