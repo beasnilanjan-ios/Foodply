@@ -45,14 +45,16 @@ export default function TrackOrder({ navigation, route }: any) {
       { label: 'On The Way', status: 'ON_THE_WAY' },
       { label: 'Delivered', status: 'DELIVERED' },
     ];
-  
+
+  const trackedOrderId = 82;
+let cleanup: (() => void) | undefined;  
 
   const [riderLocation, setRiderLocation] = useState<
     { latitude: number; longitude: number } | null
   >(null);
 
 
-  const socket = useRef<Socket | null>(null);
+const socket = useRef<Socket | null>(null);
 const handleSocket = (trackedOrderId: number) => {
   socket.current = connectSocket();
 
@@ -179,7 +181,9 @@ const getOrderDetails = async (trackedOrderId: number) => {
 
       console.log("CurrentStatus", result.data?.status);
 
+      cleanup = handleSocket(trackedOrderId);
 
+    
     } catch (error) {
 
       console.log(error);
@@ -197,11 +201,10 @@ const getOrderDetails = async (trackedOrderId: number) => {
   }
 
 useEffect(() => {
-  const trackedOrderId = 43;
   getOrderDetails(trackedOrderId)
-  const cleanup = handleSocket(trackedOrderId);
-
-  return cleanup;
+ return () => {
+    cleanup?.();
+  };
 }, []);
 
 
@@ -254,6 +257,12 @@ const getStepIconStyle = (
 
 const getLiveStatus = (status: string) => {
       switch (status) {
+         case 'PENDING':
+          return {
+            icon: require('../assets/images/check.png'),
+            message: 'Please wait while your order is being accepted',
+          };
+
         case 'PREPARING':
           return {
             icon: require('../assets/images/preparing.png'),
@@ -310,34 +319,44 @@ const getLiveStatus = (status: string) => {
             {showDetailsCard ? (
               <View style={styles.card1}>
                 {/* USER INFO */}
-                <View style={styles.header}>
-                  <Image
-                    source={
-                      orderDetail?.customer?.profileImageUrl
-                        ? { uri: orderDetail?.customer?.profileImageUrl }
-                        : require('../assets/images/customer_image.png')
-                    }
-                    style={styles.avatar}
-                  />
+                {orderDetail?.order?.status !== 'PENDING' ? (
+                  <View style={styles.header}>
+                    <Image 
+                      source={ orderDetail?.customer?.profileImageUrl ? 
+                      { uri: orderDetail?.customer?.profileImageUrl } : 
+                      require('../assets/images/customer_image.png') } 
+                      style={styles.avatar} 
+                    />
 
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.name}>{orderDetail?.agent?.name || ''}</Text>
-                    <Text style={styles.address}>
-                      Honda shine Wb04-1234
-                    </Text>
-                  </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.name}>
+                        {orderDetail?.agent?.name || ''}
+                      </Text>
 
-                  <View style={styles.iconColumn}>
-                    <TouchableOpacity style={styles.circleBtn}  
-                     onPress={() => {
+                      <Text style={styles.address}>
+                        {orderDetail?.agent?.vehicle?.brand} •{' '}
+                        {orderDetail?.agent?.vehicle?.vehicleNumber}
+                      </Text>
+                    </View>
+
+                    <View style={styles.iconColumn}>
+                      <TouchableOpacity
+                        style={styles.circleBtn}
+                        onPress={() => {
+                          // Call action
                         }}>
-                      <Image
-                        source={require('../assets/images/call.png')}
-                        style={styles.smallIcon}
-                      />
-                    </TouchableOpacity>
+                        <Image
+                          source={require('../assets/images/call.png')}
+                          style={styles.smallIcon}
+                        />
+                      </TouchableOpacity>
+                    </View>
                   </View>
-                </View>
+                ) : (
+                  <View style={styles.header1}>
+                    <Text style={styles.name}>Delivery person not assigned</Text>
+                  </View>
+                )}
 
                 {/* ORDER INFO */}
                 <View style={styles.orderRow}>
@@ -355,7 +374,7 @@ const getLiveStatus = (status: string) => {
 
                     <View>
                       <Text style={styles.smallLabel}>
-                        3 Items • 2 Qty
+                         {orderDetail?.order?.itemsSummary.itemCount} Items • {orderDetail?.order?.itemsSummary.totalQuantity} Qty
                       </Text>
                       <View
                         style={{
@@ -689,6 +708,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
+  },
+
+   header1: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 
   avatar: {
