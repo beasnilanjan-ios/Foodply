@@ -1,91 +1,4 @@
-// import React from 'react';
-// import {
-//   View,
-//   Text,
-//   StyleSheet,
-//   Platform,
-//   Dimensions,
-// } from 'react-native';
-// import Colors from '../assets/Colors/Colors';
-// import GlobalBottomBar from '../GlobalContainer/GlobalBottomBar';
-// import GlobalTopBar from '../GlobalContainer/GlobalTopBar';
-// import GlobalBackButton from '../GlobalContainer/GlobalBackButton';
-
-// const { width, height } = Dimensions.get('window');
-// const isTablet = Math.min(width, height) >= 600;
-
-// export default function Orders({ navigation }: any) {
-//   return (
-//     <View style={styles.container}>
-
-//       {/* 🔝 TOP BAR */}
-//       <GlobalTopBar navigation={navigation} showSearch={false} />
-
-//       {/* 🎯 CENTERED BACK + TITLE */}
-//       <View style={styles.headerCenter}>
-//         <GlobalBackButton onPress={() => navigation.goBack()} />
-//         <Text style={styles.title}>Cart</Text>
-//       </View>
-
-//       {/* 🔽 OVERLAY */}
-//       <View style={styles.overlay}>
-//         <GlobalBottomBar navigation={navigation} activeTab="Orders" />
-//       </View>
-
-//     </View>
-//   );
-// }
-
-// const styles = StyleSheet.create({
-//   container: {
-//     flex: 1,
-//     paddingTop: 100,
-//     backgroundColor: Colors.primary,
-//   },
-
-//   // 🎯 CENTER GROUP
-//   headerCenter: {
-//     position: 'absolute',
-//     top: Platform.OS === 'ios' ? 120 : 100,
-//     width: '100%',
-//     flexDirection: 'row',
-//     justifyContent: 'center', // 👈 center whole group
-//     alignItems: 'center',
-//   },
-
-//   title: {
-//     color: '#fff',
-//     fontSize: 32,
-//     fontWeight: '700',
-//     marginLeft: 10, // 👈 spacing from back button
-//   },
-
-//   overlay: {
-//     position: 'absolute',
-//     bottom: 0,
-//     width: '100%',
-//     height:
-//       Platform.OS === 'ios'
-//         ? isTablet
-//           ? '93%'
-//           : '88%'
-//         : isTablet
-//         ? '78%'
-//         : '92%',
-//     backgroundColor: '#fff',
-//     borderTopLeftRadius: 30,
-//     borderTopRightRadius: 30,
-//     padding: 20,
-
-//     shadowColor: '#000',
-//     shadowOpacity: 0.1,
-//     shadowRadius: 10,
-//     elevation: 5,
-//   },
-// });
-
-
-import React, { useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -94,100 +7,174 @@ import {
   Dimensions,
   ScrollView,
   TouchableOpacity,
+  Alert,
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 
 import Colors from '../assets/Colors/Colors';
 import GlobalBottomBar from '../GlobalContainer/GlobalBottomBar';
 import GlobalTopBar from '../GlobalContainer/GlobalTopBar';
+import GlobalApi from '../GlobalContainer/GlobalApi';
+import GlobalLoginAuth from '../GlobalContainer/GlobalLoginAuth';
+import GlobalLoader from '../GlobalContainer/GlobalLoader';
 import DeliveryOrderListComponent from '../GlobalContainer/DeliveryOrderListComponent';
+import { AssignedOrder } from '../Models/DeliveryDasboard/AssignedOrder';
+import {
+  isActiveOrderStatus,
+  isCancelledOrderStatus,
+  isCompletedOrderStatus,
+  MyOrderItemModel,
+  MyOrdersResponseModel,
+} from '../Models/MyOrdersModel';
 
 const { width, height } = Dimensions.get('window');
 const isTablet = Math.min(width, height) >= 600;
 
+const MY_ORDERS_LIMIT = 20;
+const MY_ORDERS_OFFSET = 0;
+
+const getApiHeaders = (): Record<string, string> => {
+  const headers: Record<string, string> = {
+    Accept: 'application/json',
+    'X-Client-Type': 'mobile',
+  };
+
+  const token = GlobalLoginAuth.accessToken || GlobalLoginAuth.token;
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
+  return headers;
+};
+
+const mapToAssignedOrder = (order: MyOrderItemModel): AssignedOrder => ({
+  deliveryId: order.deliveryId,
+  orderId: order.orderId,
+  orderNumber: order.orderNumber,
+  createdAt: order.createdAt,
+  minutesAgo: order.minutesAgo,
+  customerName: order.restaurantName || order.customerName || 'Restaurant',
+  customerPhone: order.customerPhone,
+  addressText: order.addressText,
+  itemCount: order.itemCount,
+  totalQuantity: order.totalQuantity || order.itemCount,
+  finalAmount: order.finalAmount,
+  paymentMethod: order.paymentMethod,
+  paymentStatus: order.paymentStatus,
+  deliveryStatus: order.deliveryStatus,
+  orderStatus: order.status,
+});
+
 export default function Orders({ navigation, onMenuPress }: any) {
   const [activeTab, setActiveTab] = useState('Active');
+  const [loading, setLoading] = useState(false);
+  const [orders, setOrders] = useState<MyOrderItemModel[]>([]);
 
   const tabs = ['Active', 'Completed', 'Cancelled'];
 
-  // 🔥 Dummy Orders (replace with API later)
-  const activeOrders = [
-    {
-      orderId: 1,
-      orderNumber: '#12345',
-      minutesAgo: 10,
-      customerName: 'John Doe',
-      finalAmount: 250,
-      addressText: 'Kolkata, West Bengal',
-      itemCount: 2,
-      paymentMethod: 'COD',
-    },
-    {
-      orderId: 2,
-      orderNumber: '#12346',
-      minutesAgo: 10,
-      customerName: 'Jane Smith',
-      finalAmount: 300,
-      addressText: 'Mumbai, Maharashtra',
-      itemCount: 2,
-      paymentMethod: 'COD',
-    },
-    {
-      orderId: 3,
-      orderNumber: '#12347',
-      minutesAgo: 10,
-      customerName: 'Bob Johnson',
-      finalAmount: 350,
-      addressText: 'Chennai, Tamil Nadu',
-      itemCount: 2,
-      paymentMethod: 'COD',
-    },
-  ];
+  const fetchMyOrders = useCallback(async () => {
+    try {
+      setLoading(true);
+      await GlobalLoginAuth.loadAuthData();
 
-  const completedOrders = [
-    {
-      orderId: 2,
-      orderNumber: '#12346',
-      minutesAgo: 30,
-      customerName: 'Rahul Sharma',
-      finalAmount: 450,
-      addressText: 'Barrackpore, Kolkata',
-      itemCount: 3,
-      paymentMethod: 'Paid',
-    },
-  ];
+      const token = GlobalLoginAuth.accessToken || GlobalLoginAuth.token;
+      if (!token) {
+        setOrders([]);
+        return;
+      }
 
-  const cancelledOrders: any[] = [];
+      const response = await fetch(
+        `${GlobalApi.baseUrl}api/orders/my-orders?limit=${MY_ORDERS_LIMIT}&offset=${MY_ORDERS_OFFSET}`,
+        {
+          method: 'GET',
+          headers: getApiHeaders(),
+        },
+      );
+
+      const result = await response.json();
+      console.log('My orders response:', JSON.stringify(result, null, 2));
+
+      const myOrdersResponse = MyOrdersResponseModel.fromJson(result);
+
+      if (!response.ok || myOrdersResponse.success === false) {
+        Alert.alert(
+          'FoodyPly',
+          myOrdersResponse.message || 'Failed to load orders',
+        );
+        setOrders([]);
+        return;
+      }
+
+      setOrders(myOrdersResponse.data?.orders ?? []);
+    } catch (error) {
+      console.log('fetchMyOrders failed:', error);
+      Alert.alert('FoodyPly', 'Unable to connect to server');
+      setOrders([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchMyOrders();
+    }, [fetchMyOrders]),
+  );
+
+  const activeOrders = useMemo(
+    () =>
+      orders
+        .filter(order => isActiveOrderStatus(order.status))
+        .map(mapToAssignedOrder),
+    [orders],
+  );
+
+  const completedOrders = useMemo(
+    () =>
+      orders
+        .filter(order => isCompletedOrderStatus(order.status))
+        .map(mapToAssignedOrder),
+    [orders],
+  );
+
+  const cancelledOrders = useMemo(
+    () =>
+      orders
+        .filter(order => isCancelledOrderStatus(order.status))
+        .map(mapToAssignedOrder),
+    [orders],
+  );
 
   const getOrders = () => {
-    if (activeTab === 'Active') return activeOrders;
-    if (activeTab === 'Completed') return completedOrders;
-    if (activeTab === 'Cancelled') return cancelledOrders;
+    if (activeTab === 'Active') {
+      return activeOrders;
+    }
+    if (activeTab === 'Completed') {
+      return completedOrders;
+    }
+    if (activeTab === 'Cancelled') {
+      return cancelledOrders;
+    }
     return [];
   };
 
   return (
     <View style={styles.container}>
-      {/* 🔝 TOP BAR */}
+      <GlobalLoader visible={loading} text="Please Wait" />
+
       <GlobalTopBar navigation={navigation} onMenuPress={onMenuPress} />
 
-      {/* 🔥 Header */}
       <View style={styles.headerContainer}>
         <Text style={styles.title}>My Order</Text>
       </View>
 
-      {/* 🔽 OVERLAY */}
       <View style={styles.overlay}>
         <ScrollView showsVerticalScrollIndicator={false}>
-          
-          {/* 🔥 Tabs */}
           <View style={styles.tabContainer}>
-            {tabs.map((tab) => (
+            {tabs.map(tab => (
               <TouchableOpacity
                 key={tab}
-                style={[
-                  styles.tab,
-                  activeTab === tab && styles.activeTab,
-                ]}
+                style={[styles.tab, activeTab === tab && styles.activeTab]}
                 onPress={() => setActiveTab(tab)}
               >
                 <Text
@@ -202,20 +189,21 @@ export default function Orders({ navigation, onMenuPress }: any) {
             ))}
           </View>
 
-          {/* 🔥 Order List */}
           <View style={{ marginTop: 20 }}>
             <DeliveryOrderListComponent
               orders={getOrders()}
-              onPressItem={(item) => {
+              showAmountInItemBadge
+              showTrackOrderButton={activeTab === 'Active'}
+              onPressItem={item => {
                 console.log('Clicked Order:', item);
-                // navigation.navigate('OrderDetail', { item });
+              }}
+              onPressTrackOrder={item => {
+                navigation.navigate('Trackorder', { orderId: item.orderId });
               }}
             />
           </View>
-
         </ScrollView>
 
-        {/* 🔻 Bottom Bar */}
         <GlobalBottomBar navigation={navigation} activeTab="Orders" />
       </View>
     </View>
@@ -251,15 +239,14 @@ const styles = StyleSheet.create({
           ? '93%'
           : '88%'
         : isTablet
-        ? '78%'
-        : '92%',
+          ? '78%'
+          : '92%',
     backgroundColor: '#fff',
     borderTopLeftRadius: 30,
     borderTopRightRadius: 30,
     padding: 20,
   },
 
-  /* 🔥 Tabs */
   tabContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
