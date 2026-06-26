@@ -16,7 +16,7 @@ import GlobalBottomBar from '../GlobalContainer/GlobalBottomBar';
 import Colors from '../assets/Colors/Colors';
 import { FontFamily } from '../assets/GlobalFont/GlobalFont';
 import GlobalLoginAuth from '../GlobalContainer/GlobalLoginAuth';
-import {Socket, DefaultEventsMap} from 'socket.io-client';
+import { Socket } from 'socket.io-client';
 import { ON_THE_WAY } from '../Utils/CommonUtil';
 import {
   Map,

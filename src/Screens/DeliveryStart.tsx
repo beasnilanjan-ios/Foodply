@@ -768,8 +768,6 @@ export default function DeliveryStart({ route, navigation }: any) {
                   zoom={18}
                   pitch={0}
                   bearing={0}
-                  animationMode="none"
-                  animationDuration={0}
                   center={[riderPosition.longitude, riderPosition.latitude]}
                   padding={{ top: 100, bottom: 300, left: 0, right: 0 }}
                 />

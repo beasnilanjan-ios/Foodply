@@ -9,7 +9,9 @@ export function goBackToDashboard(navigation: NavigationProp<ParamListBase>) {
     );
 
     if (dashboardIndex >= 0 && state.index > dashboardIndex) {
-      navigation.pop(state.index - dashboardIndex);
+      (navigation as { pop: (count: number) => void }).pop(
+        state.index - dashboardIndex,
+      );
       return;
     }
   }
