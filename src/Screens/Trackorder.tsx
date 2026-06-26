@@ -53,7 +53,7 @@ const steps = [
       { label: 'Delivered', status: 'DELIVERED' },
     ];
 
-  const trackedOrderId = 43;
+  const trackedOrderId = 91;
 let cleanup: (() => void) | undefined;  
 
   const [riderLocation, setRiderLocation] = useState<
@@ -82,8 +82,15 @@ const handleSocket = (trackedOrderId: number) => {
 
   const onSnapshot = (data: any) => {
     console.log('📍 Tracking Snapshot:', data);
+    console.log('stauts:',data?.status)
 
-    if (
+    if (data?.status === 'ACCEPTED') {
+      setcurrentIndex(0);
+      setCurrentLive(getLiveStatus('ACCEPTED'));
+    } else if (data?.status === 'PREPARING') {
+      setcurrentIndex(1);
+      setCurrentLive(getLiveStatus('PREPARING'));
+    } else if (
       data?.status === 'ON_THE_WAY' &&
       data?.latestLocation
     ) {
@@ -119,6 +126,32 @@ const handleSocket = (trackedOrderId: number) => {
 
   socket.current.onAny((event, ...args) => {
     console.log('EVENT =>', event, args);
+    console.log('stauts:',event?.status)
+     const payload = args[0];
+
+    if (payload?.status === 'ACCEPTED') {
+      setcurrentIndex(0);
+      setCurrentLive(getLiveStatus('ACCEPTED'));
+    } else if (payload?.status === 'PREPARING') {
+      setcurrentIndex(1);
+      setCurrentLive(getLiveStatus('PREPARING'));
+    } else if (
+      payload?.status === 'ON_THE_WAY' &&
+      payload?.latestLocation
+    ) {
+      const {latitude, longitude} = payload.latestLocation;
+
+      console.log('Lat:', latitude);
+      console.log('Lng:', longitude);
+
+      //setcurrentIndex(2);
+      //setCurrentLive(getLiveStatus('ON_THE_WAY'));
+
+      setRiderLocation({
+        latitude,
+        longitude,
+      });
+    }
   });
 
   socket.current.on('connect', onConnect);
