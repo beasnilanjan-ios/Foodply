@@ -10,9 +10,11 @@ import {
   Alert,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   launchCamera,
   launchImageLibrary,
+  Asset,
 } from 'react-native-image-picker';
 
 import GlobalBackButton from '../GlobalContainer/GlobalBackButton';
@@ -21,7 +23,11 @@ import GlobalLoader from '../GlobalContainer/GlobalLoader';
 import GlobalLoginAuth from '../GlobalContainer/GlobalLoginAuth';
 import Colors from '../assets/Colors/Colors';
 import GlobalStyles from '../assets/Styles/GlobalStyles';
-import { AuthMeResponseModel } from '../Models/AuthMeModel';
+import { AuthMeResponseModel, AuthMeUserModel } from '../Models/AuthMeModel';
+import {
+  prepareProfileImageForUpload,
+  PROFILE_IMAGE_PICKER_OPTIONS,
+} from '../Utils/CompressProfileImage';
 
 const formatDobForDisplay = (value: string) => {
   if (!value?.trim()) {
@@ -68,6 +74,38 @@ export default function MyProfile({ navigation }: any) {
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
 
+  const applyProfileUser = useCallback(async (user: AuthMeUserModel) => {
+    setName(user.name);
+    setEmail(user.email);
+    setPhone(user.phone);
+    setDob(formatDobForDisplay(user.dob));
+    setProfileImageUrl(user.profileImageUrl);
+    setImageUri(null);
+
+    GlobalLoginAuth.user = {
+      ...GlobalLoginAuth.user,
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      phone: user.phone,
+      profileImageUrl: user.profileImageUrl,
+      role: user.role,
+    };
+
+    try {
+      const storedData = await AsyncStorage.getItem('authData');
+      if (storedData) {
+        const data = JSON.parse(storedData);
+        await AsyncStorage.setItem(
+          'authData',
+          JSON.stringify({ ...data, user: GlobalLoginAuth.user }),
+        );
+      }
+    } catch (error) {
+      console.log('persistAuthUser failed:', error);
+    }
+  }, []);
+
   const fetchMyProfile = useCallback(async () => {
     try {
       setLoading(true);
@@ -102,28 +140,184 @@ export default function MyProfile({ navigation }: any) {
         return;
       }
 
-      setName(user.name);
-      setEmail(user.email);
-      setPhone(user.phone);
-      setDob(formatDobForDisplay(user.dob));
-      setProfileImageUrl(user.profileImageUrl);
-
-      GlobalLoginAuth.user = {
-        ...GlobalLoginAuth.user,
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        phone: user.phone,
-        profileImageUrl: user.profileImageUrl,
-        role: user.role,
-      };
+      await applyProfileUser(user);
     } catch (error) {
       console.log('fetchMyProfile failed:', error);
       Alert.alert('FoodyPly', 'Unable to connect to server');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [applyProfileUser]);
+
+  const handleUpdateProfile = async () => {
+    if (!name.trim() || !email.trim() || !phone.trim()) {
+      Alert.alert('FoodyPly', 'Please fill name, email and phone number');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await GlobalLoginAuth.loadAuthData();
+
+      const token = GlobalLoginAuth.accessToken || GlobalLoginAuth.token;
+      if (!token) {
+        Alert.alert('FoodyPly', 'Please login to update your profile');
+        return;
+      }
+
+      const response = await fetch(`${GlobalApi.baseUrl}api/auth/me`, {
+        method: 'PATCH',
+        headers: {
+          ...getApiHeaders(),
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: name.trim(),
+          email: email.trim(),
+          phone: phone.trim(),
+          profileImageUrl: profileImageUrl,
+        }),
+      });
+
+      const result = await response.json();
+      console.log('Update profile response:', JSON.stringify(result, null, 2));
+
+      const profileResponse = AuthMeResponseModel.fromJson(result);
+
+      if (!response.ok || profileResponse.success === false) {
+        Alert.alert(
+          'FoodyPly',
+          profileResponse.message || 'Failed to update profile',
+        );
+        return;
+      }
+
+      const user = profileResponse.data;
+      if (user) {
+        await applyProfileUser(user);
+      }
+
+      Alert.alert('FoodyPly', profileResponse.message || 'Profile updated successfully');
+    } catch (error) {
+      console.log('handleUpdateProfile failed:', error);
+      Alert.alert('FoodyPly', 'Unable to connect to server');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const uploadProfileImage = async (asset: Asset) => {
+    if (!asset.uri) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await GlobalLoginAuth.loadAuthData();
+
+      const token = GlobalLoginAuth.accessToken || GlobalLoginAuth.token;
+      if (!token) {
+        Alert.alert('FoodyPly', 'Please login to update profile image');
+        setImageUri(null);
+        return;
+      }
+
+      const compressedImage = prepareProfileImageForUpload(asset);
+
+      const formData = new FormData();
+      formData.append('image', {
+        uri: compressedImage.uri,
+        name: compressedImage.name,
+        type: compressedImage.type,
+      } as unknown as Blob);
+
+      const response = await fetch(
+        `${GlobalApi.baseUrl}api/auth/me/profile-image`,
+        {
+          method: 'POST',
+          headers: getApiHeaders(),
+          body: formData,
+        },
+      );
+
+      const result = await response.json();
+      console.log(
+        'Upload profile image response:',
+        JSON.stringify(result, null, 2),
+      );
+
+      const profileResponse = AuthMeResponseModel.fromJson(result);
+
+      if (!response.ok || profileResponse.success === false) {
+        setImageUri(null);
+        Alert.alert(
+          'FoodyPly',
+          profileResponse.message || 'Failed to upload profile image',
+        );
+        return;
+      }
+
+      const uploadedUrl =
+        profileResponse.data?.profileImageUrl ??
+        result?.data?.profileImageUrl ??
+        result?.profileImageUrl ??
+        null;
+
+      if (profileResponse.data) {
+        await applyProfileUser(profileResponse.data);
+      } else if (uploadedUrl) {
+        setProfileImageUrl(uploadedUrl);
+        setImageUri(null);
+        GlobalLoginAuth.user = {
+          ...GlobalLoginAuth.user,
+          profileImageUrl: uploadedUrl,
+        };
+
+        try {
+          const storedData = await AsyncStorage.getItem('authData');
+          if (storedData) {
+            const data = JSON.parse(storedData);
+            await AsyncStorage.setItem(
+              'authData',
+              JSON.stringify({
+                ...data,
+                user: { ...data.user, profileImageUrl: uploadedUrl },
+              }),
+            );
+          }
+        } catch (error) {
+          console.log('persistProfileImage failed:', error);
+        }
+      } else {
+        setImageUri(null);
+      }
+
+      Alert.alert(
+        'FoodyPly',
+        profileResponse.message || 'Profile image updated successfully',
+      );
+    } catch (error) {
+      console.log('uploadProfileImage failed:', error);
+      setImageUri(null);
+      Alert.alert(
+        'FoodyPly',
+        error instanceof Error
+          ? error.message
+          : 'Unable to upload profile image',
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePickedImage = async (asset?: Asset) => {
+    if (!asset?.uri) {
+      return;
+    }
+
+    setImageUri(asset.uri);
+    await uploadProfileImage(asset);
+  };
 
   useFocusEffect(
     useCallback(() => {
@@ -140,23 +334,21 @@ export default function MyProfile({ navigation }: any) {
   };
 
   const openCamera = async () => {
-    const result = await launchCamera({
-      mediaType: 'photo',
-      quality: 0.8,
-    });
+    const result = await launchCamera(PROFILE_IMAGE_PICKER_OPTIONS);
 
     if (!result.didCancel && result.assets?.length) {
-      setImageUri(result.assets[0].uri ?? null);
+      await handlePickedImage(result.assets[0]);
     }
   };
 
   const openGallery = async () => {
     const result = await launchImageLibrary({
-      mediaType: 'photo',
+      ...PROFILE_IMAGE_PICKER_OPTIONS,
+      selectionLimit: 1,
     });
 
     if (!result.didCancel && result.assets?.length) {
-      setImageUri(result.assets[0].uri ?? null);
+      await handlePickedImage(result.assets[0]);
     }
   };
 
@@ -214,7 +406,7 @@ export default function MyProfile({ navigation }: any) {
             keyboardType="phone-pad"
           />
 
-          <TouchableOpacity style={styles.button}>
+          <TouchableOpacity style={styles.button} onPress={handleUpdateProfile}>
             <Text style={styles.buttonText}>Update Profile</Text>
           </TouchableOpacity>
         </ScrollView>
