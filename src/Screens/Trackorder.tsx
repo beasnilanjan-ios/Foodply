@@ -38,15 +38,22 @@ export default function TrackOrder({ navigation, route }: any) {
   const [orderDetail, setOrderDetail] = useState<DeliveryTrackingData>();
   const [loading, setLoading] = useState(false);
   const [currentIndex, setcurrentIndex] = useState<number>(0);
-  const [liveStatus, setLiveStatus] = useState<String>();
-  const steps = [
+  const [currentLive, setCurrentLive] = useState<{
+    icon: any;
+    message: string;
+  }>({
+    icon: require('../assets/images/check.png'),
+    message: '',
+  });  
+
+const steps = [
       { label: 'Accepted', status: 'ACCEPTED' },
       { label: 'Preparing', status: 'PREPARING' },
       { label: 'On The Way', status: 'ON_THE_WAY' },
       { label: 'Delivered', status: 'DELIVERED' },
     ];
 
-  const trackedOrderId = 82;
+  const trackedOrderId = 43;
 let cleanup: (() => void) | undefined;  
 
   const [riderLocation, setRiderLocation] = useState<
@@ -84,6 +91,9 @@ const handleSocket = (trackedOrderId: number) => {
 
       console.log('Lat:', latitude);
       console.log('Lng:', longitude);
+
+      //setcurrentIndex(2);
+      //setCurrentLive(getLiveStatus('ON_THE_WAY'));
 
       setRiderLocation({
         latitude,
@@ -290,222 +300,223 @@ const getLiveStatus = (status: string) => {
       }
     };
 
-      // compute current live status object safely
-      const currentLive = getLiveStatus(orderDetail?.order?.status ?? '');
+  useEffect(() => {
+    setCurrentLive(getLiveStatus(orderDetail?.order?.status ?? ''));
+  }, [orderDetail?.order?.status]);
 
-      return (
-    <View style={styles.container}>
-      
-      {/* 🔙 Back */}
-      <GlobalBackButton onPress={() => navigation.goBack()} />
+  return (
+        <View style={styles.container}>
+          
+          {/* 🔙 Back */}
+          <GlobalBackButton onPress={() => navigation.goBack()} />
 
-      {/* 🔝 Title */}
-      <Text style={styles.title}>Track Order</Text>
+          {/* 🔝 Title */}
+          <Text style={styles.title}>Track Order</Text>
 
-      {/* 🔽 Overlay */}
-      <View style={styles.overlay}>
-        
-        <View style={styles.mapContainer}>
-          <Map
-            style={styles.map}
-            mapStyle={OSM_STYLE}
-            logo={false}
-            compass={false}
-            onTouchStart={() => {         
-            }}></Map>
+          {/* 🔽 Overlay */}
+          <View style={styles.overlay}>
+            
+            <View style={styles.mapContainer}>
+              <Map
+                style={styles.map}
+                mapStyle={OSM_STYLE}
+                logo={false}
+                compass={false}
+                onTouchStart={() => {         
+                }}></Map>
 
 
-            {/* FLOATING CARD */}
-            {showDetailsCard ? (
-              <View style={styles.card1}>
-                {/* USER INFO */}
-                {orderDetail?.order?.status !== 'PENDING' ? (
-                  <View style={styles.header}>
-                    <Image 
-                      source={ orderDetail?.customer?.profileImageUrl ? 
-                      { uri: orderDetail?.customer?.profileImageUrl } : 
-                      require('../assets/images/customer_image.png') } 
-                      style={styles.avatar} 
-                    />
-
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.name}>
-                        {orderDetail?.agent?.name || ''}
-                      </Text>
-
-                      <Text style={styles.address}>
-                        {orderDetail?.agent?.vehicle?.brand} •{' '}
-                        {orderDetail?.agent?.vehicle?.vehicleNumber}
-                      </Text>
-                    </View>
-
-                    <View style={styles.iconColumn}>
-                      <TouchableOpacity
-                        style={styles.circleBtn}
-                        onPress={() => {
-                          // Call action
-                        }}>
-                        <Image
-                          source={require('../assets/images/call.png')}
-                          style={styles.smallIcon}
+                {/* FLOATING CARD */}
+                {showDetailsCard ? (
+                  <View style={styles.card1}>
+                    {/* USER INFO */}
+                    {orderDetail?.order?.status !== 'PENDING' ? (
+                      <View style={styles.header}>
+                        <Image 
+                          source={ orderDetail?.customer?.profileImageUrl ? 
+                          { uri: orderDetail?.customer?.profileImageUrl } : 
+                          require('../assets/images/customer_image.png') } 
+                          style={styles.avatar} 
                         />
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                ) : (
-                  <View style={styles.header1}>
-                    <Text style={styles.name}>Delivery person not assigned</Text>
-                  </View>
-                )}
 
-                {/* ORDER INFO */}
-                <View style={styles.orderRow}>
-                  <View
-                    style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      gap: 5,
-                    }}
-                  >
-                    <Image
-                      source={require('../assets/images/shopping_bag.png')}
-                      style={styles.smallIconOrange}
-                    />
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.name}>
+                            {orderDetail?.agent?.name || ''}
+                          </Text>
 
-                    <View>
-                      <Text style={styles.smallLabel}>
-                         {orderDetail?.order?.itemsSummary.itemCount} Items • {orderDetail?.order?.itemsSummary.totalQuantity} Qty
-                      </Text>
+                          <Text style={styles.address}>
+                            {orderDetail?.agent?.vehicle?.brand} •{' '}
+                            {orderDetail?.agent?.vehicle?.vehicleNumber}
+                          </Text>
+                        </View>
+
+                        <View style={styles.iconColumn}>
+                          <TouchableOpacity
+                            style={styles.circleBtn}
+                            onPress={() => {
+                              // Call action
+                            }}>
+                            <Image
+                              source={require('../assets/images/call.png')}
+                              style={styles.smallIcon}
+                            />
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+                    ) : (
+                      <View style={styles.header1}>
+                        <Text style={styles.name}>Delivery person not assigned</Text>
+                      </View>
+                    )}
+
+                    {/* ORDER INFO */}
+                    <View style={styles.orderRow}>
                       <View
                         style={{
                           flexDirection: 'row',
                           alignItems: 'center',
-                          gap: 4,
-                          marginTop: 2,
+                          gap: 5,
                         }}
                       >
-                        <Text style={styles.smallLabel}>Payment Status</Text>
-                        <View style={styles.codBadge}>
-                          <Text style={styles.codText}>
-                            {orderDetail?.order.paymentStatus}
+                        <Image
+                          source={require('../assets/images/shopping_bag.png')}
+                          style={styles.smallIconOrange}
+                        />
+
+                        <View>
+                          <Text style={styles.smallLabel}>
+                            {orderDetail?.order?.itemsSummary.itemCount} Items • {orderDetail?.order?.itemsSummary.totalQuantity} Qty
                           </Text>
+                          <View
+                            style={{
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                              gap: 4,
+                              marginTop: 2,
+                            }}
+                          >
+                            <Text style={styles.smallLabel}>Payment Status</Text>
+                            <View style={styles.codBadge}>
+                              <Text style={styles.codText}>
+                                {orderDetail?.order.paymentStatus}
+                              </Text>
+                            </View>
+                          </View>
                         </View>
                       </View>
+                      <View>
+                        <Text style={styles.smallLabel}>Order Amount</Text>
+                        <Text style={styles.amount}>
+                          ₹{orderDetail?.order.totalAmount.toFixed(2)}
+                        </Text>
+                      </View>
+                    </View>
+
+                    {/* LIVE STATUS */}
+                    <View style={styles.liveBox}>
+                      <View style={styles.iconCircle}>
+                        <Image
+                          source={currentLive.icon}
+                          style={
+                            orderDetail?.order?.status === 'ON_THE_WAY'
+                              ? styles.bikeIcon
+                              : orderDetail?.order?.status === 'PREPARING'
+                              ? styles.preparingIcon
+                              : styles.checkIcon
+                          }
+                        />
+                      </View>
+
+                      <View style={{ marginLeft: 10 }}>
+                        <Text style={styles.liveTitle}>Live Status</Text>
+                        <Text style={styles.liveText}>{currentLive.message}</Text>
+                      </View>
+                    </View>
+
+                    {/* PROGRESS */}
+                    <View style={{ marginTop: 20 }}>
+                      <Text style={styles.progressTitle}>Order Progress</Text>
+
+                      <View style={styles.progressRow}>
+                      {steps.map((step, index) => {
+                          const isCompleted = index < currentIndex;
+                          const isCurrent = index === currentIndex;
+
+                          return (
+                            <View key={index} style={styles.stepContainer}>
+                              <View
+                                style={[
+                                  styles.stepCircle,
+                                  (isCompleted || isCurrent) && styles.activeStep,
+                                  isCurrent &&
+                                    step.status === 'ON_THE_WAY' &&
+                                    styles.onWayStep,
+                                ]}>
+                                <Image
+                                  source={getStepIcon(step.status, isCurrent)}
+                                  style={getStepIconStyle(
+                                    step.status,
+                                    isCurrent,
+                                    isCompleted || isCurrent,
+                                  )}
+                                />
+                              </View>
+
+                              <Text
+                                style={[
+                                  styles.stepText,
+                                  (isCompleted || isCurrent) && {
+                                    color: Colors.primary,
+                                    fontWeight: '600',
+                                  },
+                                ]}>
+                                {step.label}
+                              </Text>
+
+                              {index < steps.length - 1 && (
+                                <View
+                                  style={[
+                                    styles.line,
+                                    index < currentIndex && styles.activeLine,
+                                  ]}
+                                />
+                              )}
+                            </View>
+                          );
+                        })}
+                      </View>
+                    </View>
+
+                    {/* BUTTONS */}
+                    <View style={styles.buttonRow}>
+                      <TouchableOpacity
+                        style={styles.mapBtn}
+                        onPress={() => setShowDetailsCard(false)}
+                      >
+                        <Text style={styles.mapBtnText}>Open in Maps</Text>
+                      </TouchableOpacity>
                     </View>
                   </View>
-                  <View>
-                    <Text style={styles.smallLabel}>Order Amount</Text>
-                    <Text style={styles.amount}>
-                      ₹{orderDetail?.order.totalAmount.toFixed(2)}
-                    </Text>
-                  </View>
-                </View>
-
-                {/* LIVE STATUS */}
-                <View style={styles.liveBox}>
-                  <View style={styles.iconCircle}>
-                    <Image
-                      source={currentLive.icon}
-                      style={
-                        orderDetail?.order?.status === 'ON_THE_WAY'
-                          ? styles.bikeIcon
-                          : orderDetail?.order?.status === 'PREPARING'
-                          ? styles.preparingIcon
-                          : styles.checkIcon
-                      }
-                    />
-                  </View>
-
-                  <View style={{ marginLeft: 10 }}>
-                    <Text style={styles.liveTitle}>Live Status</Text>
-                    <Text style={styles.liveText}>{currentLive.message}</Text>
-                  </View>
-                </View>
-
-                {/* PROGRESS */}
-                <View style={{ marginTop: 20 }}>
-                  <Text style={styles.progressTitle}>Order Progress</Text>
-
-                  <View style={styles.progressRow}>
-                  {steps.map((step, index) => {
-                      const isCompleted = index < currentIndex;
-                      const isCurrent = index === currentIndex;
-
-                      return (
-                        <View key={index} style={styles.stepContainer}>
-                          <View
-                            style={[
-                              styles.stepCircle,
-                              (isCompleted || isCurrent) && styles.activeStep,
-                              isCurrent &&
-                                step.status === 'ON_THE_WAY' &&
-                                styles.onWayStep,
-                            ]}>
-                            <Image
-                              source={getStepIcon(step.status, isCurrent)}
-                              style={getStepIconStyle(
-                                step.status,
-                                isCurrent,
-                                isCompleted || isCurrent,
-                              )}
-                            />
-                          </View>
-
-                          <Text
-                            style={[
-                              styles.stepText,
-                              (isCompleted || isCurrent) && {
-                                color: Colors.primary,
-                                fontWeight: '600',
-                              },
-                            ]}>
-                            {step.label}
-                          </Text>
-
-                          {index < steps.length - 1 && (
-                            <View
-                              style={[
-                                styles.line,
-                                index < currentIndex && styles.activeLine,
-                              ]}
-                            />
-                          )}
-                        </View>
-                      );
-                    })}
-                  </View>
-                </View>
-
-                {/* BUTTONS */}
-                <View style={styles.buttonRow}>
+                ) : (
                   <TouchableOpacity
-                    style={styles.mapBtn}
-                    onPress={() => setShowDetailsCard(false)}
+                    activeOpacity={0.8}
+                    style={styles.floatingShowButton}
+                    onPress={() => setShowDetailsCard(true)}
                   >
-                    <Text style={styles.mapBtnText}>Open in Maps</Text>
+                    <Image
+                      source={require('../assets/images/shopping_bag.png')}
+                      style={styles.floatingArrow}
+                    />
                   </TouchableOpacity>
-                </View>
-              </View>
-            ) : (
-              <TouchableOpacity
-                activeOpacity={0.8}
-                style={styles.floatingShowButton}
-                onPress={() => setShowDetailsCard(true)}
-              >
-                <Image
-                  source={require('../assets/images/shopping_bag.png')}
-                  style={styles.floatingArrow}
-                />
-              </TouchableOpacity>
+                )}
+            </View>
+            {/* ✅ CONDITIONAL BOTTOM BAR */}
+            {showBottomBar && (
+              <GlobalBottomBar navigation={navigation} activeTab="MyOrders" />
             )}
-        </View>
-        {/* ✅ CONDITIONAL BOTTOM BAR */}
-        {showBottomBar && (
-          <GlobalBottomBar navigation={navigation} activeTab="MyOrders" />
-        )}
 
-      </View>
-    </View>
+          </View>
+        </View>
   );
 }
 
