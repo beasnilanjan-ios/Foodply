@@ -162,7 +162,14 @@ export default function Orders({ navigation, onMenuPress }: any) {
     <View style={styles.container}>
       <GlobalLoader visible={loading} text="Please Wait" />
 
-      <GlobalTopBar navigation={navigation} onMenuPress={onMenuPress} />
+      <GlobalTopBar
+        navigation={navigation}
+        onMenuPress={onMenuPress}
+        searchPlaceholder="Search orders..."
+        onSearchPress={() =>
+          navigation.navigate('Search', { scope: 'orders' })
+        }
+      />
 
       <View style={styles.headerContainer}>
         <Text style={styles.title}>My Order</Text>

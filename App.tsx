@@ -27,6 +27,7 @@ import Address from './src/Screens/DeliveryAddress';
 import OrderConfirmed from './src/Screens/OrderConfirmed'; 
 import DeliveryOtpVerification from './src/Screens/DeliveryOtpVerification';
 import Favorites from './src/Screens/Favorites'; // adjust path if needed
+import SearchScreen, { SearchScope } from './src/Screens/SearchScreen';
 import Trackorder from './src/Screens/Trackorder';
 import DeliveryAddressList from './src/Screens/DeliveryAddressList';
 import MyProfile from './src/Screens/MyProfile';
@@ -44,6 +45,13 @@ export type RootStackParamList = {
   Orders: { fromTab?: boolean } | undefined;
   OrderDetails: { orderId: number };
   Favorites: { fromTab?: boolean } | undefined;
+  Search: {
+    scope: SearchScope;
+    restaurantId?: number | null;
+    latitude?: number | null;
+    longitude?: number | null;
+    menuItems?: RestaurantMenuItemModel[];
+  };
   MyProfile: undefined;
   ViewAll:
     | {
@@ -250,6 +258,11 @@ const App = () => {
           <Stack.Screen
             name="DeliveryOtpVerification"
             component={DeliveryOtpVerification}
+            options={{ animation: 'none' }}
+          />
+          <Stack.Screen
+            name="Search"
+            component={SearchScreen}
             options={{ animation: 'none' }}
           />
           <Stack.Screen

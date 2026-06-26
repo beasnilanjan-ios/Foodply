@@ -100,7 +100,13 @@ const STATIC_LONGITUDE = 88.3639;
 export default function Favorites({ navigation }: any) {
   return (
     <View style={[GlobalStyles.screenBackgroundPrimary, styles.container]}>
-      <GlobalTopBar navigation={navigation} />
+      <GlobalTopBar
+        navigation={navigation}
+        searchPlaceholder="Search favorites..."
+        onSearchPress={() =>
+          navigation.navigate('Search', { scope: 'favorites' })
+        }
+      />
 
       <View style={styles.headerContainer}>
         <Text style={styles.title}>Favorites</Text>

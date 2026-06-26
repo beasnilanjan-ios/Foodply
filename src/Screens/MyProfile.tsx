@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   View,
   Text,
@@ -9,26 +9,128 @@ import {
   TextInput,
   Alert,
 } from 'react-native';
-
+import { useFocusEffect } from '@react-navigation/native';
 import {
   launchCamera,
   launchImageLibrary,
 } from 'react-native-image-picker';
 
 import GlobalBackButton from '../GlobalContainer/GlobalBackButton';
+import GlobalApi from '../GlobalContainer/GlobalApi';
+import GlobalLoader from '../GlobalContainer/GlobalLoader';
+import GlobalLoginAuth from '../GlobalContainer/GlobalLoginAuth';
 import Colors from '../assets/Colors/Colors';
 import GlobalStyles from '../assets/Styles/GlobalStyles';
+import { AuthMeResponseModel } from '../Models/AuthMeModel';
+
+const formatDobForDisplay = (value: string) => {
+  if (!value?.trim()) {
+    return '';
+  }
+
+  if (value.includes('/')) {
+    return value;
+  }
+
+  const parsedDate = new Date(value);
+  if (Number.isNaN(parsedDate.getTime())) {
+    return value;
+  }
+
+  const day = String(parsedDate.getDate()).padStart(2, '0');
+  const month = String(parsedDate.getMonth() + 1).padStart(2, '0');
+  const year = parsedDate.getFullYear();
+
+  return `${day} / ${month} / ${year}`;
+};
+
+const getApiHeaders = (): Record<string, string> => {
+  const headers: Record<string, string> = {
+    Accept: 'application/json',
+    'X-Client-Type': 'mobile',
+  };
+
+  const token = GlobalLoginAuth.accessToken || GlobalLoginAuth.token;
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
+  return headers;
+};
 
 export default function MyProfile({ navigation }: any) {
+  const [loading, setLoading] = useState(false);
+  const [imageUri, setImageUri] = useState<string | null>(null);
+  const [profileImageUrl, setProfileImageUrl] = useState<string | null>(null);
 
-  const [imageUri, setImageUri] = useState<any>(null);
+  const [name, setName] = useState('');
+  const [dob, setDob] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
 
-  const [name, setName] = useState('Surojit Bera');
-  const [dob, setDob] = useState('09 / 10 / 1991');
-  const [email, setEmail] = useState('johnsmith@example.com');
-  const [phone, setPhone] = useState('+123 567 89000');
+  const fetchMyProfile = useCallback(async () => {
+    try {
+      setLoading(true);
+      await GlobalLoginAuth.loadAuthData();
 
-  // 📷 OPEN OPTIONS
+      const token = GlobalLoginAuth.accessToken || GlobalLoginAuth.token;
+      if (!token) {
+        Alert.alert('FoodyPly', 'Please login to view your profile');
+        return;
+      }
+
+      const response = await fetch(`${GlobalApi.baseUrl}api/auth/me`, {
+        method: 'GET',
+        headers: getApiHeaders(),
+      });
+
+      const result = await response.json();
+      console.log('My profile response:', JSON.stringify(result, null, 2));
+
+      const profileResponse = AuthMeResponseModel.fromJson(result);
+
+      if (!response.ok || profileResponse.success === false) {
+        Alert.alert(
+          'FoodyPly',
+          profileResponse.message || 'Failed to load profile',
+        );
+        return;
+      }
+
+      const user = profileResponse.data;
+      if (!user) {
+        return;
+      }
+
+      setName(user.name);
+      setEmail(user.email);
+      setPhone(user.phone);
+      setDob(formatDobForDisplay(user.dob));
+      setProfileImageUrl(user.profileImageUrl);
+
+      GlobalLoginAuth.user = {
+        ...GlobalLoginAuth.user,
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        profileImageUrl: user.profileImageUrl,
+        role: user.role,
+      };
+    } catch (error) {
+      console.log('fetchMyProfile failed:', error);
+      Alert.alert('FoodyPly', 'Unable to connect to server');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchMyProfile();
+    }, [fetchMyProfile]),
+  );
+
   const openImagePicker = () => {
     Alert.alert('Select Image', 'Choose option', [
       { text: 'Camera', onPress: openCamera },
@@ -37,7 +139,6 @@ export default function MyProfile({ navigation }: any) {
     ]);
   };
 
-  // 📷 CAMERA
   const openCamera = async () => {
     const result = await launchCamera({
       mediaType: 'photo',
@@ -45,24 +146,30 @@ export default function MyProfile({ navigation }: any) {
     });
 
     if (!result.didCancel && result.assets?.length) {
-      setImageUri(result.assets[0].uri);
+      setImageUri(result.assets[0].uri ?? null);
     }
   };
 
-  // 🖼️ GALLERY
   const openGallery = async () => {
     const result = await launchImageLibrary({
       mediaType: 'photo',
     });
 
     if (!result.didCancel && result.assets?.length) {
-      setImageUri(result.assets[0].uri);
+      setImageUri(result.assets[0].uri ?? null);
     }
   };
 
+  const profileImageSource = imageUri
+    ? { uri: imageUri }
+    : profileImageUrl
+    ? { uri: profileImageUrl }
+    : require('../assets/images/Myprofile.png');
+
   return (
     <View style={[GlobalStyles.screenBackgroundPrimary, styles.container]}>
-      
+      <GlobalLoader visible={loading} text="Please Wait" />
+
       <GlobalBackButton onPress={() => navigation.goBack()} />
 
       <Text style={[GlobalStyles.pageHeaderTitle, styles.title]}>
@@ -70,24 +177,13 @@ export default function MyProfile({ navigation }: any) {
       </Text>
 
       <View style={[GlobalStyles.overlayCard, styles.overlay]}>
-        
         <ScrollView contentContainerStyle={{ paddingBottom: 120 }}>
-
-          {/* 👤 PROFILE IMAGE */}
           <View style={styles.imageContainer}>
-            <Image
-              source={
-                imageUri
-                  ? { uri: imageUri }
-                  : require('../assets/images/Myprofile.png')
-              }
-              style={styles.profileImage}
-            />
+            <Image source={profileImageSource} style={styles.profileImage} />
 
             <TouchableOpacity
               style={styles.cameraIcon}
-              onPress={openImagePicker}
-            >
+              onPress={openImagePicker}>
               <Image
                 source={require('../assets/images/camera.png')}
                 style={styles.cameraImg}
@@ -95,29 +191,33 @@ export default function MyProfile({ navigation }: any) {
             </TouchableOpacity>
           </View>
 
-          {/* 📝 FULL NAME */}
           <Text style={styles.label}>Full Name</Text>
           <TextInput value={name} onChangeText={setName} style={styles.input} />
 
-          {/* 🎂 DOB */}
           <Text style={styles.label}>Date of Birth</Text>
           <TextInput value={dob} onChangeText={setDob} style={styles.input} />
 
-          {/* 📧 EMAIL */}
           <Text style={styles.label}>Email</Text>
-          <TextInput value={email} onChangeText={setEmail} style={styles.input} />
+          <TextInput
+            value={email}
+            onChangeText={setEmail}
+            style={styles.input}
+            keyboardType="email-address"
+            autoCapitalize="none"
+          />
 
-          {/* 📞 PHONE */}
           <Text style={styles.label}>Phone Number</Text>
-          <TextInput value={phone} onChangeText={setPhone} style={styles.input} />
+          <TextInput
+            value={phone}
+            onChangeText={setPhone}
+            style={styles.input}
+            keyboardType="phone-pad"
+          />
 
-          {/* 🔘 UPDATE BUTTON */}
           <TouchableOpacity style={styles.button}>
             <Text style={styles.buttonText}>Update Profile</Text>
           </TouchableOpacity>
-
         </ScrollView>
-
       </View>
     </View>
   );

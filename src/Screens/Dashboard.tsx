@@ -697,7 +697,20 @@ export default function Dashboard({ navigation, onMenuPress }: any) {
     <View style={styles.container}>
       
       {/* 🔝 Top Bar */}
-      <GlobalTopBar navigation={navigation} onMenuPress={onMenuPress} />
+      <GlobalTopBar
+        navigation={navigation}
+        onMenuPress={onMenuPress}
+        searchPlaceholder="Search dishes..."
+        onSearchPress={() =>
+          navigation.navigate('Search', {
+            scope: 'home',
+            restaurantId,
+            latitude,
+            longitude,
+            menuItems: allMenuItems,
+          })
+        }
+      />
 
       {/* 🔥 Header Text */}
       <View style={styles.headerContainer}>

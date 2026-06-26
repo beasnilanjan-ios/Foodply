@@ -10,6 +10,7 @@ import {
 import Colors from '../assets/Colors/Colors';
 import { FontFamily } from '../assets/GlobalFont/GlobalFont';
 import { AssignedOrder } from '../Models/DeliveryDasboard/AssignedOrder';
+import { isActiveOrderStatus } from '../Models/MyOrdersModel';
 import { getTimeAgo } from '../Utils/CommonUtil';
 
 type Props = {
@@ -98,7 +99,7 @@ const OrderCard = ({
               <Text style={styles.viewButtonText}>View Details</Text>
             </TouchableOpacity>
 
-            {showTrackOrderButton ? (
+            {showTrackOrderButton && isActiveOrderStatus(item.orderStatus) ? (
               <TouchableOpacity
                 style={styles.trackButton}
                 onPress={() => onPressTrackOrder?.(item)}

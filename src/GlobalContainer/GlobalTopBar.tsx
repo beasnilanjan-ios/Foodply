@@ -24,14 +24,18 @@ type GlobalTopBarProps = {
   };
   showMenu?: boolean;
   showSearch?: boolean;
+  searchPlaceholder?: string;
   onMenuPress?: () => void;
+  onSearchPress?: () => void;
 };
 
 export default function GlobalTopBar({
   navigation,
   showMenu = true,
   showSearch = true,
+  searchPlaceholder = 'Search',
   onMenuPress,
+  onSearchPress,
 }: GlobalTopBarProps) {
   const [cartCount, setCartCount] = useState(GlobalCart.itemCount);
 
@@ -50,6 +54,12 @@ export default function GlobalTopBar({
       onMenuPress();
     } else {
       navigation?.openDrawer?.();
+    }
+  };
+
+  const handleSearchPress = () => {
+    if (onSearchPress) {
+      onSearchPress();
     }
   };
 
@@ -72,22 +82,27 @@ export default function GlobalTopBar({
       )}
 
       {showSearch && (
-        <View
+        <TouchableOpacity
+          activeOpacity={0.85}
+          onPress={handleSearchPress}
           style={[
             GlobalStyles.searchInput,
             styles.searchContainer,
             showMenu ? styles.searchWithMenu : styles.searchWithoutMenu,
           ]}
         >
-          <Text style={GlobalStyles.searchTextMuted}>Search</Text>
+          <Text style={GlobalStyles.searchTextMuted}>{searchPlaceholder}</Text>
 
-          <TouchableOpacity style={GlobalStyles.filterButton}>
+          <TouchableOpacity
+            style={GlobalStyles.filterButton}
+            onPress={handleSearchPress}
+          >
             <Image
               source={require('../assets/images/Filtericon.png')}
               style={styles.filterIconImage}
             />
           </TouchableOpacity>
-        </View>
+        </TouchableOpacity>
       )}
 
       <View style={[styles.rightIcons, !showSearch && styles.rightIconsOnly]}>
