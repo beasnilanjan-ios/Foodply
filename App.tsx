@@ -10,9 +10,11 @@ import Banner from './src/Screens/Banner';
 import Login from './src/Screens/Login';
 import MainScreen from './src/GlobalContainer/MainScreen';
 import Orders from './src/Screens/Orders';
+import OrderDetails from './src/Screens/OrderDetails';
 import DrawerScreenContainer from './src/GlobalContainer/DrawerScreenContainer';
 import ViewAll from './src/Screens/ViewAll';
 import GlobalLoginAuth from './src/GlobalContainer/GlobalLoginAuth'; // ✅ ADD THIS
+import { RestaurantMenuItemModel } from './src/Models/RestaurantMenuModel';
 import DeliveryDashboard from './src/Screens/DeliveryDashboard';
 import DeliveryOrders from './src/Screens/DeliveryOrder';
 import DeliveryProfile from './src/Screens/DeliveryProfile';
@@ -25,6 +27,7 @@ import Address from './src/Screens/DeliveryAddress';
 import OrderConfirmed from './src/Screens/OrderConfirmed'; 
 import DeliveryOtpVerification from './src/Screens/DeliveryOtpVerification';
 import Favorites from './src/Screens/Favorites'; // adjust path if needed
+import SearchScreen, { SearchScope } from './src/Screens/SearchScreen';
 import Trackorder from './src/Screens/Trackorder';
 import DeliveryAddressList from './src/Screens/DeliveryAddressList';
 import MyProfile from './src/Screens/MyProfile';
@@ -40,11 +43,33 @@ export type RootStackParamList = {
   DeliveryAddressList: undefined
   Dashboard: { fromTab?: boolean } | undefined;
   Orders: { fromTab?: boolean } | undefined;
+  OrderDetails: { orderId: number };
   Favorites: { fromTab?: boolean } | undefined;
+  Search: {
+    scope: SearchScope;
+    restaurantId?: number | null;
+    latitude?: number | null;
+    longitude?: number | null;
+    menuItems?: RestaurantMenuItemModel[];
+  };
   MyProfile: undefined;
-  ViewAll: undefined;
+  ViewAll:
+    | {
+        bestSellerItems?: RestaurantMenuItemModel[];
+        restaurantId?: number | null;
+        latitude?: number | null;
+        longitude?: number | null;
+      }
+    | undefined;
   Trackorder: undefined;
-  MenuDetails: undefined; // ✅ ADD THIS
+  MenuDetails:
+    | {
+        item?: RestaurantMenuItemModel;
+        restaurantId?: number | null;
+        latitude?: number | null;
+        longitude?: number | null;
+      }
+    | undefined;
   Cart: undefined; // ✅ ADD THIS
   Address: undefined; // ✅ ADD THIS
   OrderConfirmed: undefined; // ✅ ADD THIS
@@ -149,6 +174,11 @@ const App = () => {
             )}
           </Stack.Screen>
           <Stack.Screen
+            name="OrderDetails"
+            component={OrderDetails}
+            options={{ animation: 'none' }}
+          />
+          <Stack.Screen
             name="ViewAll"
             component={ViewAll}
             options={{ animation: 'none' }}
@@ -227,6 +257,11 @@ const App = () => {
           <Stack.Screen
             name="DeliveryOtpVerification"
             component={DeliveryOtpVerification}
+            options={{ animation: 'none' }}
+          />
+          <Stack.Screen
+            name="Search"
+            component={SearchScreen}
             options={{ animation: 'none' }}
           />
           <Stack.Screen

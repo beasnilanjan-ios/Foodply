@@ -61,6 +61,57 @@ export class MenuItemVariantModel {
   }
 }
 
+export class MenuItemAddonOptionModel {
+  id: number;
+  name: string;
+  price: number;
+  isAvailable: boolean;
+
+  constructor(data: Partial<MenuItemAddonOptionModel> = {}) {
+    this.id = data.id ?? 0;
+    this.name = data.name ?? '';
+    this.price = data.price ?? 0;
+    this.isAvailable = data.isAvailable ?? true;
+  }
+
+  static fromJson(json: any): MenuItemAddonOptionModel {
+    return new MenuItemAddonOptionModel({
+      id: Number(json?.id ?? 0),
+      name: String(json?.name ?? ''),
+      price: Number(json?.price ?? 0),
+      isAvailable: Boolean(json?.isAvailable ?? true),
+    });
+  }
+}
+
+export class MenuItemAddonGroupModel {
+  id: number;
+  name: string;
+  selectionType: string | null;
+  isRequired: boolean;
+  options: MenuItemAddonOptionModel[];
+
+  constructor(data: Partial<MenuItemAddonGroupModel> = {}) {
+    this.id = data.id ?? 0;
+    this.name = data.name ?? '';
+    this.selectionType = data.selectionType ?? null;
+    this.isRequired = data.isRequired ?? false;
+    this.options = data.options ?? [];
+  }
+
+  static fromJson(json: any): MenuItemAddonGroupModel {
+    return new MenuItemAddonGroupModel({
+      id: Number(json?.id ?? 0),
+      name: String(json?.name ?? ''),
+      selectionType: json?.selectionType ?? null,
+      isRequired: Boolean(json?.isRequired),
+      options: Array.isArray(json?.options)
+        ? json.options.map(MenuItemAddonOptionModel.fromJson)
+        : [],
+    });
+  }
+}
+
 export class RestaurantMenuItemModel {
   id: number;
   name: string;
@@ -77,6 +128,9 @@ export class RestaurantMenuItemModel {
   rating: number;
   isBestSelling: boolean;
   preparationTime: number;
+  description: string | null;
+  ingredients: string | null;
+  addonGroups: MenuItemAddonGroupModel[];
 
   constructor(data: Partial<RestaurantMenuItemModel> = {}) {
     this.id = data.id ?? 0;
@@ -94,6 +148,9 @@ export class RestaurantMenuItemModel {
     this.rating = data.rating ?? 0;
     this.isBestSelling = data.isBestSelling ?? false;
     this.preparationTime = data.preparationTime ?? 0;
+    this.description = data.description ?? null;
+    this.ingredients = data.ingredients ?? null;
+    this.addonGroups = data.addonGroups ?? [];
   }
 
   static fromJson(json: any): RestaurantMenuItemModel {
@@ -118,6 +175,11 @@ export class RestaurantMenuItemModel {
       rating: Number(json?.rating ?? 0),
       isBestSelling: Boolean(json?.isBestSelling),
       preparationTime: Number(json?.preparationTime ?? 0),
+      description: json?.description ?? null,
+      ingredients: json?.ingredients ?? null,
+      addonGroups: Array.isArray(json?.addonGroups)
+        ? json.addonGroups.map(MenuItemAddonGroupModel.fromJson)
+        : [],
     });
   }
 }

@@ -7,52 +7,47 @@ import {
   ScrollView,
   Image,
   TouchableOpacity,
+  ImageSourcePropType,
+  Dimensions,
 } from 'react-native';
 import Colors from '../assets/Colors/Colors';
 import GlobalBackButton from '../GlobalContainer/GlobalBackButton';
+import { RestaurantMenuItemModel } from '../Models/RestaurantMenuModel';
 
-const cardWidth = '48%';
+const SCREEN_WIDTH = Dimensions.get('window').width;
+const OVERLAY_HORIZONTAL_PADDING = 40;
+const CARD_GAP = 10;
+const CARD_WIDTH = (SCREEN_WIDTH - OVERLAY_HORIZONTAL_PADDING - CARD_GAP) / 2;
 
-const viewAllItems = [
-  {
-    id: 1,
-    title: 'Bean and vegetable burger',
-    description: 'Lorem ipsum dolor sit amet, consectetur...',
-    rating: 4.0,
-    price: '₹15.00',
-    image: require('../assets/images/banner1.png'),
-    categoryIcon: require('../assets/images/Meals.png'),
-  },
-  {
-    id: 2,
-    title: 'Creamy milkshakes',
-    description: 'Lorem ipsum dolor sit amet, consectetur...',
-    rating: 4.0,
-    price: '₹15.00',
-    image: require('../assets/images/banner2.png'),
-    categoryIcon: require('../assets/images/Drinks.png'),
-  },
-  {
-    id: 3,
-    title: 'Spicy rice bowl',
-    description: 'Lorem ipsum dolor sit amet, consectetur...',
-    rating: 4.0,
-    price: '₹15.00',
-    image: require('../assets/images/banner3.png'),
-    categoryIcon: require('../assets/images/Snacks.png'),
-  },
-  {
-    id: 4,
-    title: 'Vegetable curry bowl',
-    description: 'Lorem ipsum dolor sit amet, consectetur...',
-    rating: 4.0,
-    price: '₹15.00',
-    image: require('../assets/images/banner1.png'),
-    categoryIcon: require('../assets/images/Vegan.png'),
-  },
-];
+const categoryIcons: Record<string, ImageSourcePropType> = {
+  snacks: require('../assets/images/Snacks.png'),
+  snack: require('../assets/images/Snacks.png'),
+  meal: require('../assets/images/Meals.png'),
+  meals: require('../assets/images/Meals.png'),
+  vegan: require('../assets/images/Vegan.png'),
+  dessert: require('../assets/images/Desserts.png'),
+  desserts: require('../assets/images/Desserts.png'),
+  drinks: require('../assets/images/Drinks.png'),
+  drink: require('../assets/images/Drinks.png'),
+  beverages: require('../assets/images/Drinks.png'),
+};
 
-export default function Dashboard({ navigation }: any) {
+const getCategoryIcon = (name: string) =>
+  categoryIcons[name.trim().toLowerCase()] ?? require('../assets/images/Meals.png');
+
+const formatPrice = (value: number | null | undefined, fallback = 0) =>
+  `Rs${Number(value ?? fallback).toFixed(2)}`;
+
+const hasDiscount = (item: RestaurantMenuItemModel) =>
+  item.discountPrice != null && item.discountPrice < item.price;
+
+export default function Dashboard({ navigation, route }: any) {
+  const bestSellerItems: RestaurantMenuItemModel[] =
+    route?.params?.bestSellerItems ?? [];
+  const restaurantId: number | null = route?.params?.restaurantId ?? null;
+  const latitude: number | null = route?.params?.latitude ?? null;
+  const longitude: number | null = route?.params?.longitude ?? null;
+
   return (
     <View style={styles.container}>
       <GlobalBackButton onPress={() => navigation.goBack()} />
@@ -64,20 +59,35 @@ export default function Dashboard({ navigation }: any) {
         </Text>
 
         <ScrollView contentContainerStyle={styles.cardsContainer}>
-          {viewAllItems.map((item) => (
-            <TouchableOpacity
-  key={item.id}
-  style={styles.card}
-  activeOpacity={0.8}
-  onPress={() => navigation.navigate('MenuDetails', { item })}
->
-
+          {bestSellerItems.map((item) => (
+            <View key={item.id} style={styles.card}>
+              <TouchableOpacity
+                activeOpacity={0.8}
+                onPress={() =>
+                  navigation.navigate('MenuDetails', {
+                    item,
+                    restaurantId: restaurantId ?? item.restaurantId,
+                    latitude,
+                    longitude,
+                  })
+                }
+              >
               {/* IMAGE */}
               <View style={styles.cardImageContainer}>
-                <Image source={item.image} style={styles.cardImage} />
+                <Image
+                  source={
+                    item.imageUrl
+                      ? { uri: item.imageUrl }
+                      : require('../assets/images/banner1.png')
+                  }
+                  style={styles.cardImage}
+                />
 
                 <View style={styles.categoryBadge}>
-                  <Image source={item.categoryIcon} style={styles.categoryIcon} />
+                  <Image
+                    source={getCategoryIcon(item.category?.name ?? item.name)}
+                    style={styles.categoryIcon}
+                  />
                 </View>
 
                 <TouchableOpacity style={styles.favoriteButton}>
@@ -85,24 +95,61 @@ export default function Dashboard({ navigation }: any) {
                 </TouchableOpacity>
 
                 <View style={styles.ratingBadge}>
-                  <Text style={styles.ratingText}>{item.rating.toFixed(1)}</Text>
+                  <Text style={styles.ratingText}>
+                    {(item.rating || 4.0).toFixed(1)}
+                  </Text>
                   <Text style={styles.ratingStar}>★</Text>
                 </View>
               </View>
 
               {/* TEXT */}
               <Text style={styles.cardTitle} numberOfLines={2}>
-                {item.title}
+                {item.name}
               </Text>
 
               <Text style={styles.cardDescription} numberOfLines={2}>
-                {item.description}
+                {item.category?.name || 'Best selling item'}
               </Text>
+              </TouchableOpacity>
 
               {/* FOOTER */}
               <View style={styles.cardFooter}>
+                {hasDiscount(item) ? (
+                  <>
+                    <Text
+                      style={styles.originalPriceText}
+                      numberOfLines={1}
+                      adjustsFontSizeToFit
+                      minimumFontScale={0.85}>
+                      {formatPrice(item.price)}
+                    </Text>
+                    <Text
+                      style={styles.priceText}
+                      numberOfLines={1}
+                      adjustsFontSizeToFit
+                      minimumFontScale={0.85}>
+                      {formatPrice(item.discountPrice)}
+                    </Text>
+                  </>
+                ) : (
+                  <Text
+                    style={styles.priceText}
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.85}>
+                    {formatPrice(item.price)}
+                  </Text>
+                )}
+
+                {/* {quantity and cart controls — kept for future use}
                 <View style={styles.leftSection}>
-                  <Text style={styles.priceText}>{item.price}</Text>
+                  <Text
+                    style={styles.priceText}
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.85}>
+                    {formatPrice(item.discountPrice, item.price)}
+                  </Text>
 
                   <View style={styles.quantityContainer}>
                     <TouchableOpacity style={styles.counterButton}>
@@ -123,9 +170,10 @@ export default function Dashboard({ navigation }: any) {
                     style={styles.cartIcon}
                   />
                 </TouchableOpacity>
+                */}
               </View>
 
-            </TouchableOpacity>
+            </View>
           ))}
         </ScrollView>
       </View>
@@ -173,11 +221,10 @@ const styles = StyleSheet.create({
   },
 
   card: {
-    width: cardWidth,
+    width: CARD_WIDTH,
     marginBottom: 18,
     borderRadius: 20,
     backgroundColor: '#fff',
-    overflow: 'hidden',
   },
 
   cardImageContainer: {
@@ -253,41 +300,57 @@ const styles = StyleSheet.create({
   cardTitle: {
     marginHorizontal: 10,
     marginTop: 6,
-    marginBottom: 2, // 👈 tightened
+    marginBottom: 0,
     fontWeight: '700',
-    height: 36,
   },
 
   cardDescription: {
-  marginHorizontal: 10,
-  fontSize: 12,
-  color: '#6D5D54',
-  marginBottom: 4,
-  height: 32, // 👈 ADD THIS
-},
+    marginHorizontal: 10,
+    marginTop: 2,
+    fontSize: 12,
+    color: '#6D5D54',
+    marginBottom: 4,
+  },
 
   cardFooter: {
-    marginHorizontal: 10,
-    marginTop: 4, // 👈 reduced gap
+    paddingHorizontal: 8,
+    marginTop: 4,
     marginBottom: 10,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+
+  originalPriceText: {
+    color: '#9CA3AF',
+    fontSize: 12,
+    fontWeight: '600',
+    textDecorationLine: 'line-through',
+    flexShrink: 1,
+    marginRight: 4,
   },
 
   leftSection: {
+    flex: 1,
+    minWidth: 0,
     flexDirection: 'row',
     alignItems: 'center',
+    marginRight: 4,
   },
 
   priceText: {
     color: Colors.primary,
     fontWeight: '700',
-    marginRight: 6,
+    marginRight: 4,
+    flexShrink: 1,
+    fontSize: 12,
+    maxWidth: '42%',
   },
 
   quantityContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    flexShrink: 0,
   },
 
   counterButton: {
@@ -304,17 +367,17 @@ const styles = StyleSheet.create({
   },
 
   quantityText: {
-    marginHorizontal: 6,
+    marginHorizontal: 4,
   },
 
   cartButton: {
-    marginLeft: 'auto',
     width: 30,
     height: 30,
     borderRadius: 8,
     backgroundColor: Colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
+    flexShrink: 0,
   },
 
   cartIcon: {

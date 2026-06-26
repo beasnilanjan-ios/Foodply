@@ -50,7 +50,7 @@ export default function Login({ navigation }: any) {
       }
 
       // ✅ STORE FULL RESPONSE GLOBALLY
-      GlobalAuth.setAuthData(result);
+      await GlobalAuth.setAuthData(result);
 
       console.log('User:', GlobalAuth.user);
       console.log('Access Token:', GlobalAuth.accessToken);

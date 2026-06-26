@@ -45,6 +45,11 @@
   <dict>
     <key>NSAllowsArbitraryLoads</key>
     <false/>
+<<<<<<< HEAD
+=======
+    <key>NSAllowsLocalNetworking</key>
+    <true/>
+>>>>>>> e36c53c0bcd2c4e514d43f6f01c58e298be0efe1
     <key>NSExceptionDomains</key>
     <dict>
       <key>182.73.216.93</key>
@@ -54,6 +59,23 @@
         <key>NSExceptionAllowsInsecureHTTPLoads</key>
         <true/>
       </dict>
+<<<<<<< HEAD
+=======
+      <key>192.168.1.93</key>
+      <dict>
+        <key>NSIncludesSubdomains</key>
+        <true/>
+        <key>NSExceptionAllowsInsecureHTTPLoads</key>
+        <true/>
+      </dict>
+      <key>192.168.1.18</key>
+      <dict>
+        <key>NSIncludesSubdomains</key>
+        <true/>
+        <key>NSExceptionAllowsInsecureHTTPLoads</key>
+        <true/>
+      </dict>
+>>>>>>> e36c53c0bcd2c4e514d43f6f01c58e298be0efe1
     </dict>
   </dict>
 

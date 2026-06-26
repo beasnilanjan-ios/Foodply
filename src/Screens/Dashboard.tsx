@@ -170,7 +170,7 @@
 // });
 
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   StyleSheet,
@@ -189,6 +189,7 @@ import GlobalBottomBar from '../GlobalContainer/GlobalBottomBar';
 import GlobalTopBar from '../GlobalContainer/GlobalTopBar';
 import GlobalLocationPermission from '../GlobalContainer/GlobalLocationPermission';
 import GlobalApi from '../GlobalContainer/GlobalApi';
+import GlobalCart from '../GlobalContainer/GlobalCart';
 import GlobalLoginAuth from '../GlobalContainer/GlobalLoginAuth';
 import {
   NearbyRestaurantModel,
@@ -198,6 +199,7 @@ import {
   RestaurantMenuItemModel,
   RestaurantMenuResponseModel,
 } from '../Models/RestaurantMenuModel';
+import { BestSellingResponseModel } from '../Models/BestSellingModel';
 
 const { width, height } = Dimensions.get('window');
 const isTablet = Math.min(width, height) >= 600;
@@ -207,6 +209,7 @@ const categoryGap = isTablet ? 18 : 8;
 const promoBannerWidth = isTablet ? categoryMaxWidth : 323;
 
 type CategoryItem = {
+  id: number | string | 'all';
   name: string;
   icon: ImageSourcePropType;
 };
@@ -218,6 +221,66 @@ type PromoBannerItem = {
   subtitle: string;
   discountText: string;
 };
+
+const getApiHeaders = (): Record<string, string> => {
+  const headers: Record<string, string> = {
+    Accept: 'application/json',
+    'X-Client-Type': 'web',
+  };
+
+  const token = GlobalLoginAuth.accessToken || GlobalLoginAuth.token;
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
+  return headers;
+};
+
+const getBestSellingHeaders = (): Record<string, string> => {
+  const headers: Record<string, string> = {
+    Accept: 'application/json',
+    'X-Client-Type': 'mobile',
+  };
+
+  const token = GlobalLoginAuth.accessToken || GlobalLoginAuth.token;
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
+  return headers;
+};
+
+const enrichMenuItemsWithMenuData = (
+  items: RestaurantMenuItemModel[],
+  menuItems: RestaurantMenuItemModel[],
+): RestaurantMenuItemModel[] => {
+  if (!items.length || !menuItems.length) {
+    return items;
+  }
+
+  const menuById = new Map(menuItems.map(menuItem => [menuItem.id, menuItem]));
+
+  return items.map(item => {
+    const fullItem = menuById.get(item.id);
+    if (!fullItem) {
+      return item;
+    }
+
+    return RestaurantMenuItemModel.fromJson({
+      ...item,
+      description: fullItem.description ?? item.description,
+      ingredients: fullItem.ingredients ?? item.ingredients,
+      addonGroups: fullItem.addonGroups?.length
+        ? fullItem.addonGroups
+        : item.addonGroups,
+      restaurantId: item.restaurantId || fullItem.restaurantId,
+      category: item.category ?? fullItem.category,
+    });
+  });
+};
+
+const formatPrice = (value: number | null | undefined, fallback = 0) =>
+  Number(value ?? fallback).toFixed(2);
 
 const categoryIcons: Record<string, ImageSourcePropType> = {
   snacks: require('../assets/images/Snacks.png'),
@@ -261,7 +324,9 @@ const promoBanners: PromoBannerItem[] = [
 
 export default function Dashboard({ navigation, onMenuPress }: any) {
   const [categories, setCategories] = useState<CategoryItem[]>([]);
+  const [allMenuItems, setAllMenuItems] = useState<RestaurantMenuItemModel[]>([]);
   const [bestSellerItems, setBestSellerItems] = useState<RestaurantMenuItemModel[]>([]);
+  const allMenuItemsRef = useRef<RestaurantMenuItemModel[]>([]);
   const [recommendedItems, setRecommendedItems] = useState<RestaurantMenuItemModel[]>([]);
   const [nearbyRestaurants, setNearbyRestaurants] = useState<NearbyRestaurantModel[]>([]);
   const [selectedRestaurantIndex, setSelectedRestaurantIndex] = useState(0);
@@ -269,6 +334,7 @@ export default function Dashboard({ navigation, onMenuPress }: any) {
   const [selectedRestaurantAddress, setSelectedRestaurantAddress] = useState('');
   const [restaurantId, setRestaurantId] = useState<number | null>(null);
   const [restaurantModalVisible, setRestaurantModalVisible] = useState(false);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<number | string | 'all'>('all');
   const [latitude, setLatitude] = useState<number | null>(null);
   const [longitude, setLongitude] = useState<number | null>(null);
   const [activeBannerIndex, setActiveBannerIndex] = useState(0);
@@ -280,6 +346,71 @@ export default function Dashboard({ navigation, onMenuPress }: any) {
   const categoryIconSize = Math.min(isTablet ? 78 : 72, categoryItemWidth);
   const categoryIconRadius = categoryIconSize * 0.28;
   const categoryNeedsScroll = categories.length > categoryColumns;
+
+  const filteredMenuItems = useMemo(() => {
+    if (selectedCategoryId === 'all') {
+      return allMenuItems;
+    }
+    if (typeof selectedCategoryId === 'number') {
+      return allMenuItems.filter(item => item.categoryId === selectedCategoryId);
+    }
+    return allMenuItems.filter(
+      item => item.category?.name?.trim() === selectedCategoryId,
+    );
+  }, [allMenuItems, selectedCategoryId]);
+
+  const fetchBestSellingItems = async (
+    selectedRestaurantId: number,
+    lat: number,
+    lng: number,
+    categoryId?: number,
+  ) => {
+    try {
+      let bestSellingUrl =
+        `${GlobalApi.baseUrl}api/menu/best-selling?` +
+        `lat=${lat}&` +
+        `lng=${lng}&` +
+        `limit=18&` +
+        `restaurantId=${selectedRestaurantId}`;
+
+      if (categoryId && categoryId > 0) {
+        bestSellingUrl += `&categoryId=${categoryId}`;
+      }
+
+      console.log('Calling best selling API:', bestSellingUrl);
+
+      const response = await fetch(bestSellingUrl, {
+        method: 'GET',
+        headers: getBestSellingHeaders(),
+      });
+
+      const result = await response.json();
+      const bestSellingResponse = BestSellingResponseModel.fromJson(result);
+
+      if (!response.ok) {
+        console.log(
+          'Best selling error:',
+          JSON.stringify(bestSellingResponse, null, 2),
+        );
+        setBestSellerItems([]);
+        return;
+      }
+
+      console.log(
+        'Best selling items:',
+        JSON.stringify(bestSellingResponse.data, null, 2),
+      );
+      setBestSellerItems(
+        enrichMenuItemsWithMenuData(
+          bestSellingResponse.data,
+          allMenuItemsRef.current,
+        ),
+      );
+    } catch (error) {
+      console.log('fetchBestSellingItems failed:', error);
+      setBestSellerItems([]);
+    }
+  };
 
   const fetchRestaurantMenu = async (
     selectedRestaurantId: number,
@@ -296,18 +427,9 @@ export default function Dashboard({ navigation, onMenuPress }: any) {
         `limit=20&` +
         `offset=0`;
 
-      const headers: Record<string, string> = {
-        Accept: 'application/json',
-        'X-Client-Type': 'mobile',
-      };
-
-      if (GlobalLoginAuth.accessToken) {
-        headers.Authorization = `Bearer ${GlobalLoginAuth.accessToken}`;
-      }
-
       const menuResponse = await fetch(menuUrl, {
         method: 'GET',
-        headers,
+        headers: getApiHeaders(),
       });
 
       const menuResult = await menuResponse.json();
@@ -318,30 +440,83 @@ export default function Dashboard({ navigation, onMenuPress }: any) {
         return;
       }
 
-      const items = restaurantMenu.data?.items ?? [];
-      const categoriesFromItems = items
-        .map(item => item.category?.name)
-        .filter((name): name is string => Boolean(name));
-
-      const categoriesFromData = (restaurantMenu.data?.categories ?? [])
-        .map((c: any) => (typeof c === 'string' ? c : c?.name))
-        .filter((name: any): name is string => Boolean(name));
-
-      const menuCategoryNames = Array.from(
-        new Set([...categoriesFromItems, ...categoriesFromData]),
+      const responseItems = restaurantMenu.data?.items ?? [];
+      const categoryItems =
+        restaurantMenu.data?.categories.flatMap(category => category.items) ??
+        [];
+      const itemsById = new Map<number, RestaurantMenuItemModel>();
+      [...responseItems, ...categoryItems].forEach(item => {
+        itemsById.set(item.id, item);
+      });
+      const items = Array.from(itemsById.values());
+      console.log('Raw menuResult.data.items length:', menuResult?.data?.items?.length ?? 'undefined');
+      console.log('Raw menuResult.data.categories length:', menuResult?.data?.categories?.length ?? 'undefined');
+      console.log('Parsed restaurantMenu.data.items length:', responseItems.length);
+      console.log('Parsed category item length:', categoryItems.length);
+      console.log('Final items array length before setAllMenuItems:', items.length);
+      setAllMenuItems(items);
+      allMenuItemsRef.current = items;
+      setBestSellerItems(prev =>
+        enrichMenuItemsWithMenuData(prev, items),
       );
 
-      setCategories(
-        menuCategoryNames.map(name => ({
-          name,
-          icon: getCategoryIcon(name),
-        })),
-      );
+      const categoryMap = new Map<number | string, CategoryItem>();
+      const categoryNames = new Set<string>();
+      const addCategory = (id: number | string, name: string) => {
+        const categoryName = name.trim();
+        const categoryKey = categoryName.toLowerCase();
+        if (!categoryName || categoryMap.has(id) || categoryNames.has(categoryKey)) {
+          return;
+        }
+        categoryNames.add(categoryKey);
+        categoryMap.set(id, {
+          id,
+          name: categoryName,
+          icon: getCategoryIcon(categoryName),
+        });
+      };
 
-      const bestSellers = items.filter(item => item.isBestSelling) ?? [];
-      setBestSellerItems(
-        (bestSellers.length > 0 ? bestSellers : items).slice(0, 6),
-      );
+      if (Array.isArray(menuResult?.data?.categories)) {
+        menuResult.data.categories.forEach((category: any) => {
+          const categoryName =
+            typeof category === 'string'
+              ? category
+              : String(category?.name ?? '').trim();
+          const rawCategoryId =
+            typeof category === 'string'
+              ? undefined
+              : category?.id ?? category?.categoryId;
+          const numericCategoryId = Number(rawCategoryId);
+          const matchedItem = items.find(
+            item => item.category?.name?.trim() === categoryName,
+          );
+          const categoryId =
+            Number.isFinite(numericCategoryId) && numericCategoryId > 0
+              ? numericCategoryId
+              : matchedItem?.categoryId || categoryName;
+
+          addCategory(categoryId, categoryName);
+        });
+      }
+
+      items.forEach(item => {
+        const categoryId = item.categoryId;
+        const categoryName = item.category?.name?.trim() || `Category ${categoryId}`;
+        if (categoryId > 0) {
+          addCategory(categoryId, categoryName);
+        }
+      });
+
+      const finalCategories: CategoryItem[] = [
+        { id: 'all', name: 'All Items', icon: getCategoryIcon('All Items') },
+        ...Array.from(categoryMap.values()),
+      ];
+
+      setCategories(finalCategories);
+      setSelectedCategoryId('all');
+        console.log('Categories (with All Items) count:', finalCategories.length);
+        console.log('Menu items count:', items.length);
+
       setRecommendedItems(items.slice(0, 4));
     } catch (error) {
       console.log('fetchRestaurantMenu failed:', error);
@@ -366,6 +541,23 @@ export default function Dashboard({ navigation, onMenuPress }: any) {
   };
 
   useEffect(() => {
+    if (restaurantId && restaurantId > 0) {
+      GlobalCart.setRestaurantId(restaurantId);
+    }
+  }, [restaurantId]);
+
+  useEffect(() => {
+    if (restaurantId === null || latitude === null || longitude === null) {
+      return;
+    }
+
+    const categoryId =
+      typeof selectedCategoryId === 'number' ? selectedCategoryId : undefined;
+
+    fetchBestSellingItems(restaurantId, latitude, longitude, categoryId);
+  }, [restaurantId, latitude, longitude, selectedCategoryId]);
+
+  useEffect(() => {
     const interval = setInterval(() => {
       setActiveBannerIndex((currentIndex) => {
         const nextIndex = (currentIndex + 1) % promoBanners.length;
@@ -384,6 +576,8 @@ export default function Dashboard({ navigation, onMenuPress }: any) {
     const getLocation = async () => {
       try {
         console.log('Dashboard location flow started');
+
+        await GlobalLoginAuth.loadAuthData();
       
         const status = await GlobalLocationPermission.request();
         console.log('Location permission status:', status);
@@ -394,37 +588,30 @@ export default function Dashboard({ navigation, onMenuPress }: any) {
           const position = await GlobalLocationPermission.getCurrentLocation();
           const latitude = position.coords.latitude;
           const longitude = position.coords.longitude;
-         // const latitude =  22.5726;
-         // const longitude = 88.3639;
+         // const latitude =  22.57545;
+         // const longitude = 88.43226;
 
           setLatitude(latitude);
           setLongitude(longitude);
 
           const nearbyRestaurantsUrl =
-  `${GlobalApi.baseUrl}api/v1/restaurants/nearby?` +
-  `lat=${latitude}&` +
-  `lng=${longitude}&` +
-  `latitude=${latitude}&` +
-  `longitude=${longitude}&` +
-  `radiusKm=10&` +
-  `limit=20&` +
-  `offset=0`;
+            `${GlobalApi.baseUrl}api/v1/restaurants/nearby?` +
+            `lat=${latitude}&` +
+            `lng=${longitude}&` +
+            `latitude=${latitude}&` +
+            `longitude=${longitude}&` +
+            'radiusKm=10&' +
+            'limit=20&' +
+            'offset=0';
 
           console.log('Calling nearby restaurants API:', nearbyRestaurantsUrl);
 
           try {
-            const headers: Record<string, string> = {
-              Accept: 'application/json',
-              'X-Client-Type': 'mobile',
-            };
+            const headers = getApiHeaders();
 
             console.log('GlobalLoginAuth access token:', GlobalLoginAuth.accessToken);
 
-            if (GlobalLoginAuth.accessToken) {
-              headers.Authorization = `Bearer ${GlobalLoginAuth.accessToken}`;
-            }
-
-            console.log('hwader:', headers);
+            console.log('header:', headers);
             const response = await fetch(nearbyRestaurantsUrl, {
               method: 'GET',
               headers,
@@ -510,7 +697,20 @@ export default function Dashboard({ navigation, onMenuPress }: any) {
     <View style={styles.container}>
       
       {/* 🔝 Top Bar */}
-      <GlobalTopBar navigation={navigation} onMenuPress={onMenuPress} />
+      <GlobalTopBar
+        navigation={navigation}
+        onMenuPress={onMenuPress}
+        searchPlaceholder="Search dishes..."
+        onSearchPress={() =>
+          navigation.navigate('Search', {
+            scope: 'home',
+            restaurantId,
+            latitude,
+            longitude,
+            menuItems: allMenuItems,
+          })
+        }
+      />
 
       {/* 🔥 Header Text */}
       <View style={styles.headerContainer}>
@@ -546,7 +746,7 @@ export default function Dashboard({ navigation, onMenuPress }: any) {
 
         {/* 🔥 Category Section */}
         <ScrollView
-          horizontal={categoryNeedsScroll}
+          horizontal={true}
           showsHorizontalScrollIndicator={false}
           scrollEnabled={categoryNeedsScroll}
           style={[
@@ -557,42 +757,55 @@ export default function Dashboard({ navigation, onMenuPress }: any) {
             styles.categoryContainer,
             !categoryNeedsScroll && styles.categoryContainerStatic,
           ]}>
-          {categories.map((item, index) => (
-            <View
-              key={item.name}
-              style={[
-                styles.categoryItem,
-                {
-                  width: categoryItemWidth,
-                  marginRight:
-                    categoryNeedsScroll && index < categories.length - 1
-                      ? categoryGap
-                      : 0,
-                },
-              ]}>
-              
-              <View
+          {categories.map((item, index) => {
+            const isSelected = item.id === selectedCategoryId;
+            return (
+              <TouchableOpacity
+                key={`${item.name}-${item.id}`}
+                activeOpacity={0.8}
+                onPress={() => setSelectedCategoryId(item.id)}
                 style={[
-                  styles.iconCircle,
+                  styles.categoryItem,
                   {
-                    width: categoryIconSize,
-                    height: categoryIconSize,
-                    borderRadius: categoryIconRadius,
+                    width: categoryItemWidth,
+                    marginRight:
+                      categoryNeedsScroll && index < categories.length - 1
+                        ? categoryGap
+                        : 0,
                   },
                 ]}>
-                <Image
-                  source={item.icon}
-                  style={{
-                    width: categoryIconSize * 0.46,
-                    height: categoryIconSize * 0.46,
-                    resizeMode: 'contain',
-                  }}
-                />
-              </View>
 
-              <Text style={styles.categoryText}>{item.name}</Text>
-            </View>
-          ))}
+                <View
+                  style={[
+                    styles.iconCircle,
+                    {
+                      width: categoryIconSize,
+                      height: categoryIconSize,
+                      borderRadius: categoryIconRadius,
+                      backgroundColor: isSelected ? Colors.primary : '#E8D9A8',
+                    },
+                  ]}>
+                  <Image
+                    source={item.icon}
+                    style={{
+                      width: categoryIconSize * 0.46,
+                      height: categoryIconSize * 0.46,
+                      resizeMode: 'contain',
+                      tintColor: isSelected ? '#fff' : Colors.primary,
+                    }}
+                  />
+                </View>
+
+                <Text
+                  style={[
+                    styles.categoryText,
+                    { color: isSelected ? Colors.primary : '#333' },
+                  ]}>
+                  {item.name}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
         </ScrollView>
 
         {/* Divider */}
@@ -609,7 +822,14 @@ export default function Dashboard({ navigation, onMenuPress }: any) {
               <TouchableOpacity
                 activeOpacity={0.8}
                 style={styles.viewAllButton}
-                onPress={() => navigation.navigate('ViewAll')}>
+                onPress={() =>
+                  navigation.navigate('ViewAll', {
+                    bestSellerItems,
+                    restaurantId,
+                    latitude,
+                    longitude,
+                  })
+                }>
                 <Text style={styles.viewAllText}>View All</Text>
                 <Image
                   source={require('../assets/images/Next_icon _Arrow.png')}
@@ -633,8 +853,16 @@ export default function Dashboard({ navigation, onMenuPress }: any) {
                     style={styles.bestSellerImage}
                   />
 
+                  <View style={styles.bestSellerNameBadge}>
+                    <Text style={styles.bestSellerNameText} numberOfLines={2}>
+                      {item.name}
+                    </Text>
+                  </View>
+
                   <View style={styles.priceBadge}>
-                    <Text style={styles.priceText}>Rs{item.price.toFixed(2)}</Text>
+                    <Text style={styles.priceText}>
+                      Rs{formatPrice(item.discountPrice, item.price)}
+                    </Text>
                   </View>
                 </View>
               ))}
@@ -688,8 +916,19 @@ export default function Dashboard({ navigation, onMenuPress }: any) {
               nestedScrollEnabled
               style={styles.recommendScroll}
               contentContainerStyle={styles.recommendGrid}>
-              {recommendedItems.map(item => (
-                <View key={item.id} style={styles.recommendCard}>
+              {filteredMenuItems.map(item => (
+                <TouchableOpacity
+                  key={item.id}
+                  activeOpacity={0.8}
+                  style={styles.recommendCard}
+                  onPress={() =>
+                    navigation.navigate('MenuDetails', {
+                      item,
+                      restaurantId: restaurantId ?? item.restaurantId,
+                      latitude,
+                      longitude,
+                    })
+                  }>
                   <Image
                     source={
                       item.imageUrl
@@ -710,12 +949,18 @@ export default function Dashboard({ navigation, onMenuPress }: any) {
                     <Text style={styles.recommendHeart}>♥</Text>
                   </View>
 
-                  <View style={styles.recommendPriceBadge}>
-                    <Text style={styles.recommendPriceText}>
-                      Rs{item.price.toFixed(1)}
+                  <View style={styles.recommendNameBadge}>
+                    <Text style={styles.recommendNameText} numberOfLines={2}>
+                      {item.name}
                     </Text>
                   </View>
-                </View>
+
+                  <View style={styles.recommendPriceBadge}>
+                    <Text style={styles.recommendPriceText}>
+                      Rs{formatPrice(item.discountPrice, item.price)}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
               ))}
             </ScrollView>
           </View>
@@ -770,6 +1015,9 @@ export default function Dashboard({ navigation, onMenuPress }: any) {
                         </Text>
                         <Text style={styles.restaurantItemAddress} numberOfLines={2}>
                           {item.address}
+                        </Text>
+                        <Text style={styles.restaurantItemDistance}>
+                          {item.distanceKm?.toFixed(2)} km away
                         </Text>
                       </View>
                       {isSelected && (
@@ -957,6 +1205,27 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
     resizeMode: 'cover',
+  },
+
+  bestSellerNameBadge: {
+    position: 'absolute',
+    left: 0,
+    bottom: isTablet ? 48 : 34,
+    maxWidth: isTablet ? 104 : 52,
+    minHeight: isTablet ? 26 : 20,
+    paddingHorizontal: isTablet ? 8 : 5,
+    borderTopRightRadius: isTablet ? 13 : 10,
+    borderBottomRightRadius: isTablet ? 13 : 10,
+    backgroundColor: Colors.primary,
+    justifyContent: 'center',
+  },
+
+  bestSellerNameText: {
+    fontSize: isTablet ? 15 : 10,
+    lineHeight: isTablet ? 17 : 11,
+    fontFamily: 'LeagueSpartan-SemiBold',
+    color: Colors.white,
+    includeFontPadding: false,
   },
 
   priceBadge: {
@@ -1241,6 +1510,14 @@ const styles = StyleSheet.create({
     includeFontPadding: false,
   },
 
+  restaurantItemDistance: {
+    marginTop: 6,
+    fontSize: 12,
+    fontFamily: 'LeagueSpartan-Regular',
+    color: Colors.primary,
+    includeFontPadding: false,
+  },
+
   restaurantItemSelectedLabel: {
     color: Colors.primary,
     fontSize: 12,
@@ -1315,7 +1592,7 @@ const styles = StyleSheet.create({
   recommendHeartBadge: {
     position: 'absolute',
     top: 12,
-    left: isTablet ? 72 : 58,
+    right: 12,
     width: 24,
     height: 24,
     borderRadius: 12,
@@ -1327,6 +1604,27 @@ const styles = StyleSheet.create({
   recommendHeart: {
     fontSize: isTablet ? 15 : 12,
     color: Colors.primary,
+    includeFontPadding: false,
+  },
+
+  recommendNameBadge: {
+    position: 'absolute',
+    left: 0,
+    right: 70,
+    bottom: 22,
+    minHeight: 28,
+    paddingHorizontal: 8,
+    borderTopRightRadius: 14,
+    borderBottomRightRadius: 14,
+    backgroundColor: Colors.primary,
+    justifyContent: 'center',
+  },
+
+  recommendNameText: {
+    fontSize: isTablet ? 18 : 14,
+    lineHeight: isTablet ? 20 : 15,
+    fontFamily: 'LeagueSpartan-SemiBold',
+    color: Colors.white,
     includeFontPadding: false,
   },
 
