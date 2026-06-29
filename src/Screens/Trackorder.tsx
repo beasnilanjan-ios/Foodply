@@ -45,6 +45,7 @@ export default function TrackOrder({ navigation, route }: any) {
     icon: require('../assets/images/check.png'),
     message: '',
   });  
+  const deliveryAssignedHandled = useRef(false);
 
 const steps = [
       { label: 'Accepted', status: 'ACCEPTED' },
@@ -53,8 +54,8 @@ const steps = [
       { label: 'Delivered', status: 'DELIVERED' },
     ];
 
-  const trackedOrderId = 91;
-let cleanup: (() => void) | undefined;  
+  const trackedOrderId = 103;
+  let cleanup: (() => void) | undefined;  
 
   const [riderLocation, setRiderLocation] = useState<
     { latitude: number; longitude: number } | null
@@ -82,31 +83,32 @@ const handleSocket = (trackedOrderId: number) => {
 
   const onSnapshot = (data: any) => {
     console.log('📍 Tracking Snapshot:', data);
-    console.log('stauts:',data?.status)
+    console.log('stauts onSnapshot:',data?.status)
 
-    if (data?.status === 'ACCEPTED') {
-      setcurrentIndex(0);
-      setCurrentLive(getLiveStatus('ACCEPTED'));
-    } else if (data?.status === 'PREPARING') {
-      setcurrentIndex(1);
-      setCurrentLive(getLiveStatus('PREPARING'));
-    } else if (
-      data?.status === 'ON_THE_WAY' &&
-      data?.latestLocation
-    ) {
-      const {latitude, longitude} = data.latestLocation;
+    // if (data?.status === '"ORDER_ACCEPTED"') {
+    //   setcurrentIndex(0);
+    //   setCurrentLive(getLiveStatus('ACCEPTED'));
+    //   getOrderDetails(trackedOrderId);
+    // } else if (data?.status === 'PREPARING') {
+    //   setcurrentIndex(1);
+    //   setCurrentLive(getLiveStatus('PREPARING'));
+    // } else if (
+    //   data?.status === 'ON_THE_WAY' &&
+    //   data?.latestLocation
+    // ) {
+    //   const {latitude, longitude} = data.latestLocation;
 
-      console.log('Lat:', latitude);
-      console.log('Lng:', longitude);
+    //   console.log('Lat:', latitude);
+    //   console.log('Lng:', longitude);
 
-      //setcurrentIndex(2);
-      //setCurrentLive(getLiveStatus('ON_THE_WAY'));
+    //   setcurrentIndex(2);
+    //   setCurrentLive(getLiveStatus('ON_THE_WAY'));
 
-      setRiderLocation({
-        latitude,
-        longitude,
-      });
-    }
+    //   setRiderLocation({
+    //     latitude,
+    //     longitude,
+    //   });
+    // }
   };
 
   const onLocationUpdated = (data: any) => {
@@ -126,10 +128,17 @@ const handleSocket = (trackedOrderId: number) => {
 
   socket.current.onAny((event, ...args) => {
     console.log('EVENT =>', event, args);
-    console.log('stauts:',event?.status)
      const payload = args[0];
 
-    if (payload?.status === 'ACCEPTED') {
+     console.log('stauts onany:',payload?.status)
+
+     
+    if ( payload?.status === 'DELIVERY_ASSIGNED' &&
+    !deliveryAssignedHandled.current
+    ) {
+      deliveryAssignedHandled.current = true;
+      getOrderDetails(trackedOrderId);
+  }else if (payload?.status === 'ACCEPTED') {
       setcurrentIndex(0);
       setCurrentLive(getLiveStatus('ACCEPTED'));
     } else if (payload?.status === 'PREPARING') {
@@ -144,8 +153,8 @@ const handleSocket = (trackedOrderId: number) => {
       console.log('Lat:', latitude);
       console.log('Lng:', longitude);
 
-      //setcurrentIndex(2);
-      //setCurrentLive(getLiveStatus('ON_THE_WAY'));
+      setcurrentIndex(2);
+      setCurrentLive(getLiveStatus('ON_THE_WAY'));
 
       setRiderLocation({
         latitude,
@@ -363,7 +372,7 @@ const getLiveStatus = (status: string) => {
                 {showDetailsCard ? (
                   <View style={styles.card1}>
                     {/* USER INFO */}
-                    {orderDetail?.order?.status !== 'PENDING' ? (
+                    {orderDetail?.status !== 'PENDING' ? (
                       <View style={styles.header}>
                         <Image 
                           source={ orderDetail?.customer?.profileImageUrl ? 
