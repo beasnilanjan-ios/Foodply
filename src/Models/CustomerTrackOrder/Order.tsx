@@ -4,7 +4,7 @@ export interface Order {
   id: number;
   orderNumber: string;
   status: string;
-  totalAmount: number;
+  finalAmount: number;
   paymentStatus: string;
   itemsSummary: ItemsSummary;
 }

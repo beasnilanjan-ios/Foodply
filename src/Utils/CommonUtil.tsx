@@ -63,3 +63,6 @@ export const formatDate = (
 
   return parsedDate.format(outputFormat);
 };
+
+export const truncateText = (text: string, maxLength: number) =>
+  text?.length > maxLength ? `${text.substring(0, maxLength)}...` : text;

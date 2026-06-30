@@ -11,6 +11,7 @@ import Colors from '../assets/Colors/Colors';
 import { FontFamily } from '../assets/GlobalFont/GlobalFont';
 import { AssignedOrder } from '../Models/DeliveryDasboard/AssignedOrder';
 import { getTimeAgo } from '../Utils/CommonUtil';
+import { truncateText } from '../Utils/CommonUtil';
 
 type Props = {
   orders: AssignedOrder[];
@@ -30,7 +31,7 @@ const OrderCard = ({ item, onPressItem }: { item: AssignedOrder; onPressItem?: (
 
       <View style={styles.orderCenter}>
         <View style={styles.rowBetween}>
-          <Text style={styles.customerName}>{item.customerName}</Text>
+          <Text style={styles.customerName}>{truncateText(item.customerName, 16)}</Text>
 
           <Text style={styles.amount}>₹{item.finalAmount.toFixed(2)}</Text>
         </View>

@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
   ToastAndroid,
   Alert,
+  Linking,
 } from 'react-native';
 
 import GlobalBackButton from '../GlobalContainer/GlobalBackButton';
@@ -54,7 +55,7 @@ const steps = [
       { label: 'Delivered', status: 'DELIVERED' },
     ];
 
-  const trackedOrderId = 103;
+  const trackedOrderId = 112;
   let cleanup: (() => void) | undefined;  
 
   const [riderLocation, setRiderLocation] = useState<
@@ -138,13 +139,13 @@ const handleSocket = (trackedOrderId: number) => {
     ) {
       deliveryAssignedHandled.current = true;
       getOrderDetails(trackedOrderId);
-  }else if (payload?.status === 'ACCEPTED') {
+    } else if (payload?.status === 'ACCEPTED') {
       setcurrentIndex(0);
       setCurrentLive(getLiveStatus('ACCEPTED'));
     } else if (payload?.status === 'PREPARING') {
       setcurrentIndex(1);
       setCurrentLive(getLiveStatus('PREPARING'));
-    } else if (
+    } else if(
       payload?.status === 'ON_THE_WAY' &&
       payload?.latestLocation
     ) {
@@ -160,7 +161,14 @@ const handleSocket = (trackedOrderId: number) => {
         latitude,
         longitude,
       });
-    }
+    } else if (payload?.status === 'DELIVERED') {
+      setcurrentIndex(3);
+      setCurrentLive(getLiveStatus('DELIVERED'));
+    } 
+    // else if(payload?.status !== 'PENDING'){
+    //   setcurrentIndex(2);
+    //   setCurrentLive(getLiveStatus('ON_THE_WAY'));
+    // } 
   });
 
   socket.current.on('connect', onConnect);
@@ -342,6 +350,17 @@ const getLiveStatus = (status: string) => {
       }
     };
 
+    const makePhoneCall = (phoneNumber?: string) => {
+      if (!phoneNumber) {
+        Alert.alert('Error', 'Phone number not available');
+        return;
+      }
+
+      Linking.openURL(`tel:${phoneNumber}`).catch(() => {
+        Alert.alert('Error', 'Unable to make a phone call');
+      });
+    };
+
   useEffect(() => {
     setCurrentLive(getLiveStatus(orderDetail?.order?.status ?? ''));
   }, [orderDetail?.order?.status]);
@@ -375,8 +394,8 @@ const getLiveStatus = (status: string) => {
                     {orderDetail?.status !== 'PENDING' ? (
                       <View style={styles.header}>
                         <Image 
-                          source={ orderDetail?.customer?.profileImageUrl ? 
-                          { uri: orderDetail?.customer?.profileImageUrl } : 
+                          source={ orderDetail?.agent?.profileImageUrl ? 
+                          { uri: orderDetail?.agent?.profileImageUrl } : 
                           require('../assets/images/customer_image.png') } 
                           style={styles.avatar} 
                         />
@@ -397,6 +416,7 @@ const getLiveStatus = (status: string) => {
                             style={styles.circleBtn}
                             onPress={() => {
                               // Call action
+                              makePhoneCall(orderDetail?.customer?.phone)
                             }}>
                             <Image
                               source={require('../assets/images/call.png')}
@@ -449,7 +469,7 @@ const getLiveStatus = (status: string) => {
                       <View>
                         <Text style={styles.smallLabel}>Order Amount</Text>
                         <Text style={styles.amount}>
-                          ₹{orderDetail?.order.totalAmount.toFixed(2)}
+                          ₹{orderDetail?.order.finalAmount.toFixed(2)}
                         </Text>
                       </View>
                     </View>
