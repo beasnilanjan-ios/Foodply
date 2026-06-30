@@ -17,8 +17,7 @@ import GlobalTopBar from '../GlobalContainer/GlobalTopBar';
 import GlobalApi from '../GlobalContainer/GlobalApi';
 import GlobalLoginAuth from '../GlobalContainer/GlobalLoginAuth';
 import GlobalLoader from '../GlobalContainer/GlobalLoader';
-import DeliveryOrderListComponent from '../GlobalContainer/DeliveryOrderListComponent';
-import { AssignedOrder } from '../Models/DeliveryDasboard/AssignedOrder';
+import CustomerOrderListComponent from '../GlobalContainer/CustomerOrderListComponent';
 import {
   isActiveOrderStatus,
   isCancelledOrderStatus,
@@ -46,24 +45,6 @@ const getApiHeaders = (): Record<string, string> => {
 
   return headers;
 };
-
-const mapToAssignedOrder = (order: MyOrderItemModel): AssignedOrder => ({
-  deliveryId: order.deliveryId,
-  orderId: order.orderId,
-  orderNumber: order.orderNumber,
-  createdAt: order.createdAt,
-  minutesAgo: order.minutesAgo,
-  customerName: order.restaurantName || order.customerName || 'Restaurant',
-  customerPhone: order.customerPhone,
-  addressText: order.addressText,
-  itemCount: order.itemCount,
-  totalQuantity: order.totalQuantity || order.itemCount,
-  finalAmount: order.finalAmount,
-  paymentMethod: order.paymentMethod,
-  paymentStatus: order.paymentStatus,
-  deliveryStatus: order.deliveryStatus,
-  orderStatus: order.status,
-});
 
 export default function Orders({ navigation, onMenuPress }: any) {
   const [activeTab, setActiveTab] = useState('Active');
@@ -122,26 +103,17 @@ export default function Orders({ navigation, onMenuPress }: any) {
   );
 
   const activeOrders = useMemo(
-    () =>
-      orders
-        .filter(order => isActiveOrderStatus(order.status))
-        .map(mapToAssignedOrder),
+    () => orders.filter(order => isActiveOrderStatus(order.status)),
     [orders],
   );
 
   const completedOrders = useMemo(
-    () =>
-      orders
-        .filter(order => isCompletedOrderStatus(order.status))
-        .map(mapToAssignedOrder),
+    () => orders.filter(order => isCompletedOrderStatus(order.status)),
     [orders],
   );
 
   const cancelledOrders = useMemo(
-    () =>
-      orders
-        .filter(order => isCancelledOrderStatus(order.status))
-        .map(mapToAssignedOrder),
+    () => orders.filter(order => isCancelledOrderStatus(order.status)),
     [orders],
   );
 
@@ -197,16 +169,14 @@ export default function Orders({ navigation, onMenuPress }: any) {
           </View>
 
           <View style={{ marginTop: 20 }}>
-            <DeliveryOrderListComponent
+            <CustomerOrderListComponent
               orders={getOrders()}
-              showAmountInItemBadge
               showTrackOrderButton={activeTab === 'Active'}
               onPressItem={item => {
                 navigation.navigate('OrderDetails', { orderId: item.orderId });
               }}
               onPressTrackOrder={item => {
-                const orderId = item.orderId;
-                navigation.navigate('Trackorder', { orderId });
+                navigation.navigate('Trackorder', { orderId: item.orderId });
               }}
             />
           </View>
