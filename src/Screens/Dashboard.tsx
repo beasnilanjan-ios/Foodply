@@ -191,6 +191,8 @@ import GlobalLocationPermission from '../GlobalContainer/GlobalLocationPermissio
 import GlobalApi from '../GlobalContainer/GlobalApi';
 import GlobalCart from '../GlobalContainer/GlobalCart';
 import GlobalLoginAuth from '../GlobalContainer/GlobalLoginAuth';
+import FavoriteButton from '../components/FavoriteButton';
+import GlobalFavorites from '../GlobalContainer/GlobalFavorites';
 import {
   NearbyRestaurantModel,
   NearbyRestaurantsResponseModel,
@@ -275,6 +277,7 @@ const enrichMenuItemsWithMenuData = (
         : item.addonGroups,
       restaurantId: item.restaurantId || fullItem.restaurantId,
       category: item.category ?? fullItem.category,
+      isFavorite: fullItem.isFavorite ?? item.isFavorite,
     });
   });
 };
@@ -400,12 +403,12 @@ export default function Dashboard({ navigation, onMenuPress }: any) {
         'Best selling items:',
         JSON.stringify(bestSellingResponse.data, null, 2),
       );
-      setBestSellerItems(
-        enrichMenuItemsWithMenuData(
+      const enrichedBestSellers = enrichMenuItemsWithMenuData(
           bestSellingResponse.data,
           allMenuItemsRef.current,
-        ),
-      );
+        );
+      setBestSellerItems(enrichedBestSellers);
+      GlobalFavorites.syncFromMenuItems(enrichedBestSellers);
     } catch (error) {
       console.log('fetchBestSellingItems failed:', error);
       setBestSellerItems([]);
@@ -456,6 +459,7 @@ export default function Dashboard({ navigation, onMenuPress }: any) {
       console.log('Final items array length before setAllMenuItems:', items.length);
       setAllMenuItems(items);
       allMenuItemsRef.current = items;
+      GlobalFavorites.syncFromMenuItems(items);
       setBestSellerItems(prev =>
         enrichMenuItemsWithMenuData(prev, items),
       );
@@ -945,9 +949,12 @@ export default function Dashboard({ navigation, onMenuPress }: any) {
                     <Text style={styles.recommendStar}>★</Text>
                   </View>
 
-                  <View style={styles.recommendHeartBadge}>
-                    <Text style={styles.recommendHeart}>♥</Text>
-                  </View>
+                  <FavoriteButton
+                    itemId={item.id}
+                    buttonStyle={styles.recommendHeartBadge}
+                    iconStyle={styles.recommendHeart}
+                    activeIconStyle={styles.recommendHeartActive}
+                  />
 
                   <View style={styles.recommendNameBadge}>
                     <Text style={styles.recommendNameText} numberOfLines={2}>
@@ -1603,9 +1610,10 @@ const styles = StyleSheet.create({
 
   recommendHeart: {
     fontSize: isTablet ? 15 : 12,
-    color: Colors.primary,
     includeFontPadding: false,
   },
+
+  recommendHeartActive: {},
 
   recommendNameBadge: {
     position: 'absolute',

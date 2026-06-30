@@ -11,6 +11,8 @@ import {
 } from 'react-native';
 import Colors from '../assets/Colors/Colors';
 import GlobalBackButton from '../GlobalContainer/GlobalBackButton';
+import FavoriteButton from '../components/FavoriteButton';
+import GlobalFavorites from '../GlobalContainer/GlobalFavorites';
 import GlobalApi from '../GlobalContainer/GlobalApi';
 import GlobalLoginAuth from '../GlobalContainer/GlobalLoginAuth';
 import GlobalCart from '../GlobalContainer/GlobalCart';
@@ -137,6 +139,7 @@ export default function MenuDetails({ navigation, route }: any) {
             addonGroups: fullItem.addonGroups,
             restaurantId: currentItem.restaurantId || fullItem.restaurantId,
             category: currentItem.category ?? fullItem.category,
+            isFavorite: fullItem.isFavorite ?? currentItem.isFavorite,
           }),
         );
       } catch {
@@ -150,6 +153,12 @@ export default function MenuDetails({ navigation, route }: any) {
   useEffect(() => {
     setHasAddedToCart(false);
   }, [item?.id, selectedAddons]);
+
+  useEffect(() => {
+    if (item?.id) {
+      GlobalFavorites.syncFromMenuItems([item]);
+    }
+  }, [item?.id, item?.isFavorite]);
 
   const baseItemPrice = item
     ? Number(item.discountPrice ?? item.price ?? 0)
@@ -392,9 +401,13 @@ export default function MenuDetails({ navigation, route }: any) {
               <Text style={styles.ratingStar}>★</Text>
             </View>
 
-            <TouchableOpacity style={styles.favoriteButton}>
-              <Text style={styles.favoriteIcon}>♥</Text>
-            </TouchableOpacity>
+            {item?.id ? (
+              <FavoriteButton
+                itemId={item.id}
+                buttonStyle={styles.favoriteButton}
+                iconStyle={styles.favoriteIcon}
+              />
+            ) : null}
           </View>
 
           {/* DETAILS */}
@@ -559,7 +572,6 @@ const styles = StyleSheet.create({
   },
 
   favoriteIcon: {
-    color: Colors.primary,
     fontSize: 16,
   },
 

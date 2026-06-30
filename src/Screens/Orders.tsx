@@ -205,7 +205,8 @@ export default function Orders({ navigation, onMenuPress }: any) {
                 navigation.navigate('OrderDetails', { orderId: item.orderId });
               }}
               onPressTrackOrder={item => {
-                navigation.navigate('Trackorder', { orderId: item.orderId });
+                const orderId = item.orderId;
+                navigation.navigate('Trackorder', { orderId });
               }}
             />
           </View>

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useCallback, useEffect, useState} from 'react';
 import {
   View,
   Text,
@@ -9,16 +9,20 @@ import {
   Image,
   TouchableOpacity,
   ImageSourcePropType,
+  Alert,
 } from 'react-native';
+import {useFocusEffect} from '@react-navigation/native';
 
 import Colors from '../assets/Colors/Colors';
 import GlobalStyles from '../assets/Styles/GlobalStyles';
 import GlobalBottomBar from '../GlobalContainer/GlobalBottomBar';
 import GlobalTopBar from '../GlobalContainer/GlobalTopBar';
-import {
-  MenuItemCategoryModel,
-  RestaurantMenuItemModel,
-} from '../Models/RestaurantMenuModel';
+import GlobalLoader from '../GlobalContainer/GlobalLoader';
+import GlobalLoginAuth from '../GlobalContainer/GlobalLoginAuth';
+import FavoriteButton from '../components/FavoriteButton';
+import GlobalFavorites from '../GlobalContainer/GlobalFavorites';
+import {RestaurantMenuItemModel} from '../Models/RestaurantMenuModel';
+import {fetchFavoriteMenuItems} from '../services/favoriteService';
 
 const { width, height } = Dimensions.get('window');
 const isTablet = Math.min(width, height) >= 600;
@@ -50,54 +54,51 @@ const formatPrice = (value: number | null | undefined, fallback = 0) =>
 const hasDiscount = (item: RestaurantMenuItemModel) =>
   item.discountPrice != null && item.discountPrice < item.price;
 
-const favoriteItems: RestaurantMenuItemModel[] = [
-  new RestaurantMenuItemModel({
-    id: 1,
-    name: 'Chicken Biryani',
-    price: 249,
-    discountPrice: 199,
-    rating: 4.5,
-    restaurantId: 1,
-    category: new MenuItemCategoryModel({ id: 1, name: 'Meals' }),
-    imageUrl: null,
-  }),
-  new RestaurantMenuItemModel({
-    id: 2,
-    name: 'Paneer Butter Masala',
-    price: 179,
-    discountPrice: null,
-    rating: 4.2,
-    restaurantId: 1,
-    category: new MenuItemCategoryModel({ id: 2, name: 'Meals' }),
-    imageUrl: null,
-  }),
-  new RestaurantMenuItemModel({
-    id: 3,
-    name: 'Veg Hakka Noodles',
-    price: 149,
-    discountPrice: 129,
-    rating: 4.0,
-    restaurantId: 1,
-    category: new MenuItemCategoryModel({ id: 3, name: 'Snacks' }),
-    imageUrl: null,
-  }),
-  new RestaurantMenuItemModel({
-    id: 4,
-    name: 'Chocolate Brownie',
-    price: 99,
-    discountPrice: null,
-    rating: 4.8,
-    restaurantId: 1,
-    category: new MenuItemCategoryModel({ id: 4, name: 'Desserts' }),
-    imageUrl: null,
-  }),
-];
-
 const STATIC_RESTAURANT_ID = 1;
 const STATIC_LATITUDE = 22.5726;
 const STATIC_LONGITUDE = 88.3639;
 
 export default function Favorites({ navigation }: any) {
+  const [loading, setLoading] = useState(false);
+  const [favoriteItems, setFavoriteItems] = useState<RestaurantMenuItemModel[]>(
+    [],
+  );
+
+  const loadFavorites = useCallback(async () => {
+    try {
+      setLoading(true);
+      await GlobalLoginAuth.loadAuthData();
+
+      const result = await fetchFavoriteMenuItems();
+
+      if (result.success) {
+        setFavoriteItems(result.data);
+        GlobalFavorites.syncFromMenuItems(result.data);
+      } else if (result.message) {
+        Alert.alert('FoodyPly', result.message);
+      }
+    } catch (error) {
+      console.log('loadFavorites failed:', error);
+      Alert.alert('FoodyPly', 'Unable to load favorites');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadFavorites();
+    }, [loadFavorites]),
+  );
+
+  useEffect(() => {
+    return GlobalFavorites.subscribe(() => {
+      setFavoriteItems(prev =>
+        prev.filter(item => GlobalFavorites.isFavorite(item.id)),
+      );
+    });
+  }, []);
+
   return (
     <View style={[GlobalStyles.screenBackgroundPrimary, styles.container]}>
       <GlobalTopBar
@@ -149,9 +150,11 @@ export default function Favorites({ navigation }: any) {
                     />
                   </View>
 
-                  <TouchableOpacity style={styles.favoriteButton}>
-                    <Text style={styles.favoriteIcon}>♥</Text>
-                  </TouchableOpacity>
+                  <FavoriteButton
+                    itemId={item.id}
+                    buttonStyle={styles.favoriteButton}
+                    iconStyle={styles.favoriteIcon}
+                  />
 
                   <View style={styles.ratingBadge}>
                     <Text style={styles.ratingText}>
@@ -204,6 +207,8 @@ export default function Favorites({ navigation }: any) {
 
         <GlobalBottomBar navigation={navigation} activeTab="Favorites" />
       </View>
+
+      <GlobalLoader visible={loading} />
     </View>
   );
 }
@@ -303,7 +308,7 @@ const styles = StyleSheet.create({
   },
 
   favoriteIcon: {
-    color: Colors.primary,
+    fontSize: 12,
   },
 
   ratingBadge: {

@@ -32,6 +32,12 @@ import GlobalApi from '../GlobalContainer/GlobalApi';
 
 export default function TrackOrder({ navigation, route }: any) {
 
+  const orderId = route?.params?.orderId;
+
+  useEffect(() => {
+    console.log('Nilanjan implementation', orderId);
+  }, [orderId]);
+
   // ✅ SHOW BOTTOM BAR ONLY WHEN FROM TAB
   const showBottomBar = route?.params?.fromTab === true;
   const [showDetailsCard, setShowDetailsCard] = useState(true);
@@ -53,8 +59,8 @@ const steps = [
       { label: 'Delivered', status: 'DELIVERED' },
     ];
 
-  const trackedOrderId = 43;
-let cleanup: (() => void) | undefined;  
+  const trackedOrderId = Number(route?.params?.orderId ?? 0);
+  const cleanupRef = useRef<(() => void) | undefined>(undefined);  
 
   const [riderLocation, setRiderLocation] = useState<
     { latitude: number; longitude: number } | null
@@ -191,7 +197,7 @@ const getOrderDetails = async (trackedOrderId: number) => {
 
       console.log("CurrentStatus", result.data?.status);
 
-      cleanup = handleSocket(trackedOrderId);
+      cleanupRef.current = handleSocket(trackedOrderId);
 
     
     } catch (error) {
@@ -211,11 +217,24 @@ const getOrderDetails = async (trackedOrderId: number) => {
   }
 
 useEffect(() => {
-  getOrderDetails(trackedOrderId)
- return () => {
-    cleanup?.();
+  if (!trackedOrderId) {
+    Alert.alert('FoodyPly', 'Order not found');
+    navigation.goBack();
+    return;
+  }
+
+  const loadOrder = async () => {
+    await GlobalLoginAuth.loadAuthData();
+    await getOrderDetails(trackedOrderId);
   };
-}, []);
+
+  loadOrder();
+
+  return () => {
+    cleanupRef.current?.();
+    cleanupRef.current = undefined;
+  };
+}, [trackedOrderId]);
 
 
 const getStepIcon = (status: string, isCurrent: boolean) => {
@@ -385,7 +404,8 @@ const getLiveStatus = (status: string) => {
 
                         <View>
                           <Text style={styles.smallLabel}>
-                            {orderDetail?.order?.itemsSummary.itemCount} Items • {orderDetail?.order?.itemsSummary.totalQuantity} Qty
+                            {orderDetail?.order?.itemsSummary?.itemCount ?? 0} Items •{' '}
+                            {orderDetail?.order?.itemsSummary?.totalQuantity ?? 0} Qty
                           </Text>
                           <View
                             style={{
@@ -398,7 +418,7 @@ const getLiveStatus = (status: string) => {
                             <Text style={styles.smallLabel}>Payment Status</Text>
                             <View style={styles.codBadge}>
                               <Text style={styles.codText}>
-                                {orderDetail?.order.paymentStatus}
+                                {orderDetail?.order?.paymentStatus ?? ''}
                               </Text>
                             </View>
                           </View>
@@ -407,7 +427,7 @@ const getLiveStatus = (status: string) => {
                       <View>
                         <Text style={styles.smallLabel}>Order Amount</Text>
                         <Text style={styles.amount}>
-                          ₹{orderDetail?.order.totalAmount.toFixed(2)}
+                          ₹{Number(orderDetail?.order?.totalAmount ?? 0).toFixed(2)}
                         </Text>
                       </View>
                     </View>
