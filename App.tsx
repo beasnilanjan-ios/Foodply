@@ -61,7 +61,7 @@ export type RootStackParamList = {
         longitude?: number | null;
       }
     | undefined;
-  Trackorder: undefined;
+  Trackorder: { orderId?: number; fromTab?: boolean } | undefined;
   MenuDetails:
     | {
         item?: RestaurantMenuItemModel;
@@ -72,12 +72,11 @@ export type RootStackParamList = {
     | undefined;
   Cart: undefined; // ✅ ADD THIS
   Address: undefined; // ✅ ADD THIS
-  OrderConfirmed: undefined; // ✅ ADD THIS
+  OrderConfirmed: { orderId?: number } | undefined;
   DeliveryDashboard: undefined;
   DeliveryOrders: undefined;
   DeliveryProfile: undefined;
-  DeliveryOrderDetail: { orderId: string, from: string } | undefined;
-  DeliveryProfile: undefined; 
+  DeliveryOrderDetail: { orderId: string; from: string } | undefined;
   DeliveryStart: { orderDetail: DeliveryOrderDetails } | undefined;
   DeliveryOtpVerification: { orderDetail: DeliveryOrderDetails, otp: string } | undefined; // ✅ ADD THIS
 };

@@ -11,7 +11,9 @@ import {
 import GlobalBackButton from '../GlobalContainer/GlobalBackButton';
 import Colors from '../assets/Colors/Colors';
 
-export default function OrderConfirmed({ navigation }: any) {
+export default function OrderConfirmed({ navigation, route }: any) {
+  const orderId = route?.params?.orderId;
+
   return (
     <View style={styles.container}>
       
@@ -46,7 +48,7 @@ export default function OrderConfirmed({ navigation }: any) {
         <TouchableOpacity
           style={styles.trackButton}
           activeOpacity={0.8}
-          onPress={() => navigation.navigate('Trackorder')} // ✅ NAVIGATION
+          onPress={() => navigation.navigate('Trackorder', { orderId })}
         >
           <Text style={styles.trackText}>Track my order</Text>
         </TouchableOpacity>

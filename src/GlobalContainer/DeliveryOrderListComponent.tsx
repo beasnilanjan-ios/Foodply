@@ -10,18 +10,38 @@ import {
 import Colors from '../assets/Colors/Colors';
 import { FontFamily } from '../assets/GlobalFont/GlobalFont';
 import { AssignedOrder } from '../Models/DeliveryDasboard/AssignedOrder';
+import { isActiveOrderStatus } from '../Models/MyOrdersModel';
 import { getTimeAgo } from '../Utils/CommonUtil';
 import { truncateText } from '../Utils/CommonUtil';
 
 type Props = {
   orders: AssignedOrder[];
   onPressItem?: (item: AssignedOrder) => void;
+  onPressTrackOrder?: (item: AssignedOrder) => void;
+  showAmountInItemBadge?: boolean;
+  showTrackOrderButton?: boolean;
 };
 
-const OrderCard = ({ item, onPressItem }: { item: AssignedOrder; onPressItem?: (item: AssignedOrder) => void }) => {
+const formatOrderAmount = (value: number) =>
+  `₹${Number(value || 0).toFixed(2)}`;
+
+const OrderCard = ({
+  item,
+  onPressItem,
+  onPressTrackOrder,
+  showAmountInItemBadge = false,
+  showTrackOrderButton = false,
+}: {
+  item: AssignedOrder;
+  onPressItem?: (item: AssignedOrder) => void;
+  onPressTrackOrder?: (item: AssignedOrder) => void;
+  showAmountInItemBadge?: boolean;
+  showTrackOrderButton?: boolean;
+}) => {
   return (
     <TouchableOpacity
       style={styles.orderCard}
+      activeOpacity={0.9}
       onPress={() => onPressItem?.(item)}
     >
       <View style={styles.orderLeft}>
@@ -33,25 +53,60 @@ const OrderCard = ({ item, onPressItem }: { item: AssignedOrder; onPressItem?: (
         <View style={styles.rowBetween}>
           <Text style={styles.customerName}>{truncateText(item.customerName, 16)}</Text>
 
-          <Text style={styles.amount}>₹{item.finalAmount.toFixed(2)}</Text>
+          {!showAmountInItemBadge ? (
+            <Text style={styles.amount}>
+              {formatOrderAmount(item.finalAmount)}
+            </Text>
+          ) : null}
         </View>
 
-        <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'flex-start' }}>
-            <Image style={styles.icon} source={require('../assets/images/location.png')} />
-            <Text style={styles.address}>{item.addressText}</Text>
-        </View>
+        {item.addressText?.trim() ? (
+          <View style={styles.addressRow}>
+            <Image
+              style={styles.icon}
+              source={require('../assets/images/location.png')}
+            />
+            <Text style={styles.address} numberOfLines={2}>
+              {item.addressText}
+            </Text>
+          </View>
+        ) : null}
+
         <View style={styles.bottomRow}>
-          <View style={styles.codBadge}>
-              <Text style={styles.itemText}>{item.itemCount} item</Text>
+          <View style={styles.badgesRow}>
+            <View style={styles.codBadge}>
+              <Text style={styles.itemText}>
+                {showAmountInItemBadge
+                  ? formatOrderAmount(item.finalAmount)
+                  : `${item.itemCount} item`}
+              </Text>
+            </View>
+
+            {item.paymentStatus ? (
+              <View style={styles.codBadge}>
+                <Text style={styles.codText}>{item.paymentStatus}</Text>
+              </View>
+            ) : null}
           </View>
 
-          <View style={styles.codBadge}>
-            <Text style={styles.codText}>{item.paymentStatus}</Text>
-          </View>
+          <View style={styles.actionsRow}>
+            <TouchableOpacity
+              style={styles.viewButton}
+              activeOpacity={0.8}
+              onPress={() => onPressItem?.(item)}
+            >
+              <Text style={styles.viewButtonText}>View Details</Text>
+            </TouchableOpacity>
 
-          <TouchableOpacity style={styles.viewButton} onPress={() => onPressItem?.(item)}>
-            <Text style={styles.viewButtonText}>View Details</Text>
-          </TouchableOpacity>
+            {showTrackOrderButton && isActiveOrderStatus(item.orderStatus) ? (
+              <TouchableOpacity
+                style={styles.trackButton}
+                onPress={() => onPressTrackOrder?.(item)}
+              >
+                <Text style={styles.trackButtonText}>Track Order</Text>
+              </TouchableOpacity>
+            ) : null}
+          </View>
         </View>
       </View>
     </TouchableOpacity>
@@ -61,6 +116,9 @@ const OrderCard = ({ item, onPressItem }: { item: AssignedOrder; onPressItem?: (
 export default function DeliveryOrderListComponent({
   orders,
   onPressItem,
+  onPressTrackOrder,
+  showAmountInItemBadge = false,
+  showTrackOrderButton = false,
 }: Props) {
   return (
     <FlatList
@@ -68,7 +126,13 @@ export default function DeliveryOrderListComponent({
       keyExtractor={(item) => String(item.orderId)}
       scrollEnabled={false}
       renderItem={({ item }) => (
-        <OrderCard item={item} onPressItem={onPressItem} />
+        <OrderCard
+          item={item}
+          onPressItem={onPressItem}
+          onPressTrackOrder={onPressTrackOrder}
+          showAmountInItemBadge={showAmountInItemBadge}
+          showTrackOrderButton={showTrackOrderButton}
+        />
       )}
       ListEmptyComponent={
         <View style={styles.noOrderContainer}>
@@ -89,18 +153,18 @@ const styles = StyleSheet.create({
     elevation: 2,
     borderWidth: 2,
     borderColor: Colors.deviderColor,
-    justifyContent: 'center',
-    alignItems: 'center',
+    alignItems: 'flex-start',
   },
 
   orderLeft: {
     width: 110,
-    height: 80,
+    minHeight: 80,
     justifyContent: 'center',
     backgroundColor: Colors.lightOrange,
-    borderRadius: 10,       
+    borderRadius: 10,
     padding: 10,
     alignItems: 'center',
+    alignSelf: 'stretch',
   },
 
   orderId: {
@@ -118,6 +182,7 @@ const styles = StyleSheet.create({
 
   orderCenter: {
     flex: 1,
+    minWidth: 0,
     marginLeft: 10,
   },
 
@@ -125,24 +190,33 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    gap: 8,
   },
 
   customerName: {
+    flex: 1,
     fontSize: 16,
     fontFamily: FontFamily.medium,
     color: Colors.textColor,
   },
 
   amount: {
+    flexShrink: 0,
     fontSize: 16,
     fontFamily: FontFamily.medium,
     color: Colors.primary,
   },
 
+  addressRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginTop: 6,
+  },
+
   address: {
+    flex: 1,
     fontSize: 12,
     color: Colors.textBrown,
-    maxWidth: '80%',
   },
 
   icon: {
@@ -155,9 +229,22 @@ const styles = StyleSheet.create({
   },
 
   bottomRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
     marginTop: 10,
+    gap: 8,
+  },
+
+  badgesRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: 8,
+  },
+
+  actionsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: 8,
   },
 
   itemText: {
@@ -171,7 +258,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 20,
-    marginLeft: 8,
   },
 
   codText: {
@@ -185,11 +271,25 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 7,
     borderRadius: 20,
-    marginLeft: 'auto',
   },
 
   viewButtonText: {
     color: Colors.white,
+    fontSize: 12,
+    fontFamily: FontFamily.medium,
+  },
+
+  trackButton: {
+    backgroundColor: Colors.white,
+    borderWidth: 1,
+    borderColor: Colors.primary,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 20,
+  },
+
+  trackButtonText: {
+    color: Colors.primary,
     fontSize: 12,
     fontFamily: FontFamily.medium,
   },

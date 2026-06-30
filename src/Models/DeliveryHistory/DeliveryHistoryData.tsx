@@ -1,4 +1,4 @@
-import { DeliveryHistoryItem } from './DeliveryHistoryItem';
+import { AssignedOrder } from '../Models/DeliveryDasboard/AssignedOrder';
 import { DeliveryHistorySummary } from './DeliveryHistorySummary';
 
 export interface DeliveryHistoryData {

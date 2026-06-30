@@ -30,8 +30,6 @@ target 'Foodyply' do
       :mac_catalyst_enabled => false,
       # :ccache_enabled => true
     )
-<<<<<<< HEAD
-=======
     installer.pods_project.targets.each do |target|
       target.build_configurations.each do |build_configuration|
         build_configuration.build_settings['ENABLE_DEBUG_DYLIB'] = 'NO'
@@ -44,7 +42,6 @@ target 'Foodyply' do
         end
       end
     end
->>>>>>> e36c53c0bcd2c4e514d43f6f01c58e298be0efe1
     # Required by @maplibre/maplibre-react-native to link the MapLibre SPM package.
     $MLRN.post_install(installer) if defined?($MLRN) && $MLRN.respond_to?(:post_install)
   end

@@ -83,14 +83,14 @@ export default function GlobalBottomBar({ navigation, activeTab }: any) {
             activeTab === 'Favorites' && styles.activeText
           ]}
         >
-          ReOreder
+          Favorites
         </Text>
       </TouchableOpacity>
 
       {/* MY ORDERS */}
       <TouchableOpacity
         style={styles.tabItem}
-        onPress={() => navigation.navigate('Trackorder',{ fromTab: true })}
+       // onPress={() => navigation.navigate('Trackorder',{ fromTab: true })}
       >
         <Image
           
@@ -110,7 +110,7 @@ export default function GlobalBottomBar({ navigation, activeTab }: any) {
             activeTab === 'MyOrders' && styles.activeText
           ]}
         >
-         Track Order
+         FAQ
         </Text>
       </TouchableOpacity>
 

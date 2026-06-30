@@ -127,6 +127,7 @@ export class RestaurantMenuItemModel {
   spicyLevel: string | null;
   rating: number;
   isBestSelling: boolean;
+  isFavorite: boolean;
   preparationTime: number;
   description: string | null;
   ingredients: string | null;
@@ -147,6 +148,7 @@ export class RestaurantMenuItemModel {
     this.spicyLevel = data.spicyLevel ?? null;
     this.rating = data.rating ?? 0;
     this.isBestSelling = data.isBestSelling ?? false;
+    this.isFavorite = data.isFavorite ?? false;
     this.preparationTime = data.preparationTime ?? 0;
     this.description = data.description ?? null;
     this.ingredients = data.ingredients ?? null;
@@ -174,6 +176,7 @@ export class RestaurantMenuItemModel {
       spicyLevel: json?.spicyLevel ?? null,
       rating: Number(json?.rating ?? 0),
       isBestSelling: Boolean(json?.isBestSelling),
+      isFavorite: Boolean(json?.isFavorite),
       preparationTime: Number(json?.preparationTime ?? 0),
       description: json?.description ?? null,
       ingredients: json?.ingredients ?? null,

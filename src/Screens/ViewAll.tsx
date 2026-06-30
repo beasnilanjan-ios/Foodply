@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,8 @@ import {
 } from 'react-native';
 import Colors from '../assets/Colors/Colors';
 import GlobalBackButton from '../GlobalContainer/GlobalBackButton';
+import FavoriteButton from '../components/FavoriteButton';
+import GlobalFavorites from '../GlobalContainer/GlobalFavorites';
 import { RestaurantMenuItemModel } from '../Models/RestaurantMenuModel';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -47,6 +49,12 @@ export default function Dashboard({ navigation, route }: any) {
   const restaurantId: number | null = route?.params?.restaurantId ?? null;
   const latitude: number | null = route?.params?.latitude ?? null;
   const longitude: number | null = route?.params?.longitude ?? null;
+
+  useEffect(() => {
+    if (bestSellerItems.length > 0) {
+      GlobalFavorites.syncFromMenuItems(bestSellerItems);
+    }
+  }, [route?.params?.bestSellerItems]);
 
   return (
     <View style={styles.container}>
@@ -90,9 +98,11 @@ export default function Dashboard({ navigation, route }: any) {
                   />
                 </View>
 
-                <TouchableOpacity style={styles.favoriteButton}>
-                  <Text style={styles.favoriteIcon}>♥</Text>
-                </TouchableOpacity>
+                <FavoriteButton
+                  itemId={item.id}
+                  buttonStyle={styles.favoriteButton}
+                  iconStyle={styles.favoriteIcon}
+                />
 
                 <View style={styles.ratingBadge}>
                   <Text style={styles.ratingText}>
@@ -274,7 +284,7 @@ const styles = StyleSheet.create({
   },
 
   favoriteIcon: {
-    color: Colors.primary,
+    fontSize: 12,
   },
 
   ratingBadge: {

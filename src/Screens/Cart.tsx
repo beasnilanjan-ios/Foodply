@@ -1196,7 +1196,7 @@ export default function Cart({ navigation, route }: any) {
 
       if (paymentMethod === 'cod') {
         await confirmCodPayment(orderId);
-        navigation.navigate('OrderConfirmed');
+        navigation.navigate('OrderConfirmed', { orderId });
         return;
       }
 
@@ -1247,7 +1247,7 @@ export default function Cart({ navigation, route }: any) {
         }),
       );
 
-      navigation.navigate('OrderConfirmed');
+      navigation.navigate('OrderConfirmed', { orderId });
     } catch (error: any) {
       if (error?.code === 'PAYMENT_CANCELLED') {
         Alert.alert('Payment cancelled', 'You cancelled the payment.');

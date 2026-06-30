@@ -17,7 +17,7 @@ import GlobalBottomBar from '../GlobalContainer/GlobalBottomBar';
 import Colors from '../assets/Colors/Colors';
 import { FontFamily } from '../assets/GlobalFont/GlobalFont';
 import GlobalLoginAuth from '../GlobalContainer/GlobalLoginAuth';
-import {Socket, DefaultEventsMap} from 'socket.io-client';
+import { Socket } from 'socket.io-client';
 import { ON_THE_WAY } from '../Utils/CommonUtil';
 import {
   Map,
@@ -32,6 +32,12 @@ import { DeliveryTrackingResponse } from '../Models/CustomerTrackOrder/DeliveryT
 import GlobalApi from '../GlobalContainer/GlobalApi';
 
 export default function TrackOrder({ navigation, route }: any) {
+
+  const orderId = route?.params?.orderId;
+
+  useEffect(() => {
+    console.log('Nilanjan implementation', orderId);
+  }, [orderId]);
 
   // ✅ SHOW BOTTOM BAR ONLY WHEN FROM TAB
   const showBottomBar = route?.params?.fromTab === true;
@@ -55,8 +61,8 @@ const steps = [
       { label: 'Delivered', status: 'DELIVERED' },
     ];
 
-  const trackedOrderId = 112;
-  let cleanup: (() => void) | undefined;  
+  const trackedOrderId = Number(route?.params?.orderId ?? 0);
+  const cleanupRef = useRef<(() => void) | undefined>(undefined);  
 
   const [riderLocation, setRiderLocation] = useState<
     { latitude: number; longitude: number } | null
@@ -241,7 +247,7 @@ const getOrderDetails = async (trackedOrderId: number) => {
 
       console.log("CurrentStatus", result.data?.status);
 
-      cleanup = handleSocket(trackedOrderId);
+      cleanupRef.current = handleSocket(trackedOrderId);
 
     
     } catch (error) {
@@ -261,11 +267,24 @@ const getOrderDetails = async (trackedOrderId: number) => {
   }
 
 useEffect(() => {
-  getOrderDetails(trackedOrderId)
- return () => {
-    cleanup?.();
+  if (!trackedOrderId) {
+    Alert.alert('FoodyPly', 'Order not found');
+    navigation.goBack();
+    return;
+  }
+
+  const loadOrder = async () => {
+    await GlobalLoginAuth.loadAuthData();
+    await getOrderDetails(trackedOrderId);
   };
-}, []);
+
+  loadOrder();
+
+  return () => {
+    cleanupRef.current?.();
+    cleanupRef.current = undefined;
+  };
+}, [trackedOrderId]);
 
 
 const getStepIcon = (status: string, isCurrent: boolean) => {
@@ -447,7 +466,8 @@ const getLiveStatus = (status: string) => {
 
                         <View>
                           <Text style={styles.smallLabel}>
-                            {orderDetail?.order?.itemsSummary.itemCount} Items • {orderDetail?.order?.itemsSummary.totalQuantity} Qty
+                            {orderDetail?.order?.itemsSummary?.itemCount ?? 0} Items •{' '}
+                            {orderDetail?.order?.itemsSummary?.totalQuantity ?? 0} Qty
                           </Text>
                           <View
                             style={{
@@ -460,7 +480,7 @@ const getLiveStatus = (status: string) => {
                             <Text style={styles.smallLabel}>Payment Status</Text>
                             <View style={styles.codBadge}>
                               <Text style={styles.codText}>
-                                {orderDetail?.order.paymentStatus}
+                                {orderDetail?.order?.paymentStatus ?? ''}
                               </Text>
                             </View>
                           </View>
@@ -760,13 +780,12 @@ const styles = StyleSheet.create({
 
   card1: {
     position: 'absolute',
-    bottom: 80,
+    bottom: 20,
     left: 15,
     right: 15,
     backgroundColor: '#fff',
     borderRadius: 25,
     padding: 18,
-
     shadowColor: '#000',
     shadowOpacity: 0.15,
     shadowRadius: 10,
@@ -979,7 +998,7 @@ const styles = StyleSheet.create({
 
   floatingShowButton: {
     position: 'absolute',
-    bottom: 90,
+    bottom: 20,
     right: 20,
     width: 40,
     height: 40,
