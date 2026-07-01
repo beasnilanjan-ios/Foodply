@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -7,9 +7,20 @@ import {
   Image,
 } from 'react-native';
 import Colors from '../assets/Colors/Colors';
-import GlobalLoginAuth from '../GlobalContainer/GlobalLoginAuth'; // ✅ IMPORT CLEAR FUNCTION
+import GlobalLoginAuth from '../GlobalContainer/GlobalLoginAuth';
+import { User } from '../Models/Login/User';
 
 export default function CustomDrawer({ navigation, closeDrawer }: any) {
+  const [user, setUser] = useState<User | null>(GlobalLoginAuth.user ?? null);
+
+  useEffect(() => {
+    const loadUser = async () => {
+      await GlobalLoginAuth.loadAuthData();
+      setUser(GlobalLoginAuth.user ?? null);
+    };
+
+    loadUser();
+  }, []);
   const menu = [
     { title: 'My Orders', icon: require('../assets/images/MyOrder.png') },
     { title: 'My Profile', icon: require('../assets/images/MyProfileSide.png'), route: 'MyProfile' },
@@ -31,10 +42,10 @@ export default function CustomDrawer({ navigation, closeDrawer }: any) {
     }
   };
 
-  const logoutClicked = () => {
-    closeDrawer(); // ✅ close drawer first
+  const logoutClicked = async () => {
+    closeDrawer();
+    await GlobalLoginAuth.clear();
     navigation.replace('Login');
-    GlobalLoginAuth.clear(); // ✅ then navigate
   };
 
   return (
@@ -43,12 +54,20 @@ export default function CustomDrawer({ navigation, closeDrawer }: any) {
       {/* HEADER */}
       <View style={styles.header}>
         <Image
-          source={require('../assets/images/Myprofile.png')}
+          source={
+            user?.profileImageUrl
+              ? { uri: user.profileImageUrl }
+              : require('../assets/images/Myprofile.png')
+          }
           style={styles.avatar}
         />
-        <View>
-          <Text style={styles.name}>Surojit Berg</Text>
-          <Text style={styles.email}>Loremipsum@email.com</Text>
+        <View style={styles.userInfo}>
+          <Text style={styles.name} numberOfLines={2}>
+            {user?.name || 'Guest'}
+          </Text>
+          <Text style={styles.email} numberOfLines={1} ellipsizeMode="tail">
+            {user?.email || ''}
+          </Text>
         </View>
       </View>
 
@@ -100,24 +119,33 @@ const styles = StyleSheet.create({
     marginBottom: 40,
   },
 
+  userInfo: {
+    flex: 1,
+    minWidth: 0,
+  },
+
   avatar: {
     width: 60,
     height: 60,
     borderRadius: 30,
     marginRight: 15,
+    flexShrink: 0,
   },
 
   name: {
-    fontSize: 24,
+    fontSize: 20,
     color: '#fff',
     fontWeight: 'bold',
     fontFamily: 'LeagueSpartan-Bold',
+    flexShrink: 1,
   },
 
   email: {
     color: '#fff',
     fontSize: 14,
     fontFamily: 'LeagueSpartan-Regular',
+    marginTop: 4,
+    flexShrink: 1,
   },
 
   row: {

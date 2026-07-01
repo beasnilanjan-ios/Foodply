@@ -20,10 +20,20 @@ import GlobalSocialButtons from '../GlobalContainer/GlobalSocialButtons';
 import GlobalTextInput from '../GlobalContainer/GlobalTextInput';
 import GlobalApi from '../GlobalContainer/GlobalApi';
 
+const DEFAULT_COUNTRY_CODE = '+91';
+
+const formatPhoneForApi = (countryCode: string, phoneNumber: string) => {
+  const digits = phoneNumber.replace(/\D/g, '');
+  const normalized = digits.startsWith('0') ? digits.slice(1) : digits;
+
+  return `${countryCode}${normalized}`;
+};
+
 export default function Registration({ navigation }: any) {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [mobile, setMobile] = useState('');
+  const [countryCode] = useState(DEFAULT_COUNTRY_CODE);
   const [dob, setDob] = useState('');
   const [password, setPassword] = useState('');
   const [secure, setSecure] = useState(true);
@@ -34,10 +44,9 @@ export default function Registration({ navigation }: any) {
       !fullName.trim() ||
       !email.trim() ||
       !mobile.trim() ||
-      !dob.trim() ||
       !password.trim()
     ) {
-      Alert.alert('FoodyPly', 'Please fill all fields');
+      Alert.alert('FoodyPly', 'Please fill all required fields');
       return;
     }
 
@@ -46,12 +55,14 @@ export default function Registration({ navigation }: any) {
     try {
       const response = await fetch(`${GlobalApi.baseUrl}api/auth/register`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({
-          name: fullName,
-          email,
-          mobile,
-          dob,
+          name: fullName.trim(),
+          email: email.trim(),
+          phone: formatPhoneForApi(countryCode, mobile.trim()),
           password,
         }),
       });
@@ -63,10 +74,10 @@ export default function Registration({ navigation }: any) {
         return;
       }
 
-      Alert.alert('FoodyPly', 'Registration Successful');
+      Alert.alert('FoodyPly', result.message || 'Registration Successful');
       navigation.navigate('Login');
     } catch (error) {
-      Alert.alert('FoodyPly', 'Server error');
+      Alert.alert('FoodyPly', 'Unable to connect to server');
     } finally {
       setLoading(false);
     }
@@ -109,15 +120,23 @@ export default function Registration({ navigation }: any) {
 
             {/* Mobile */}
             <Text style={GlobalStyles.formLabelLarge}>Mobile Number</Text>
-            <GlobalTextInput
-              value={mobile}
-              onChangeText={setMobile}
-              placeholder="+91 XXXXX XXXXX"
-              keyboardType="phone-pad"
-            />
+            <View style={styles.phoneRow}>
+              <View style={styles.countryCodeBox}>
+                <Text style={styles.countryCodeText}>{countryCode}</Text>
+              </View>
+              <View style={styles.phoneInputWrapper}>
+                <GlobalTextInput
+                  value={mobile}
+                  onChangeText={setMobile}
+                  placeholder="XXXXXXXXXX"
+                  keyboardType="phone-pad"
+                  style={styles.phoneInput}
+                />
+              </View>
+            </View>
 
-            {/* DOB */}
-            <Text style={GlobalStyles.formLabelLarge}>Date of Birth</Text>
+            {/* DOB (optional) */}
+            <Text style={GlobalStyles.formLabelLarge}>Date of Birth (Optional)</Text>
             <GlobalTextInput
               value={dob}
               onChangeText={setDob}
@@ -249,5 +268,36 @@ const styles = StyleSheet.create({
   bottomText: {
     fontSize: 12,
     fontFamily: 'LeagueSpartan-Regular',
+  },
+
+  phoneRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+
+  countryCodeBox: {
+    height: 45,
+    minWidth: 72,
+    paddingHorizontal: 12,
+    borderRadius: 15,
+    backgroundColor: Colors.inputBackground,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 12,
+  },
+
+  countryCodeText: {
+    fontSize: 16,
+    fontFamily: 'LeagueSpartan-Medium',
+    color: '#000',
+  },
+
+  phoneInputWrapper: {
+    flex: 1,
+  },
+
+  phoneInput: {
+    marginTop: 0,
   },
 });
