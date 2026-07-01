@@ -98,6 +98,15 @@ export default function Orders({ navigation, onMenuPress }: any) {
 
   useFocusEffect(
     useCallback(() => {
+      navigation?.setOptions?.({
+        gestureEnabled: false,
+        fullScreenGestureEnabled: false,
+      });
+    }, [navigation]),
+  );
+
+  useFocusEffect(
+    useCallback(() => {
       fetchMyOrders();
     }, [fetchMyOrders]),
   );
@@ -173,7 +182,10 @@ export default function Orders({ navigation, onMenuPress }: any) {
               orders={getOrders()}
               showTrackOrderButton={activeTab === 'Active'}
               onPressItem={item => {
-                navigation.navigate('OrderDetails', { orderId: item.orderId });
+                navigation.navigate('OrderDetails', {
+                  orderId: item.orderId,
+                  isReOrder: item.isReOrder,
+                });
               }}
               onPressTrackOrder={item => {
                 navigation.navigate('Trackorder', { orderId: item.orderId });

@@ -24,9 +24,11 @@ export default function DrawerScreenContainer({
   const swipeResponder = useMemo(
     () =>
       PanResponder.create({
+        onStartShouldSetPanResponder: () => false,
+        onStartShouldSetPanResponderCapture: () => false,
         onMoveShouldSetPanResponder: (_, gestureState) =>
           !open &&
-          gestureState.x0 <= 35 &&
+          gestureState.x0 <= 28 &&
           gestureState.dx > 10 &&
           Math.abs(gestureState.dx) > Math.abs(gestureState.dy),
         onPanResponderRelease: (_, gestureState) => {
@@ -93,10 +95,10 @@ const styles = StyleSheet.create({
 
   swipeEdge: {
     position: 'absolute',
-    top: 0,
+    top: 110,
     left: 0,
     bottom: 0,
-    width: 35,
-    zIndex: 10,
+    width: 28,
+    zIndex: 1,
   },
 });

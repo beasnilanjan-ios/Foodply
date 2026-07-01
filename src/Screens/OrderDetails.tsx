@@ -27,11 +27,15 @@ import {
 const { width, height } = Dimensions.get('window');
 const isTablet = Math.min(width, height) >= 600;
 
-const getApiHeaders = (): Record<string, string> => {
+const getApiHeaders = (withBody = false): Record<string, string> => {
   const headers: Record<string, string> = {
     Accept: 'application/json',
     'X-Client-Type': 'mobile',
   };
+
+  if (withBody) {
+    headers['Content-Type'] = 'application/json';
+  }
 
   const token = GlobalLoginAuth.accessToken || GlobalLoginAuth.token;
   if (token) {
@@ -41,16 +45,48 @@ const getApiHeaders = (): Record<string, string> => {
   return headers;
 };
 
-const mapOrderItems = (items: OrderItem[] = []): OrderItem[] =>
-  items.map(item => ({
-    ...item,
-    addons: (item.addons ?? []).map(addon =>
-      typeof addon === 'string' ? addon : String((addon as any)?.name ?? ''),
-    ),
-  }));
+const mapOrderItems = (items: any[] = []): OrderItem[] =>
+  items.map(item => {
+    const menuItem = item?.menuItem ?? {};
+    const variant = item?.variant ?? {};
+    const addonLabels = Array.isArray(item?.addons)
+      ? item.addons
+          .map((addon: any) =>
+            typeof addon === 'string'
+              ? addon
+              : String(
+                  addon?.addonOptionName ??
+                    addon?.name ??
+                    addon?.addonGroupName ??
+                    '',
+                ),
+          )
+          .filter(Boolean)
+      : [];
+
+    const descriptionParts = [
+      variant?.name ? String(variant.name) : '',
+      ...addonLabels,
+    ].filter(Boolean);
+
+    return {
+      id: Number(item?.id ?? 0),
+      menuItemId: Number(item?.menuItemId ?? menuItem?.id ?? 0),
+      name: String(menuItem?.name ?? item?.name ?? ''),
+      imageUrl: String(menuItem?.imageUrl ?? item?.imageUrl ?? ''),
+      variantName: String(variant?.name ?? item?.variantName ?? ''),
+      addons: descriptionParts,
+      quantity: Number(item?.quantity ?? 0),
+      unitPrice: Number(
+        item?.price ?? item?.unitPrice ?? menuItem?.price ?? 0,
+      ),
+      totalPrice: Number(item?.totalPrice ?? 0),
+    };
+  });
 
 export default function OrderDetails({ navigation, route }: any) {
   const orderId = Number(route?.params?.orderId ?? 0);
+  const isReOrder = Boolean(route?.params?.isReOrder);
   const [loading, setLoading] = useState(false);
   const [orderData, setOrderData] = useState<DeliveryOrderDetails | null>(null);
   const [invoiceData, setInvoiceData] = useState<OrderInvoiceDataModel | null>(
@@ -135,6 +171,43 @@ export default function OrderDetails({ navigation, route }: any) {
     }
   }, [fetchOrderInvoice, navigation, orderId]);
 
+  const handleReOrder = useCallback(async () => {
+    if (!orderId) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await GlobalLoginAuth.loadAuthData();
+
+      const token = GlobalLoginAuth.accessToken || GlobalLoginAuth.token;
+      if (!token) {
+        Alert.alert('FoodyPly', 'Please login to re-order');
+        return;
+      }
+
+      const response = await fetch(`${GlobalApi.baseUrl}api/orders/reorder`, {
+        method: 'POST',
+        headers: getApiHeaders(true),
+        body: JSON.stringify({ orderId }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || result?.success === false) {
+        Alert.alert('FoodyPly', result?.message || 'Failed to re-order');
+        return;
+      }
+
+      navigation.goBack();
+    } catch (error) {
+      console.log('handleReOrder failed:', error);
+      Alert.alert('FoodyPly', 'Unable to connect to server');
+    } finally {
+      setLoading(false);
+    }
+  }, [navigation, orderId]);
+
   useEffect(() => {
     fetchOrderDetails();
   }, [fetchOrderDetails]);
@@ -212,17 +285,18 @@ export default function OrderDetails({ navigation, route }: any) {
             </View>
           </View>
 
-          <View style={styles.buttonContainer}>
-            <TouchableOpacity
-              style={[GlobalStyles.buttonPrimary, styles.reorderButton]}
-              activeOpacity={0.8}
-              onPress={() => {
-                console.log('Re-order clicked');
-              }}
-            >
-              <Text style={GlobalStyles.buttonPrimaryText}>Re-order</Text>
-            </TouchableOpacity>
-          </View>
+          {isReOrder ? (
+            <View style={styles.buttonContainer}>
+              <TouchableOpacity
+                style={[GlobalStyles.buttonPrimary, styles.reorderButton]}
+                activeOpacity={0.8}
+                disabled={loading}
+                onPress={handleReOrder}
+              >
+                <Text style={GlobalStyles.buttonPrimaryText}>Re-order</Text>
+              </TouchableOpacity>
+            </View>
+          ) : null}
         </ScrollView>
       </View>
     </View>

@@ -43,7 +43,7 @@ export type RootStackParamList = {
   DeliveryAddressList: undefined
   Dashboard: { fromTab?: boolean } | undefined;
   Orders: { fromTab?: boolean } | undefined;
-  OrderDetails: { orderId: number };
+  OrderDetails: { orderId: number; isReOrder?: boolean };
   Favorites: { fromTab?: boolean } | undefined;
   Search: {
     scope: SearchScope;
@@ -150,16 +150,20 @@ const App = () => {
           <Stack.Screen
             name="Dashboard"
             component={MainScreen}
-            options={({ route }) => ({
-              animation: route.params?.fromTab ? 'none' : 'default',
-            })}
+            options={{
+              animation: 'none',
+              gestureEnabled: false,
+              fullScreenGestureEnabled: false,
+            }}
           />
 
           <Stack.Screen
             name="Orders"
-            options={({ route }) => ({
-              animation: route.params?.fromTab ? 'none' : 'default',
-            })}
+            options={{
+              animation: 'none',
+              gestureEnabled: false,
+              fullScreenGestureEnabled: false,
+            }}
           >
             {props => (
               <DrawerScreenContainer navigation={props.navigation}>
@@ -205,8 +209,11 @@ const App = () => {
           <Stack.Screen
             name="Cart"
             component={Cart}
-            options={{ animation: 'none' }}
-           
+            options={{
+              animation: 'none',
+              gestureEnabled: false,
+              fullScreenGestureEnabled: false,
+            }}
           />
           <Stack.Screen
             name="Address"
@@ -265,7 +272,11 @@ const App = () => {
           />
           <Stack.Screen
             name="Favorites"
-            options={{ animation: 'none' }}
+            options={{
+              animation: 'none',
+              gestureEnabled: false,
+              fullScreenGestureEnabled: false,
+            }}
           >
             {props => (
               <DrawerScreenContainer navigation={props.navigation}>
