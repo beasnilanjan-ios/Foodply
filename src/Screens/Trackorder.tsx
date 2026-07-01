@@ -451,49 +451,59 @@ const getLiveStatus = (status: string) => {
                     )}
 
                     {/* ORDER INFO */}
-                    <View style={styles.orderRow}>
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          alignItems: 'center',
-                          gap: 5,
-                        }}
-                      >
-                        <Image
-                          source={require('../assets/images/shopping_bag.png')}
-                          style={styles.smallIconOrange}
-                        />
 
-                        <View>
-                          <Text style={styles.smallLabel}>
-                            {orderDetail?.order?.itemsSummary?.itemCount ?? 0} Items •{' '}
-                            {orderDetail?.order?.itemsSummary?.totalQuantity ?? 0} Qty
-                          </Text>
+                    <TouchableOpacity
+                      activeOpacity={0.8}
+                      onPress={() =>
+                        navigation.navigate('OrderDetails', {
+                          orderId: orderDetail?.order?.id, // optional if needed
+                          isReorder: true,
+                        })
+                      }
+                    >
+                        <View style={styles.orderRow}>
                           <View
                             style={{
                               flexDirection: 'row',
                               alignItems: 'center',
-                              gap: 4,
-                              marginTop: 2,
+                              gap: 5,
                             }}
                           >
-                            <Text style={styles.smallLabel}>Payment Status</Text>
-                            <View style={styles.codBadge}>
-                              <Text style={styles.codText}>
-                                {orderDetail?.order?.paymentStatus ?? ''}
+                            <Image
+                              source={require('../assets/images/shopping_bag.png')}
+                              style={styles.smallIconOrange}
+                            />
+
+                            <View>
+                              <Text style={styles.smallLabel}>
+                                {orderDetail?.order?.itemsSummary?.itemCount ?? 0} Items •{' '}
+                                {orderDetail?.order?.itemsSummary?.totalQuantity ?? 0} Qty
                               </Text>
+                              <View
+                                style={{
+                                  flexDirection: 'row',
+                                  alignItems: 'center',
+                                  gap: 4,
+                                  marginTop: 2,
+                                }}
+                              >
+                                <Text style={styles.smallLabel}>Payment Status</Text>
+                                <View style={styles.codBadge}>
+                                  <Text style={styles.codText}>
+                                    {orderDetail?.order?.paymentStatus ?? ''}
+                                  </Text>
+                                </View>
+                              </View>
                             </View>
                           </View>
+                          <View>
+                            <Text style={styles.smallLabel}>Order Amount</Text>
+                            <Text style={styles.amount}>
+                              ₹{orderDetail?.order.finalAmount.toFixed(2)}
+                            </Text>
+                          </View>
                         </View>
-                      </View>
-                      <View>
-                        <Text style={styles.smallLabel}>Order Amount</Text>
-                        <Text style={styles.amount}>
-                          ₹{orderDetail?.order.finalAmount.toFixed(2)}
-                        </Text>
-                      </View>
-                    </View>
-
+                    </TouchableOpacity>
                     {/* LIVE STATUS */}
                     <View style={styles.liveBox}>
                       <View style={styles.iconCircle}>
