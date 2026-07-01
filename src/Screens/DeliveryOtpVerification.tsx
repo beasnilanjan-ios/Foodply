@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, TextInput, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, TextInput, Alert, Linking } from 'react-native';
 import Colors from '../assets/Colors/Colors';
 import GlobalTopBarDelivery from '../GlobalContainer/GlobalTopBarDelivery';
 import { DeliveryOrderDetails } from '../Models/DeliveryOrderDetails/DeliveryOrderDetails';
@@ -265,6 +265,18 @@ const DeliveryOtpVerification = ({ route,
       setTimer(60);
       setCanResend(false);
     };
+
+    const makePhoneCall = (phoneNumber?: string) => {
+      if (!phoneNumber) {
+        Alert.alert('Error', 'Phone number not available');
+        return;
+      }
+
+      Linking.openURL(`tel:${phoneNumber}`).catch(() => {
+        Alert.alert('Error', 'Unable to make a phone call');
+      });
+    };
+
     
   return (
      <View style={styles.container}>
@@ -290,7 +302,11 @@ const DeliveryOtpVerification = ({ route,
                   <View style={styles.customerRow}>
                   <View style={styles.customerLeft}>
                     <Image
-                      source={require('../assets/images/customer_image.png')}
+                      source={
+                          orderDetail?.customer?.profileImageUrl
+                            ? { uri: orderDetail.customer.profileImageUrl }
+                            : require('../assets/images/customer_image.png')
+                        }
                       style={styles.profileImage}
                     />
           
@@ -303,15 +319,20 @@ const DeliveryOtpVerification = ({ route,
                         <Text style={styles.smallText}> {orderDetail?.customer.phone}</Text>
                       </View>
                       <View style={{ flexDirection: 'row', justifyContent: 'flex-start',alignItems: 'flex-start', marginRight: 10, marginTop: 4 }}>
-                        <Image style= {[DeliveryGlobalStyles.icon, {marginTop: 2}]} source={require('../assets/images/location.png')} />
+                        <Image 
+                          style= {[DeliveryGlobalStyles.icon, {marginTop: 2}]} 
+                          source={require('../assets/images/location.png')} />
                         <Text style={styles.smallText}> {orderDetail?.customer.address.address}</Text>
                       </View>
                     </View>
                   </View>
           
                   <View style={styles.actionButtons}>
-                    <TouchableOpacity style={styles.iconButton}>
-                      <Image style= {[DeliveryGlobalStyles.iconMedium]} source={require('../assets/images/call.png')} />
+                    <TouchableOpacity 
+                      style={styles.iconButton} 
+                      onPress={() => makePhoneCall(orderDetail?.customer.phone)}>
+                      <Image style= {[DeliveryGlobalStyles.iconMedium]} 
+                      source={require('../assets/images/call.png')} />
                     </TouchableOpacity>
                   </View>
                 </View>
