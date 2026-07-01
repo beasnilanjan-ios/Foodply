@@ -12,6 +12,7 @@ import { FontFamily } from '../assets/GlobalFont/GlobalFont';
 import { AssignedOrder } from '../Models/DeliveryDasboard/AssignedOrder';
 import { isActiveOrderStatus } from '../Models/MyOrdersModel';
 import { getTimeAgo } from '../Utils/CommonUtil';
+import { truncateText } from '../Utils/CommonUtil';
 
 type Props = {
   orders: AssignedOrder[];
@@ -50,9 +51,7 @@ const OrderCard = ({
 
       <View style={styles.orderCenter}>
         <View style={styles.rowBetween}>
-          <Text style={styles.customerName} numberOfLines={1}>
-            {item.customerName}
-          </Text>
+          <Text style={styles.customerName}>{truncateText(item.customerName, 16)}</Text>
 
           {!showAmountInItemBadge ? (
             <Text style={styles.amount}>

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, Alert, Linking } from 'react-native';
 import Colors from '../assets/Colors/Colors';
 import GlobalTopBarDelivery from '../GlobalContainer/GlobalTopBarDelivery';
 import OrderItemsListComponent from '../GlobalContainer/DeliveryOrderItemsListComponent';
@@ -133,6 +133,17 @@ useEffect(() => {
     }
 };
 
+ const makePhoneCall = (phoneNumber?: string) => {
+      if (!phoneNumber) {
+        Alert.alert('Error', 'Phone number not available');
+        return;
+      }
+
+      Linking.openURL(`tel:${phoneNumber}`).catch(() => {
+        Alert.alert('Error', 'Unable to make a phone call');
+      });
+    };
+
   return (
      <View style={styles.container}>
       <GlobalTopBarDelivery navigation={navigation} notificationClick={() => {}} text="Order Detail" subtitleText={`#${orderData?.order.orderNumber}`} isBackVisible={true} isOnlineVisible = {false} />
@@ -177,15 +188,17 @@ useEffect(() => {
 
                     <View style={styles.actionButtons}>
                         {from === 'Dashboard' && (
-                        <TouchableOpacity style={styles.iconButton}>
+                        <TouchableOpacity 
+                            style={styles.iconButton} 
+                            onPress={() => makePhoneCall(orderData?.customer.phone)}>
                             <Image style= {[DeliveryGlobalStyles.iconMedium]} source={require('../assets/images/call.png')} />
                         </TouchableOpacity>
                         )}
-                        {from === 'Dashboard' && (
+                        {/* {from === 'Dashboard' && (
                         <TouchableOpacity style={styles.iconButton}>
                             <Image style= {[DeliveryGlobalStyles.iconMedium]} source={require('../assets/images/send.png')} />
                         </TouchableOpacity>
-                        )}
+                        )} */}
                     </View>
                     </View>
                 </View>
@@ -323,13 +336,13 @@ useEffect(() => {
                 {/* Bottom Buttons */}
                 {from === 'Dashboard' && (
                 <View style={styles.buttonRow}>
-                    <TouchableOpacity
+                    {/* <TouchableOpacity
                     style={styles.callButton}
                     >
                     <Text style={styles.callButtonText}>
                         Call Customer
                     </Text>
-                    </TouchableOpacity>
+                    </TouchableOpacity> */}
 
                     <TouchableOpacity
                         style={styles.acceptButton} onPress={() => updateOrderStatus(orderData?.order.id || 0, ON_THE_WAY)}

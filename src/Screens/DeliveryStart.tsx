@@ -11,6 +11,7 @@ import {
   TouchableOpacity,
   ToastAndroid,
   Alert,
+  Linking,
 } from 'react-native';
 
 import {
@@ -735,6 +736,17 @@ export default function DeliveryStart({ route, navigation }: any) {
     }
   };
 
+  const makePhoneCall = (phoneNumber?: string) => {
+      if (!phoneNumber) {
+        Alert.alert('Error', 'Phone number not available');
+        return;
+      }
+
+      Linking.openURL(`tel:${phoneNumber}`).catch(() => {
+        Alert.alert('Error', 'Unable to make a phone call');
+      });
+    };
+
   return (
     <View style={styles.container}>
       <GlobalTopBarDelivery
@@ -895,7 +907,10 @@ export default function DeliveryStart({ route, navigation }: any) {
                       //     return;
                       //   sendLocation(latitude, longitude, orderDetail.order.id);
                       // }}
-                    >
+                      onPress={() => {
+                        // Call action
+                        makePhoneCall(orderDetail?.customer?.phone)
+                      }}>
                       <Image
                         source={require('../assets/images/call.png')}
                         style={styles.smallIcon}

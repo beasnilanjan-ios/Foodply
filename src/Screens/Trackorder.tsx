@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
   ToastAndroid,
   Alert,
+  Linking,
 } from 'react-native';
 
 import GlobalBackButton from '../GlobalContainer/GlobalBackButton';
@@ -51,6 +52,7 @@ export default function TrackOrder({ navigation, route }: any) {
     icon: require('../assets/images/check.png'),
     message: '',
   });  
+  const deliveryAssignedHandled = useRef(false);
 
 const steps = [
       { label: 'Accepted', status: 'ACCEPTED' },
@@ -88,24 +90,32 @@ const handleSocket = (trackedOrderId: number) => {
 
   const onSnapshot = (data: any) => {
     console.log('📍 Tracking Snapshot:', data);
+    console.log('stauts onSnapshot:',data?.status)
 
-    if (
-      data?.status === 'ON_THE_WAY' &&
-      data?.latestLocation
-    ) {
-      const {latitude, longitude} = data.latestLocation;
+    // if (data?.status === '"ORDER_ACCEPTED"') {
+    //   setcurrentIndex(0);
+    //   setCurrentLive(getLiveStatus('ACCEPTED'));
+    //   getOrderDetails(trackedOrderId);
+    // } else if (data?.status === 'PREPARING') {
+    //   setcurrentIndex(1);
+    //   setCurrentLive(getLiveStatus('PREPARING'));
+    // } else if (
+    //   data?.status === 'ON_THE_WAY' &&
+    //   data?.latestLocation
+    // ) {
+    //   const {latitude, longitude} = data.latestLocation;
 
-      console.log('Lat:', latitude);
-      console.log('Lng:', longitude);
+    //   console.log('Lat:', latitude);
+    //   console.log('Lng:', longitude);
 
-      //setcurrentIndex(2);
-      //setCurrentLive(getLiveStatus('ON_THE_WAY'));
+    //   setcurrentIndex(2);
+    //   setCurrentLive(getLiveStatus('ON_THE_WAY'));
 
-      setRiderLocation({
-        latitude,
-        longitude,
-      });
-    }
+    //   setRiderLocation({
+    //     latitude,
+    //     longitude,
+    //   });
+    // }
   };
 
   const onLocationUpdated = (data: any) => {
@@ -125,6 +135,46 @@ const handleSocket = (trackedOrderId: number) => {
 
   socket.current.onAny((event, ...args) => {
     console.log('EVENT =>', event, args);
+     const payload = args[0];
+
+     console.log('stauts onany:',payload?.status)
+
+     
+    if ( payload?.status === 'DELIVERY_ASSIGNED' &&
+    !deliveryAssignedHandled.current
+    ) {
+      deliveryAssignedHandled.current = true;
+      getOrderDetails(trackedOrderId);
+    } else if (payload?.status === 'ACCEPTED') {
+      setcurrentIndex(0);
+      setCurrentLive(getLiveStatus('ACCEPTED'));
+    } else if (payload?.status === 'PREPARING') {
+      setcurrentIndex(1);
+      setCurrentLive(getLiveStatus('PREPARING'));
+    } else if(
+      payload?.status === 'ON_THE_WAY' &&
+      payload?.latestLocation
+    ) {
+      const {latitude, longitude} = payload.latestLocation;
+
+      console.log('Lat:', latitude);
+      console.log('Lng:', longitude);
+
+      setcurrentIndex(2);
+      setCurrentLive(getLiveStatus('ON_THE_WAY'));
+
+      setRiderLocation({
+        latitude,
+        longitude,
+      });
+    } else if (payload?.status === 'DELIVERED') {
+      setcurrentIndex(3);
+      setCurrentLive(getLiveStatus('DELIVERED'));
+    } 
+    // else if(payload?.status !== 'PENDING'){
+    //   setcurrentIndex(2);
+    //   setCurrentLive(getLiveStatus('ON_THE_WAY'));
+    // } 
   });
 
   socket.current.on('connect', onConnect);
@@ -319,6 +369,17 @@ const getLiveStatus = (status: string) => {
       }
     };
 
+    const makePhoneCall = (phoneNumber?: string) => {
+      if (!phoneNumber) {
+        Alert.alert('Error', 'Phone number not available');
+        return;
+      }
+
+      Linking.openURL(`tel:${phoneNumber}`).catch(() => {
+        Alert.alert('Error', 'Unable to make a phone call');
+      });
+    };
+
   useEffect(() => {
     setCurrentLive(getLiveStatus(orderDetail?.order?.status ?? ''));
   }, [orderDetail?.order?.status]);
@@ -349,11 +410,11 @@ const getLiveStatus = (status: string) => {
                 {showDetailsCard ? (
                   <View style={styles.card1}>
                     {/* USER INFO */}
-                    {orderDetail?.order?.status !== 'PENDING' ? (
+                    {orderDetail?.status !== 'PENDING' ? (
                       <View style={styles.header}>
                         <Image 
-                          source={ orderDetail?.customer?.profileImageUrl ? 
-                          { uri: orderDetail?.customer?.profileImageUrl } : 
+                          source={ orderDetail?.agent?.profileImageUrl ? 
+                          { uri: orderDetail?.agent?.profileImageUrl } : 
                           require('../assets/images/customer_image.png') } 
                           style={styles.avatar} 
                         />
@@ -374,6 +435,7 @@ const getLiveStatus = (status: string) => {
                             style={styles.circleBtn}
                             onPress={() => {
                               // Call action
+                              makePhoneCall(orderDetail?.customer?.phone)
                             }}>
                             <Image
                               source={require('../assets/images/call.png')}
@@ -389,49 +451,59 @@ const getLiveStatus = (status: string) => {
                     )}
 
                     {/* ORDER INFO */}
-                    <View style={styles.orderRow}>
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          alignItems: 'center',
-                          gap: 5,
-                        }}
-                      >
-                        <Image
-                          source={require('../assets/images/shopping_bag.png')}
-                          style={styles.smallIconOrange}
-                        />
 
-                        <View>
-                          <Text style={styles.smallLabel}>
-                            {orderDetail?.order?.itemsSummary?.itemCount ?? 0} Items •{' '}
-                            {orderDetail?.order?.itemsSummary?.totalQuantity ?? 0} Qty
-                          </Text>
+                    <TouchableOpacity
+                      activeOpacity={0.8}
+                      onPress={() =>
+                        navigation.navigate('OrderDetails', {
+                          orderId: orderDetail?.order?.id, // optional if needed
+                          isReorder: true,
+                        })
+                      }
+                    >
+                        <View style={styles.orderRow}>
                           <View
                             style={{
                               flexDirection: 'row',
                               alignItems: 'center',
-                              gap: 4,
-                              marginTop: 2,
+                              gap: 5,
                             }}
                           >
-                            <Text style={styles.smallLabel}>Payment Status</Text>
-                            <View style={styles.codBadge}>
-                              <Text style={styles.codText}>
-                                {orderDetail?.order?.paymentStatus ?? ''}
+                            <Image
+                              source={require('../assets/images/shopping_bag.png')}
+                              style={styles.smallIconOrange}
+                            />
+
+                            <View>
+                              <Text style={styles.smallLabel}>
+                                {orderDetail?.order?.itemsSummary?.itemCount ?? 0} Items •{' '}
+                                {orderDetail?.order?.itemsSummary?.totalQuantity ?? 0} Qty
                               </Text>
+                              <View
+                                style={{
+                                  flexDirection: 'row',
+                                  alignItems: 'center',
+                                  gap: 4,
+                                  marginTop: 2,
+                                }}
+                              >
+                                <Text style={styles.smallLabel}>Payment Status</Text>
+                                <View style={styles.codBadge}>
+                                  <Text style={styles.codText}>
+                                    {orderDetail?.order?.paymentStatus ?? ''}
+                                  </Text>
+                                </View>
+                              </View>
                             </View>
                           </View>
+                          <View>
+                            <Text style={styles.smallLabel}>Order Amount</Text>
+                            <Text style={styles.amount}>
+                              ₹{orderDetail?.order.finalAmount.toFixed(2)}
+                            </Text>
+                          </View>
                         </View>
-                      </View>
-                      <View>
-                        <Text style={styles.smallLabel}>Order Amount</Text>
-                        <Text style={styles.amount}>
-                          ₹{Number(orderDetail?.order?.totalAmount ?? 0).toFixed(2)}
-                        </Text>
-                      </View>
-                    </View>
-
+                    </TouchableOpacity>
                     {/* LIVE STATUS */}
                     <View style={styles.liveBox}>
                       <View style={styles.iconCircle}>
@@ -718,13 +790,12 @@ const styles = StyleSheet.create({
 
   card1: {
     position: 'absolute',
-    bottom: 80,
+    bottom: 20,
     left: 15,
     right: 15,
     backgroundColor: '#fff',
     borderRadius: 25,
     padding: 18,
-
     shadowColor: '#000',
     shadowOpacity: 0.15,
     shadowRadius: 10,
@@ -937,7 +1008,7 @@ const styles = StyleSheet.create({
 
   floatingShowButton: {
     position: 'absolute',
-    bottom: 90,
+    bottom: 20,
     right: 20,
     width: 40,
     height: 40,
