@@ -43,7 +43,7 @@ export type RootStackParamList = {
   DeliveryAddressList: undefined
   Dashboard: { fromTab?: boolean } | undefined;
   Orders: { fromTab?: boolean } | undefined;
-  OrderDetails: { orderId: number };
+  OrderDetails: { orderId: number; isReOrder?: boolean };
   Favorites: { fromTab?: boolean } | undefined;
   Search: {
     scope: SearchScope;

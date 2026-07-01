@@ -173,7 +173,10 @@ export default function Orders({ navigation, onMenuPress }: any) {
               orders={getOrders()}
               showTrackOrderButton={activeTab === 'Active'}
               onPressItem={item => {
-                navigation.navigate('OrderDetails', { orderId: item.orderId });
+                navigation.navigate('OrderDetails', {
+                  orderId: item.orderId,
+                  isReOrder: item.isReOrder,
+                });
               }}
               onPressTrackOrder={item => {
                 navigation.navigate('Trackorder', { orderId: item.orderId });

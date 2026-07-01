@@ -15,6 +15,7 @@ export class MyOrderItemModel {
   paymentStatus: string;
   deliveryStatus: string;
   deliveryId: number;
+  isReOrder: boolean;
 
   constructor(data: Partial<MyOrderItemModel> = {}) {
     this.orderId = data.orderId ?? 0;
@@ -33,6 +34,7 @@ export class MyOrderItemModel {
     this.paymentStatus = data.paymentStatus ?? '';
     this.deliveryStatus = data.deliveryStatus ?? '';
     this.deliveryId = data.deliveryId ?? 0;
+    this.isReOrder = data.isReOrder ?? false;
   }
 
   static fromJson(json: any): MyOrderItemModel {
@@ -136,6 +138,7 @@ export class MyOrderItemModel {
         json?.deliveryStatus ?? json?.delivery?.status ?? '',
       ),
       deliveryId: Number(json?.deliveryId ?? json?.delivery?.id ?? 0),
+      isReOrder: Boolean(order?.isReOrder ?? json?.isReOrder),
     });
   }
 
