@@ -98,6 +98,15 @@ export default function Orders({ navigation, onMenuPress }: any) {
 
   useFocusEffect(
     useCallback(() => {
+      navigation?.setOptions?.({
+        gestureEnabled: false,
+        fullScreenGestureEnabled: false,
+      });
+    }, [navigation]),
+  );
+
+  useFocusEffect(
+    useCallback(() => {
       fetchMyOrders();
     }, [fetchMyOrders]),
   );
