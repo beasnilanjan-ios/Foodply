@@ -120,7 +120,7 @@ class GlobalCart {
         headers: {
           Accept: 'application/json',
           'Content-Type': 'application/json',
-          'X-Client-Type': 'web',
+          'X-Client-Type': 'mobile',
           Authorization: `Bearer ${token}`,
         },
       });

@@ -66,7 +66,7 @@ const getApiHeaders = (): Record<string, string> => {
   const headers: Record<string, string> = {
     Accept: 'application/json',
     'Content-Type': 'application/json',
-    'X-Client-Type': 'web',
+    'X-Client-Type': 'mobile',
   };
 
   const token = GlobalLoginAuth.accessToken || GlobalLoginAuth.token;

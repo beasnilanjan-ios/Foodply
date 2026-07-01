@@ -227,7 +227,7 @@ type PromoBannerItem = {
 const getApiHeaders = (): Record<string, string> => {
   const headers: Record<string, string> = {
     Accept: 'application/json',
-    'X-Client-Type': 'web',
+    'X-Client-Type': 'mobile',
   };
 
   const token = GlobalLoginAuth.accessToken || GlobalLoginAuth.token;
@@ -429,13 +429,24 @@ export default function Dashboard({ navigation, onMenuPress }: any) {
         `longitude=${lng}&` +
         `limit=20&` +
         `offset=0`;
+      const headers = getApiHeaders();
+
+      console.log('Full API Restaurant Menu URL:', menuUrl);
+      console.log(
+        'Full API Restaurant Menu Headers:',
+        JSON.stringify(headers, null, 2),
+      );
 
       const menuResponse = await fetch(menuUrl, {
         method: 'GET',
-        headers: getApiHeaders(),
+        headers,
       });
 
       const menuResult = await menuResponse.json();
+      console.log(
+        'Full API Restaurant Menu Response:',
+        JSON.stringify(menuResult, null, 2),
+      );
       const restaurantMenu = RestaurantMenuResponseModel.fromJson(menuResult);
 
       if (!menuResponse.ok) {
