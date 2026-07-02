@@ -47,15 +47,16 @@ export default function OrderConfirmed({ navigation, route }: any) {
         </Text>
 
         {/* 🔘 TRACK BUTTON */}
-        {/* <TouchableOpacity
+        <TouchableOpacity
           style={styles.trackButton}
           activeOpacity={0.8}
-          onPress={() => navigation.navigate('Trackorder', { orderId })}
+          //onPress={() => navigation.navigate('Trackorder', { orderId })}
+          onPress={() => navigation.replace('Trackorder', { orderId })}
         >
           <Text style={styles.trackText}>Track my order</Text>
-        </TouchableOpacity> */}
+        </TouchableOpacity>
 
-        <TouchableOpacity
+        {/* <TouchableOpacity
           style={styles.trackButton}
           activeOpacity={0.8}
           onPress={() =>
@@ -74,7 +75,7 @@ export default function OrderConfirmed({ navigation, route }: any) {
           }
         >
           <Text style={styles.trackText}>Track my order</Text>
-        </TouchableOpacity>
+        </TouchableOpacity> */}
         <View style={styles.bottomSpacer} />
 
         {/* 🧾 HELP TEXT */}
