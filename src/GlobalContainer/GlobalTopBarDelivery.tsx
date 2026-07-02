@@ -75,7 +75,7 @@ export default function GlobalTopBarDelivery({ navigation, notificationClick, te
 const styles = StyleSheet.create({
   topBar: {
     width: '100%',
-    paddingHorizontal: 15,
+  
     marginTop:
       Platform.OS === 'ios'
         ? isTablet
