@@ -9,6 +9,7 @@ import {
   Platform,
 } from 'react-native';
 import Colors from '../assets/Colors/Colors';
+import GlobalStyles from '../assets/Styles/GlobalStyles';
 
 const { width, height } = Dimensions.get('window');
 const isTablet = Math.min(width, height) >= 600;
@@ -16,66 +17,69 @@ const isTablet = Math.min(width, height) >= 600;
 export default function GlobalTopBarDelivery({ navigation, notificationClick, text, subtitleText, isBackVisible, isOnlineVisible }: any) {
   return (
     <View style={styles.topBar}>
+      <View style={styles.headerContainer}>
+        <View style={styles.titleRow}>
+          <View style={styles.row}>
+            {isBackVisible && (
+              <TouchableOpacity
+                style={styles.backButton}
+                activeOpacity={0.7}
+                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                onPress={() => navigation?.goBack?.()}
+              >
+                <Image
+                  source={require('../assets/images/Back.png')}
+                  style={styles.backIcon}
+                />
+              </TouchableOpacity>
+            )}
+            <Text style={styles.title}>{text}</Text>
+            {isOnlineVisible && (
+              <View style={styles.curveBackground}>
+                <View style={[styles.circle, { backgroundColor: 'green' }]} />
+                <Text style={[styles.subtitle, { color: Colors.black }, { marginTop: 2 }]}>
+                  Online
+                </Text>
+              </View>
+            )}
+          </View>
 
-       <View style={styles.headerContainer}>
-          <Text style={[styles.subtitle, { marginLeft: isBackVisible ? 12 : 0 }]}>
+          <TouchableOpacity
+            style={styles.smallCircle}
+            activeOpacity={0.8}
+            onPress={notificationClick}>
+            <Image
+              source={require('../assets/images/notification.png')}
+              style={styles.menuIcon}
+            />
+          </TouchableOpacity>
+        </View>
+
+        {!!subtitleText && (
+          <Text
+            style={[
+              styles.subtitle,
+              isBackVisible ? styles.subtitleIndented : null,
+            ]}>
             {subtitleText}
           </Text>
-        <View style={styles.row}>
-          {isBackVisible && (
-            <TouchableOpacity onPress={() => navigation.goBack()}>
-              <Image
-                source={require('../assets/images/Back.png')}
-                style={{
-                  width: 12,
-                  height: 12,
-                  padding: 4,
-                  marginRight: 2,
-                  marginLeft: -2,
-                }}
-              />
-            </TouchableOpacity>
-          )}
-          <Text style={styles.title}>{text}</Text>
-          {isOnlineVisible && (
-            <View style={styles.curveBackground}>
-              <View style={[styles.circle, { backgroundColor: 'green' }]} />
-                <Text style={[styles.subtitle, { color: Colors.black }, { marginTop: 2 }]}>
-                   Online
-                </Text>
-            </View>
-          )}
-          </View>
-        </View>
-      {/* RIGHT ICONS */}
-      <View style={styles.rightIcons}>
-        <TouchableOpacity style={styles.smallCircle} onPress={notificationClick}>
-          <Image
-            source={require('../assets/images/notification.png')}
-            style={styles.menuIcon}
-          />
-        </TouchableOpacity>
+        )}
       </View>
-
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   topBar: {
-  width: '100%',
-  height: isTablet ? 100 : 80,
-  flexDirection: 'row',
-  alignItems: 'flex-end',
-  justifyContent: 'space-between',
-  paddingHorizontal: 15,
-  marginTop:
-    Platform.OS === 'ios'
-      ? isTablet
-        ? -65
-        : -45
-      : -70,
-},
+    width: '100%',
+    paddingHorizontal: 15,
+    marginTop:
+      Platform.OS === 'ios'
+        ? isTablet
+          ? -65
+          : -45
+        : -70,
+  },
 
   circleButton: {
     width: 26,
@@ -125,13 +129,6 @@ const styles = StyleSheet.create({
     resizeMode: 'contain',
   },
 
- rightIcons: {
-  justifyContent: 'flex-start',
-  alignItems: 'flex-end',
-  marginTop: 10,
-  marginLeft: 'auto',
-  flexShrink: 0,
-},
   smallCircle: {
     width: 26,
     height: 26,
@@ -139,36 +136,62 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     justifyContent: 'center',
     alignItems: 'center',
-    marginLeft: 8,
+    flexShrink: 0,
   },
 
  headerContainer: {
-  marginTop: Platform.OS === 'ios' ? 15 : 10,
-  alignItems: 'flex-start',
+  marginTop: Platform.OS === 'ios' ? 8 : 6,
+  width: '100%',
 },
+
+  titleRow: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
   
     title: {
+      flexShrink: 1,
       fontSize: isTablet ? 34 : 28,
       fontFamily: 'LeagueSpartan-Bold',
       color: '#fff',
       textAlign: 'left',
-      includeFontPadding: false, // 🔥 Android fix
-      marginTop: 5,
+      includeFontPadding: false,
+      marginTop: 0,
     },
   
     subtitle: {
       fontSize: isTablet ? 18 : 16,
       fontFamily: 'LeagueSpartan-Regular',
       color: '#fff',
-      marginTop: 5,
+      marginTop: 4,
       textAlign: 'left',
-      includeFontPadding: false, // 🔥 Android fix
+      includeFontPadding: false,
+    },
+
+    subtitleIndented: {
+      marginLeft: 44,
     },
 
     row: {
+      flex: 1,
       flexDirection: 'row',
+      alignItems: 'center',
+      marginRight: 8,
+    },
+
+    backButton: {
+      width: 40,
+      height: 40,
       justifyContent: 'center',
       alignItems: 'center',
+      marginRight: 4,
+      zIndex: 10,
+    },
+
+    backIcon: {
+      ...GlobalStyles.backIcon,
     },
 
     curveBackground: {
