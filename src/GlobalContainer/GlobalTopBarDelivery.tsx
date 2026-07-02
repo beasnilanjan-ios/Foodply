@@ -175,7 +175,7 @@ const styles = StyleSheet.create({
     },
 
     subtitleIndented: {
-      marginLeft: 44,
+      marginLeft: 26,
     },
 
     row: {
@@ -193,6 +193,7 @@ const styles = StyleSheet.create({
       alignItems: 'center',
       zIndex: 10,
       marginTop: -4,
+      marginLeft: -15,
     },
 
     backIcon: {
