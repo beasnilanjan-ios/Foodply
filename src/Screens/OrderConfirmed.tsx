@@ -10,6 +10,8 @@ import {
 
 import GlobalBackButton from '../GlobalContainer/GlobalBackButton';
 import Colors from '../assets/Colors/Colors';
+import { CommonActions } from '@react-navigation/native';
+
 
 export default function OrderConfirmed({ navigation, route }: any) {
   const orderId = route?.params?.orderId;
@@ -45,14 +47,34 @@ export default function OrderConfirmed({ navigation, route }: any) {
         </Text>
 
         {/* 🔘 TRACK BUTTON */}
-        <TouchableOpacity
+        {/* <TouchableOpacity
           style={styles.trackButton}
           activeOpacity={0.8}
           onPress={() => navigation.navigate('Trackorder', { orderId })}
         >
           <Text style={styles.trackText}>Track my order</Text>
-        </TouchableOpacity>
+        </TouchableOpacity> */}
 
+        <TouchableOpacity
+          style={styles.trackButton}
+          activeOpacity={0.8}
+          onPress={() =>
+            navigation.dispatch(
+              CommonActions.reset({
+                index: 1,
+                routes: [
+                  { name: 'Dashboard' },
+                  {
+                    name: 'Trackorder',
+                    params: { orderId },
+                  },
+                ],
+              })
+            )
+          }
+        >
+          <Text style={styles.trackText}>Track my order</Text>
+        </TouchableOpacity>
         <View style={styles.bottomSpacer} />
 
         {/* 🧾 HELP TEXT */}
