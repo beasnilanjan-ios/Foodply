@@ -201,9 +201,6 @@ export class MyOrdersResponseModel {
 export const normalizeOrderStatus = (status: string): string =>
   status.trim().toUpperCase().replace(/\s+/g, '_');
 
-export const isActiveOrderStatus = (status: string): boolean =>
-  normalizeOrderStatus(status) === 'ACCEPTED';
-
 export const isCompletedOrderStatus = (status: string): boolean =>
   normalizeOrderStatus(status) === 'DELIVERED';
 
@@ -211,3 +208,6 @@ export const isCancelledOrderStatus = (status: string): boolean => {
   const normalized = normalizeOrderStatus(status);
   return normalized === 'CANCELLED' || normalized === 'CANCELED';
 };
+
+export const isActiveOrderStatus = (status: string): boolean =>
+  !isCompletedOrderStatus(status) && !isCancelledOrderStatus(status);

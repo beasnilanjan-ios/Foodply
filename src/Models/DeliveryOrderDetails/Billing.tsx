@@ -4,6 +4,9 @@ export interface Billing {
   packagingCharge: number;
   discountAmount: number;
   taxAmount: number;
+  cgstAmount?: number;
+  sgstAmount?: number;
+  tipAmount?: number;
   totalAmount: number;
   finalAmount: number;
   paymentMethod: string;

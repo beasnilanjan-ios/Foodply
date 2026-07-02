@@ -183,4 +183,50 @@ export default class GlobalLocationPermission {
       });
     }
   }
+
+  static async getSearchBiasLocation(): Promise<{
+    lat: number;
+    lon: number;
+  } | null> {
+    try {
+      if (Platform.OS === 'android') {
+        let hasPermission = await PermissionsAndroid.check(
+          PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+        );
+
+        if (!hasPermission) {
+          const granted = await PermissionsAndroid.request(
+            PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+            {
+              title: 'Improve address search',
+              message:
+                'Allow location to show nearby address suggestions while you type.',
+              buttonPositive: 'Allow',
+              buttonNegative: 'Not now',
+            },
+          );
+          hasPermission = granted === PermissionsAndroid.RESULTS.GRANTED;
+        }
+
+        if (!hasPermission) {
+          return null;
+        }
+      } else {
+        const status = await Geolocation.requestAuthorization('whenInUse');
+        if (status !== 'granted') {
+          return null;
+        }
+      }
+
+      const position = await this.getCurrentLocation();
+
+      return {
+        lat: position.coords.latitude,
+        lon: position.coords.longitude,
+      };
+    } catch (error) {
+      console.log('Search bias location unavailable:', error);
+      return null;
+    }
+  }
 }
