@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, TextInput, Alert, Linking } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, TextInput, Alert, Linking, KeyboardAvoidingView, Platform } from 'react-native';
 import Colors from '../assets/Colors/Colors';
 import GlobalTopBarDelivery from '../GlobalContainer/GlobalTopBarDelivery';
 import { DeliveryOrderDetails } from '../Models/DeliveryOrderDetails/DeliveryOrderDetails';
@@ -287,12 +287,16 @@ const DeliveryOtpVerification = ({ route,
         isBackVisible={true}
         isOnlineVisible={false}
       />
+      <KeyboardAvoidingView
+        style={styles.keyboardAvoiding}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={0}>
        <View style={styles.overlay}>
         <ScrollView
               showsVerticalScrollIndicator={false}
-              contentContainerStyle={{
-              paddingBottom: 40,
-            }}>
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="interactive"
+              contentContainerStyle={styles.scrollContent}>
               {/* Customer Information */}
               <View style={styles.card}>
                   <Text style={styles.cardTitle}>
@@ -492,6 +496,7 @@ const DeliveryOtpVerification = ({ route,
               </View>
             </ScrollView>
       </View>
+      </KeyboardAvoidingView>
       <GlobalLoader visible={loading} />
     </View>
     );
@@ -506,6 +511,10 @@ const styles = StyleSheet.create({
     paddingTop: 100,
   },
 
+  keyboardAvoiding: {
+    flex: 1,
+  },
+
   overlay: {
     flex: 1,
     backgroundColor: '#F8F8F8',
@@ -514,6 +523,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 18,
     marginTop: 20,
+  },
+
+  scrollContent: {
+    paddingBottom: 120,
   },
 
   card: {
