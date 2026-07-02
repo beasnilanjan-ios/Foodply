@@ -14,6 +14,7 @@ import GlobalStyles from '../assets/Styles/GlobalStyles';
 const { width, height } = Dimensions.get('window');
 const isTablet = Math.min(width, height) >= 600;
 
+//Final changes
 export default function GlobalTopBarDelivery({ navigation, notificationClick, text, subtitleText, isBackVisible, isOnlineVisible }: any) {
   return (
     <View style={styles.topBar}>
