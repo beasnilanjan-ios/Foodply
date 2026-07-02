@@ -18,12 +18,19 @@ import { goBackToDashboard } from '../GlobalContainer/navigationHelpers';
 import GlobalApi from '../GlobalContainer/GlobalApi';
 import GlobalLoginAuth from '../GlobalContainer/GlobalLoginAuth';
 import GlobalCart from '../GlobalContainer/GlobalCart';
+import GlobalLocationPermission from '../GlobalContainer/GlobalLocationPermission';
 import Colors from '../assets/Colors/Colors';
 import GlobalStyles from '../assets/Styles/GlobalStyles';
 import {
   AddUserAddressRequestModel,
   UserAddressResponseModel,
 } from '../Models/UserAddressModel';
+import {
+  AddressSearchBias,
+  LocationIqSearchResult,
+  resolveLocationIqAddress,
+  searchLocationIqAddresses,
+} from '../services/locationIqService';
 
 type AddressItem = {
   id?: number;
@@ -36,31 +43,9 @@ type AddressItem = {
   isDefault: boolean;
 };
 
-type NominatimAddressDetails = {
-  house_number?: string;
-  road?: string;
-  suburb?: string;
-  neighbourhood?: string;
-  city?: string;
-  city_district?: string;
-  town?: string;
-  village?: string;
-  state?: string;
-  state_district?: string;
-};
-
-type SearchResult = {
-  place_id: number;
-  display_name: string;
-  lat: string;
-  lon: string;
-  address?: NominatimAddressDetails;
-};
-
 const ALLOWED_ADDRESS_LABELS = ['Home', 'Work', 'Other'] as const;
 type AddressLabel = (typeof ALLOWED_ADDRESS_LABELS)[number];
 const SEARCH_DEBOUNCE_MS = 500;
-const NOMINATIM_USER_AGENT = 'Foodyply/1.0 (delivery-address-search)';
 
 const getApiHeaders = (): Record<string, string> => {
   const headers: Record<string, string> = {
@@ -77,7 +62,7 @@ const getApiHeaders = (): Record<string, string> => {
   return headers;
 };
 
-const getCityFromResult = (result: SearchResult): string => {
+const getCityFromResult = (result: LocationIqSearchResult): string => {
   const address = result.address;
   return (
     address?.city ||
@@ -88,12 +73,12 @@ const getCityFromResult = (result: SearchResult): string => {
   );
 };
 
-const getStateFromResult = (result: SearchResult): string => {
+const getStateFromResult = (result: LocationIqSearchResult): string => {
   const address = result.address;
   return address?.state || address?.state_district || '';
 };
 
-const buildAddressLine = (result: SearchResult): string => {
+const buildAddressLine = (result: LocationIqSearchResult): string => {
   const address = result.address;
 
   if (address) {
@@ -148,21 +133,57 @@ export default function DeliveryAddressList({ navigation }: any) {
   const [selectedLabel, setSelectedLabel] = useState<AddressLabel>('Home');
   const [editingAddressId, setEditingAddressId] = useState<number | null>(null);
   const [query, setQuery] = useState('');
-  const [results, setResults] = useState<SearchResult[]>([]);
+  const [results, setResults] = useState<LocationIqSearchResult[]>([]);
+  const [selectedSearchResult, setSelectedSearchResult] =
+    useState<LocationIqSearchResult | null>(null);
   const [isSearching, setIsSearching] = useState(false);
   const [isSavingAddress, setIsSavingAddress] = useState(false);
   const [isDeletingAddress, setIsDeletingAddress] = useState(false);
   const [searchError, setSearchError] = useState('');
+  const [searchBias, setSearchBias] = useState<AddressSearchBias | null>(null);
 
   const [addressList, setAddressList] = useState<AddressItem[]>([]);
 
   const searchRequestIdRef = useRef(0);
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const addressListRef = useRef<AddressItem[]>([]);
+  const selectedSearchResultRef = useRef<LocationIqSearchResult | null>(null);
+  const searchBiasRef = useRef<AddressSearchBias | null>(null);
 
   useEffect(() => {
     addressListRef.current = addressList;
   }, [addressList]);
+
+  useEffect(() => {
+    selectedSearchResultRef.current = selectedSearchResult;
+  }, [selectedSearchResult]);
+
+  useEffect(() => {
+    searchBiasRef.current = searchBias;
+  }, [searchBias]);
+
+  useEffect(() => {
+    if (!isAdding) {
+      return;
+    }
+
+    let active = true;
+
+    const prepareSearchBias = async () => {
+      const bias = await GlobalLocationPermission.getSearchBiasLocation();
+      if (!active) {
+        return;
+      }
+
+      setSearchBias(bias);
+    };
+
+    prepareSearchBias();
+
+    return () => {
+      active = false;
+    };
+  }, [isAdding]);
 
   useEffect(() => {
     return () => {
@@ -227,6 +248,12 @@ export default function DeliveryAddressList({ navigation }: any) {
 
       setAddressList(mapped);
       addressListRef.current = mapped;
+
+      if (mapped.length === 0) {
+        await GlobalCart.clearShippingAddress();
+        setSelected(0);
+        return mapped;
+      }
 
       await GlobalCart.loadShippingAddress();
 
@@ -357,7 +384,7 @@ export default function DeliveryAddressList({ navigation }: any) {
   };
 
   const upsertAddressFromResult = async (
-    result: SearchResult,
+    result: LocationIqSearchResult,
     label: AddressLabel,
     addressId?: number,
   ) => {
@@ -420,47 +447,10 @@ export default function DeliveryAddressList({ navigation }: any) {
     setEditingAddressId(null);
     setQuery('');
     setResults([]);
+    setSelectedSearchResult(null);
     setSearchError('');
     setIsSearching(false);
     setIsAdding(false);
-  };
-
-  const searchNominatim = async (
-    text: string,
-    limit = 10,
-  ): Promise<SearchResult[]> => {
-    const searchUrl =
-      `https://nominatim.openstreetmap.org/search?` +
-      `q=${encodeURIComponent(text.trim())}&` +
-      'format=json&' +
-      'addressdetails=1&' +
-      `limit=${limit}`;
-
-    const response = await fetch(searchUrl, {
-      method: 'GET',
-      headers: {
-        Accept: 'application/json',
-        'User-Agent': NOMINATIM_USER_AGENT,
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error('Search failed');
-    }
-
-    const data = await response.json();
-
-    if (!Array.isArray(data) || data.length === 0) {
-      return [];
-    }
-
-    return data.map((item: SearchResult) => ({
-      place_id: item.place_id,
-      display_name: item.display_name,
-      lat: String(item.lat),
-      lon: String(item.lon),
-      address: item.address,
-    }));
   };
 
   const fetchAddressResults = async (text: string) => {
@@ -478,7 +468,10 @@ export default function DeliveryAddressList({ navigation }: any) {
     setSearchError('');
 
     try {
-      const data = await searchNominatim(trimmedText);
+      const data = await searchLocationIqAddresses(trimmedText, {
+        bias: searchBiasRef.current,
+        limit: 10,
+      });
 
       if (requestId !== searchRequestIdRef.current) {
         return;
@@ -500,7 +493,11 @@ export default function DeliveryAddressList({ navigation }: any) {
       }
 
       setResults([]);
-      setSearchError('Unable to search right now. Check your internet and retry.');
+      setSearchError(
+        error instanceof Error && error.message.includes('access token')
+          ? 'LocationIQ access token is missing. Add it in GlobalApi.locationIqAccessToken.'
+          : 'Unable to search right now. Check your internet and retry.',
+      );
     } finally {
       if (requestId === searchRequestIdRef.current) {
         setIsSearching(false);
@@ -510,6 +507,7 @@ export default function DeliveryAddressList({ navigation }: any) {
 
   const handleQueryChange = (text: string) => {
     setQuery(text);
+    setSelectedSearchResult(null);
 
     if (debounceTimerRef.current) {
       clearTimeout(debounceTimerRef.current);
@@ -561,20 +559,28 @@ export default function DeliveryAddressList({ navigation }: any) {
     setSearchError('');
 
     try {
-      const matchedResult = results.find(
-        item => item.display_name.toLowerCase() === trimmedQuery.toLowerCase(),
+      const resolvedResult = await resolveLocationIqAddress(
+        trimmedQuery,
+        selectedSearchResultRef.current,
+        { bias: searchBiasRef.current },
       );
 
-      const resolvedResult = matchedResult || (await searchNominatim(trimmedQuery, 1))[0];
+      await upsertAddressFromResult(
+        resolvedResult,
+        labelToSave,
+        addressIdToUpdate,
+      );
+    } catch (error) {
+      console.log('Apply address save failed:', error);
 
-      if (!resolvedResult) {
-        setSearchError('Could not find coordinates for this address.');
+      if (
+        error instanceof Error &&
+        error.message === 'Could not find coordinates for this address.'
+      ) {
+        setSearchError(error.message);
         return;
       }
 
-      await upsertAddressFromResult(resolvedResult, labelToSave, addressIdToUpdate);
-    } catch (error) {
-      console.log('Apply address save failed:', error);
       Alert.alert(
         'Save address failed',
         error instanceof Error
@@ -591,6 +597,7 @@ export default function DeliveryAddressList({ navigation }: any) {
     setEditingAddressId(null);
     setQuery('');
     setResults([]);
+    setSelectedSearchResult(null);
     setSearchError('');
     setIsSearching(false);
     setIsAdding(false);
@@ -609,6 +616,7 @@ export default function DeliveryAddressList({ navigation }: any) {
       setEditingAddressId(existing.id);
       setQuery(existing.address);
       setResults([]);
+      setSelectedSearchResult(null);
       setSearchError('');
       return;
     }
@@ -616,6 +624,7 @@ export default function DeliveryAddressList({ navigation }: any) {
     setEditingAddressId(null);
     setQuery('');
     setResults([]);
+    setSelectedSearchResult(null);
     setSearchError('');
   };
 
@@ -628,13 +637,15 @@ export default function DeliveryAddressList({ navigation }: any) {
     setSelectedLabel(toAddressLabel(item.title));
     setQuery(item.address);
     setResults([]);
+    setSelectedSearchResult(null);
     setSearchError('');
     setIsSearching(false);
     setIsAdding(true);
   };
 
-  const handleSearchResultPress = (item: SearchResult) => {
+  const handleSearchResultPress = (item: LocationIqSearchResult) => {
     setQuery(item.display_name);
+    setSelectedSearchResult(item);
     setResults([]);
     setSearchError('');
     setIsSearching(false);
@@ -649,6 +660,7 @@ export default function DeliveryAddressList({ navigation }: any) {
       setSelectedLabel(defaultLabel);
       setQuery('');
       setResults([]);
+      setSelectedSearchResult(null);
       setSearchError('');
       setIsSearching(false);
       setIsAdding(true);
@@ -816,12 +828,15 @@ export default function DeliveryAddressList({ navigation }: any) {
 
               {results.length > 0 && (
                 <View style={styles.resultsContainer}>
-                  {results.map(item => (
+                  {results.map((item, index) => (
                     <TouchableOpacity
-                      key={String(item.place_id)}
+                      key={item.place_id || `${item.display_name}-${index}`}
                       style={styles.resultItem}
                       onPress={() => handleSearchResultPress(item)}>
                       <Text style={styles.resultText}>{item.display_name}</Text>
+                      {item.subtitle ? (
+                        <Text style={styles.resultSubText}>{item.subtitle}</Text>
+                      ) : null}
                     </TouchableOpacity>
                   ))}
                 </View>
@@ -1097,6 +1112,13 @@ const styles = StyleSheet.create({
   resultText: {
     fontSize: 14,
     color: '#1F2937',
+    fontFamily: 'LeagueSpartan-Regular',
+  },
+
+  resultSubText: {
+    marginTop: 4,
+    fontSize: 12,
+    color: '#6B7280',
     fontFamily: 'LeagueSpartan-Regular',
   },
 

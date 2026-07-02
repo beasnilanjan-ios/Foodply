@@ -870,16 +870,8 @@ export default function Cart({ navigation, route }: any) {
           return;
         }
 
-        const storedAddress = await GlobalCart.loadShippingAddress();
-        if (storedAddress.trim()) {
-          setShippingAddress(storedAddress);
-          return;
-        }
-
         const apiAddress = await GlobalCart.refreshShippingAddressFromApi();
-        if (apiAddress.trim()) {
-          setShippingAddress(apiAddress);
-        }
+        setShippingAddress(apiAddress.trim());
       };
 
       loadShippingAddress();
@@ -1312,7 +1304,7 @@ export default function Cart({ navigation, route }: any) {
                     </Text>
                   ) : (
                     <Text style={styles.addressPlaceholderText}>
-                      Enter your address
+                      Please Enter Your Address
                     </Text>
                   )}
                 </TouchableOpacity>

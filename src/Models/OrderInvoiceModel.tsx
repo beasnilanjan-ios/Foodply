@@ -3,6 +3,10 @@ export class OrderInvoiceDataModel {
   deliveryCharge: number;
   packagingCharge: number;
   discountAmount: number;
+  taxAmount: number;
+  cgstAmount: number;
+  sgstAmount: number;
+  tipAmount: number;
   finalAmount: number;
 
   constructor(data: Partial<OrderInvoiceDataModel> = {}) {
@@ -10,6 +14,10 @@ export class OrderInvoiceDataModel {
     this.deliveryCharge = data.deliveryCharge ?? 0;
     this.packagingCharge = data.packagingCharge ?? 0;
     this.discountAmount = data.discountAmount ?? 0;
+    this.taxAmount = data.taxAmount ?? 0;
+    this.cgstAmount = data.cgstAmount ?? 0;
+    this.sgstAmount = data.sgstAmount ?? 0;
+    this.tipAmount = data.tipAmount ?? 0;
     this.finalAmount = data.finalAmount ?? 0;
   }
 
@@ -21,6 +29,20 @@ export class OrderInvoiceDataModel {
       json?.invoice ??
       json?.billing ??
       json;
+
+    const cgstAmount = Number(
+      payload?.cgstAmount ?? payload?.cgst ?? payload?.cgstTax ?? 0,
+    );
+    const sgstAmount = Number(
+      payload?.sgstAmount ?? payload?.sgst ?? payload?.sgstTax ?? 0,
+    );
+    const taxAmount = Number(
+      payload?.taxAmount ??
+        payload?.taxAndFees ??
+        payload?.tax ??
+        payload?.taxes ??
+        (cgstAmount + sgstAmount > 0 ? cgstAmount + sgstAmount : 0),
+    );
 
     return new OrderInvoiceDataModel({
       itemTotal: Number(
@@ -42,6 +64,10 @@ export class OrderInvoiceDataModel {
           payload?.manualDiscountAmount ??
           0,
       ),
+      taxAmount,
+      cgstAmount,
+      sgstAmount,
+      tipAmount: Number(payload?.tipAmount ?? payload?.tip ?? 0),
       finalAmount: Number(
         payload?.finalAmount ??
           payload?.totalAmount ??
