@@ -69,6 +69,20 @@ class GlobalCart {
     });
   }
 
+  async clearShippingAddress() {
+    this.shippingAddress = '';
+    this.shippingAddressId = 0;
+
+    try {
+      await AsyncStorage.multiRemove([
+        SHIPPING_ADDRESS_KEY,
+        SHIPPING_ADDRESS_ID_KEY,
+      ]);
+    } catch (error) {
+      console.log('GlobalCart.clearShippingAddress failed:', error);
+    }
+  }
+
   async setShippingAddress(address: string, addressId?: number) {
     this.shippingAddress = address.trim();
     this.shippingAddressId = Math.max(0, addressId ?? 0);
@@ -136,6 +150,7 @@ class GlobalCart {
         : [];
 
       if (addresses.length === 0) {
+        await this.clearShippingAddress();
         return '';
       }
 

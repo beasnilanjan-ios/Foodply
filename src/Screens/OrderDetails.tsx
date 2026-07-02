@@ -225,7 +225,31 @@ export default function OrderDetails({ navigation, route }: any) {
   );
 
   const billing = orderData?.billing;
-  const summary = invoiceData ?? billing;
+  const summary = useMemo(() => {
+    const source = invoiceData ?? billing;
+    if (!source) {
+      return null;
+    }
+
+    return new OrderInvoiceDataModel({
+      itemTotal: source.itemTotal,
+      deliveryCharge: source.deliveryCharge,
+      packagingCharge: source.packagingCharge,
+      discountAmount: source.discountAmount,
+      taxAmount: source.taxAmount,
+      cgstAmount: Number((source as OrderInvoiceDataModel).cgstAmount ?? 0),
+      sgstAmount: Number((source as OrderInvoiceDataModel).sgstAmount ?? 0),
+      tipAmount: Number((source as OrderInvoiceDataModel).tipAmount ?? 0),
+      finalAmount: source.finalAmount,
+    });
+  }, [billing, invoiceData]);
+
+  const taxTotal =
+    summary?.taxAmount ??
+    (summary?.cgstAmount ?? 0) + (summary?.sgstAmount ?? 0);
+  const cgstAmount = summary?.cgstAmount ?? 0;
+  const sgstAmount = summary?.sgstAmount ?? 0;
+  const tipAmount = summary?.tipAmount ?? 0;
 
   return (
     <View style={styles.container}>
@@ -273,6 +297,42 @@ export default function OrderDetails({ navigation, route }: any) {
                   -₹{(summary?.discountAmount ?? 0).toFixed(2)}
                 </Text>
               </View>
+
+              {taxTotal > 0 ? (
+                <View style={styles.summaryItem}>
+                  <Text style={styles.summaryLabel}>Taxes</Text>
+                  <Text style={styles.summaryValue}>
+                    ₹{taxTotal.toFixed(2)}
+                  </Text>
+                </View>
+              ) : null}
+
+              {cgstAmount > 0 ? (
+                <View style={styles.taxBreakdownRow}>
+                  <Text style={styles.taxBreakdownLabel}>CGST</Text>
+                  <Text style={styles.taxBreakdownValue}>
+                    ₹{cgstAmount.toFixed(2)}
+                  </Text>
+                </View>
+              ) : null}
+
+              {sgstAmount > 0 ? (
+                <View style={styles.taxBreakdownRow}>
+                  <Text style={styles.taxBreakdownLabel}>SGST</Text>
+                  <Text style={styles.taxBreakdownValue}>
+                    ₹{sgstAmount.toFixed(2)}
+                  </Text>
+                </View>
+              ) : null}
+
+              {tipAmount > 0 ? (
+                <View style={styles.summaryItem}>
+                  <Text style={styles.summaryLabel}>Tip</Text>
+                  <Text style={styles.summaryValue}>
+                    ₹{tipAmount.toFixed(2)}
+                  </Text>
+                </View>
+              ) : null}
 
               <View style={styles.divider} />
 
@@ -361,6 +421,24 @@ const styles = StyleSheet.create({
   summaryValue: {
     fontSize: 13,
     fontWeight: '600',
+  },
+
+  taxBreakdownRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginVertical: 3,
+    paddingLeft: 12,
+  },
+
+  taxBreakdownLabel: {
+    fontSize: 12,
+    color: '#777',
+  },
+
+  taxBreakdownValue: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#555',
   },
 
   divider: {
