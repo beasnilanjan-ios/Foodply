@@ -43,6 +43,8 @@ useEffect(() => {
       const result: DeliveryOrderDetailsResponse =
         await response.json();
 
+      console.log('Order Details Api:', `Bearer ${GlobalLoginAuth.accessToken}`);
+      console.log('Order Details Api:', `${GlobalApi.baseUrl}api/deliveries/me/orders/${orderId}`);
       console.log('Order Details:', result);
 
       if (!response.ok || !result.success) {
@@ -165,9 +167,9 @@ useEffect(() => {
                         <Image
                           source={
                             orderData?.customer?.profileImageUrl
-                              ? { uri: orderData.customer.profileImageUrl }
-                              : require('../assets/images/customer_image.png')
-                          }
+                                ? { uri: orderData.customer.profileImageUrl }
+                                : require('../assets/images/customer_image.png')
+                            }
                           style={styles.profileImage}
                         />
 
@@ -226,6 +228,16 @@ useEffect(() => {
 
                     <View style={styles.summaryItem}>
                         <Text style={styles.summaryLabel}>
+                        Tax Charges
+                        </Text>
+
+                        <Text style={styles.summaryValue}>
+                        ₹{orderData?.billing?.taxAmount?.toFixed(2)}
+                        </Text>
+                    </View>
+
+                     <View style={styles.summaryItem}>
+                        <Text style={styles.summaryLabel}>
                         Delivery Charges
                         </Text>
 
@@ -268,7 +280,7 @@ useEffect(() => {
 
                     <View style={styles.codBadge}>
                         <Text style={styles.codText}>
-                        Payment Status: {orderData?.billing?.paymentStatus}
+                            Payment Status: {orderData?.billing?.paymentStatus}
                         </Text>
                     </View>
                     </View>
@@ -325,7 +337,7 @@ useEffect(() => {
 
                             <View style={styles.paymentBadge}>
                             <Text style={styles.paymentText}>
-                                {orderData?.billing?.paymentMethod}
+                                {orderData?.billing?.paymentMethod === 'COD' ? 'COD' : 'Online'}
                             </Text>
                             </View>
                         </View>
@@ -374,7 +386,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 30,
     paddingHorizontal: 16,
     paddingTop: 18,
-    marginTop: 20,
+    marginTop: 8,
   },
  card: {
     backgroundColor: '#fff',
@@ -462,13 +474,14 @@ const styles = StyleSheet.create({
     summaryCard1: {
         backgroundColor: '#fff',
         borderRadius: 20,
-        padding: 8,
+        padding: 4,
     },
 
     summaryItem: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         marginBottom: 10,
+        alignItems: 'center',
     },
 
      deliveryCard: {
