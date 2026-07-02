@@ -3,7 +3,6 @@ import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import Colors from '../assets/Colors/Colors';
 import GlobalStyles from '../assets/Styles/GlobalStyles';
 import GlobalApi from '../GlobalContainer/GlobalApi';
-import GlobalBackButton from '../GlobalContainer/GlobalBackButton';
 import GlobalButton from '../GlobalContainer/GlobalButton';
 import GlobalLoader from '../GlobalContainer/GlobalLoader';
 import GlobalPasswordToggle from '../GlobalContainer/GlobalPasswordToggle';
@@ -84,8 +83,6 @@ export default function Login({ navigation }: any) {
 
   return (
     <View style={styles.container}>
-      <GlobalBackButton onPress={() => navigation.goBack()} />
-
       <Text style={styles.title}>Log In</Text>
 
       <View style={styles.overlay}>
@@ -95,7 +92,7 @@ export default function Login({ navigation }: any) {
           Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
         </Text>
 
-        <Text style={GlobalStyles.formLabelLarge}>Email or Mobile Number</Text>
+        <Text style={GlobalStyles.formLabelLarge}>Email</Text>
 
         <GlobalTextInput
           value={email}
