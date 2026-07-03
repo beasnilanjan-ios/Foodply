@@ -1,6 +1,6 @@
 // //re-route rnd 1
 
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useMemo } from 'react';
 import {
   View,
   StyleSheet,
@@ -12,6 +12,7 @@ import {
   ToastAndroid,
   Alert,
   Linking,
+  NativeSyntheticEvent,
 } from 'react-native';
 
 import {
@@ -20,8 +21,9 @@ import {
   Marker,
   GeoJSONSource,
   Layer,
+  ViewStateChangeEvent,
+  CameraRef,
 } from '@maplibre/maplibre-react-native';
-import { OSM_STYLE } from '../GlobalContainer/mapStyle';
 import Geolocation from 'react-native-geolocation-service';
 import axios from 'axios';
 
@@ -39,11 +41,554 @@ import socket, {
   getSocket,
 } from '../services/socketService';
 
-const DARK_MAP_STYLE =
-  'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json';
+const NAVIGATION_MAP_STYLE =
+  'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json';
 
+const NAVIGATION_ZOOM = 19;
+const NAVIGATION_PITCH = 55;
+const MAP_PADDING = { top: 100, bottom: 300, left: 0, right: 0 };
 
-const ON_ROUTE_SNAP_THRESHOLD = 15; // meters
+const OSRM_ENDPOINTS = [
+  'https://router.project-osrm.org',
+  'https://routing.openstreetmap.de/routed-car',
+];
+
+const ON_ROUTE_SNAP_THRESHOLD = 15;
+const OFF_ROUTE_THRESHOLD_METERS = 25;
+const OFF_ROUTE_CONFIRM_COUNT = 3;
+const MIN_TURN_ANGLE_FOR_HEADING = 22;
+const HEADING_ANIMATION_SPEED = 0.08;
+const TURN_HEADING_ANIMATION_SPEED = 0.1;
+const TURN_BLEND_WALKING_METERS = 1;
+const TURN_BLEND_VEHICLE_METERS = 2;
+const WALKING_MAX_SPEED_MPS = 1.5;
+const SEGMENT_ADVANCE_DISTANCE_METERS = 1.5;
+const SEGMENT_ADVANCE_PROGRESS = 0.99;
+const MANEUVER_LOOKAHEAD_METERS = 250;
+const MIN_TURN_ANGLE = 28;
+
+type RouteCoordinate = [number, number];
+
+type UpcomingManeuver = {
+  label: string;
+  distanceMeters: number;
+};
+
+const getSignedTurnAngle = (incomingBearing: number, outgoingBearing: number) => {
+  let delta = outgoingBearing - incomingBearing;
+  if (delta > 180) {
+    delta -= 360;
+  }
+  if (delta < -180) {
+    delta += 360;
+  }
+  return delta;
+};
+
+const getManeuverLabel = (turnAngle: number) => {
+  const absAngle = Math.abs(turnAngle);
+  if (absAngle < MIN_TURN_ANGLE) {
+    return null;
+  }
+  if (absAngle > 150) {
+    return 'Take a U-turn';
+  }
+  if (turnAngle < 0) {
+    return absAngle < 60 ? 'Bear left' : 'Take left turn';
+  }
+  return absAngle < 60 ? 'Bear right' : 'Take right turn';
+};
+
+const getDistanceAlongRouteToVertex = (
+  route: RouteCoordinate[],
+  fromIndex: number,
+  fromPoint: { latitude: number; longitude: number },
+  vertexIndex: number,
+) => {
+  if (vertexIndex <= fromIndex) {
+    return 0;
+  }
+
+  let total = getDistance(
+    fromPoint.latitude,
+    fromPoint.longitude,
+    route[fromIndex + 1][1],
+    route[fromIndex + 1][0],
+  );
+
+  for (let index = fromIndex + 1; index < vertexIndex; index += 1) {
+    total += getDistance(
+      route[index][1],
+      route[index][0],
+      route[index + 1][1],
+      route[index + 1][0],
+    );
+  }
+
+  return total;
+};
+
+const getUpcomingManeuver = (
+  route: RouteCoordinate[],
+  fromIndex: number,
+  fromPoint: { latitude: number; longitude: number },
+): UpcomingManeuver | null => {
+  if (route.length < 2) {
+    return null;
+  }
+
+  const destination = route[route.length - 1];
+  const distanceToDestination = getDistance(
+    fromPoint.latitude,
+    fromPoint.longitude,
+    destination[1],
+    destination[0],
+  );
+
+  if (distanceToDestination <= 35) {
+    return {
+      label: 'You have arrived',
+      distanceMeters: distanceToDestination,
+    };
+  }
+
+  if (route.length < 3) {
+    return {
+      label: 'Continue to destination',
+      distanceMeters: distanceToDestination,
+    };
+  }
+
+  for (
+    let vertexIndex = Math.max(fromIndex + 1, 1);
+    vertexIndex < route.length - 1;
+    vertexIndex += 1
+  ) {
+    const incomingBearing = calculateBearing(
+      route[vertexIndex - 1][1],
+      route[vertexIndex - 1][0],
+      route[vertexIndex][1],
+      route[vertexIndex][0],
+    );
+    const outgoingBearing = calculateBearing(
+      route[vertexIndex][1],
+      route[vertexIndex][0],
+      route[vertexIndex + 1][1],
+      route[vertexIndex + 1][0],
+    );
+    const turnAngle = getSignedTurnAngle(incomingBearing, outgoingBearing);
+    const label = getManeuverLabel(turnAngle);
+
+    if (!label) {
+      continue;
+    }
+
+    const distanceMeters = getDistanceAlongRouteToVertex(
+      route,
+      fromIndex,
+      fromPoint,
+      vertexIndex,
+    );
+
+    if (distanceMeters <= MANEUVER_LOOKAHEAD_METERS) {
+      return { label, distanceMeters };
+    }
+  }
+
+  return {
+    label: 'Continue straight',
+    distanceMeters: Math.min(distanceToDestination, MANEUVER_LOOKAHEAD_METERS),
+  };
+};
+
+const formatManeuverInstruction = (maneuver: UpcomingManeuver) => {
+  if (maneuver.label === 'You have arrived') {
+    return maneuver.label;
+  }
+
+  const meters = Math.max(1, Math.round(maneuver.distanceMeters));
+
+  if (meters <= 30) {
+    return `${maneuver.label} within ${meters} meters`;
+  }
+
+  if (meters < 1000) {
+    return `${maneuver.label} in ${meters} m`;
+  }
+
+  return `${maneuver.label} in ${(meters / 1000).toFixed(1)} km`;
+};
+
+const calculateBearing = (
+  startLat: number,
+  startLng: number,
+  endLat: number,
+  endLng: number,
+) => {
+  const dLon = ((endLng - startLng) * Math.PI) / 180;
+  const y = Math.sin(dLon) * Math.cos((endLat * Math.PI) / 180);
+  const x =
+    Math.cos((startLat * Math.PI) / 180) * Math.sin((endLat * Math.PI) / 180) -
+    Math.sin((startLat * Math.PI) / 180) *
+      Math.cos((endLat * Math.PI) / 180) *
+      Math.cos(dLon);
+  return ((Math.atan2(y, x) * 180) / Math.PI + 360) % 360;
+};
+
+const getDistance = (
+  lat1: number,
+  lon1: number,
+  lat2: number,
+  lon2: number,
+) => {
+  const earthRadius = 6371e3;
+  const phi1 = (lat1 * Math.PI) / 180;
+  const phi2 = (lat2 * Math.PI) / 180;
+  const deltaPhi = ((lat2 - lat1) * Math.PI) / 180;
+  const deltaLambda = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(deltaPhi / 2) * Math.sin(deltaPhi / 2) +
+    Math.cos(phi1) *
+      Math.cos(phi2) *
+      Math.sin(deltaLambda / 2) *
+      Math.sin(deltaLambda / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return earthRadius * c;
+};
+
+const getProjectedPointOnSegment = (
+  lat: number,
+  lng: number,
+  startLat: number,
+  startLng: number,
+  endLat: number,
+  endLng: number,
+) => {
+  const dx = endLng - startLng;
+  const dy = endLat - startLat;
+  const lengthSquared = dx * dx + dy * dy;
+  if (lengthSquared === 0) {
+    return { latitude: startLat, longitude: startLng, t: 0 };
+  }
+  let t = ((lng - startLng) * dx + (lat - startLat) * dy) / lengthSquared;
+  t = Math.max(0, Math.min(1, t));
+  return {
+    latitude: startLat + t * dy,
+    longitude: startLng + t * dx,
+    t,
+  };
+};
+
+const getNearestPointOnRoute = (
+  latitude: number,
+  longitude: number,
+  route: RouteCoordinate[],
+  minIndex = 0,
+) => {
+  if (route.length < 2) {
+    return null;
+  }
+
+  const searchStart = Math.max(0, Math.min(minIndex, route.length - 2));
+  let minDistance = Infinity;
+  let nearestIndex = searchStart;
+  let projectedPoint: {
+    latitude: number;
+    longitude: number;
+    t: number;
+  } | null = null;
+
+  for (let index = searchStart; index < route.length - 1; index += 1) {
+    const start = route[index];
+    const end = route[index + 1];
+    const projected = getProjectedPointOnSegment(
+      latitude,
+      longitude,
+      start[1],
+      start[0],
+      end[1],
+      end[0],
+    );
+    const distance = getDistance(
+      latitude,
+      longitude,
+      projected.latitude,
+      projected.longitude,
+    );
+    if (distance < minDistance) {
+      minDistance = distance;
+      nearestIndex = index;
+      projectedPoint = projected;
+    }
+  }
+
+  if (!projectedPoint) {
+    return null;
+  }
+
+  return {
+    index: nearestIndex,
+    distance: minDistance,
+    point: projectedPoint,
+  };
+};
+
+const buildRemainingRoute = (
+  route: RouteCoordinate[],
+  snapIndex: number,
+  snapPoint: { latitude: number; longitude: number },
+): RouteCoordinate[] => {
+  if (route.length < 2) {
+    return [];
+  }
+
+  const startIndex = Math.max(0, Math.min(snapIndex, route.length - 1));
+  const remaining = route.slice(startIndex);
+  if (remaining.length === 0) {
+    return [];
+  }
+
+  return [[snapPoint.longitude, snapPoint.latitude], ...remaining.slice(1)];
+};
+
+const getRouteSegmentBearing = (
+  route: RouteCoordinate[],
+  index: number,
+  snapPoint?: { latitude: number; longitude: number },
+) => {
+  const nextIndex = Math.min(index + 1, route.length - 1);
+  const end = route[nextIndex];
+
+  if (nextIndex === index) {
+    const start = route[Math.max(0, route.length - 2)];
+    return calculateBearing(start[1], start[0], end[1], end[0]);
+  }
+
+  const fromLat = snapPoint?.latitude ?? route[index][1];
+  const fromLng = snapPoint?.longitude ?? route[index][0];
+
+  return calculateBearing(fromLat, fromLng, end[1], end[0]);
+};
+
+const interpolateBearing = (from: number, to: number, progress: number) => {
+  let delta = to - from;
+  if (delta > 180) {
+    delta -= 360;
+  }
+  if (delta < -180) {
+    delta += 360;
+  }
+  return (from + delta * progress + 360) % 360;
+};
+
+const smoothstep = (value: number) => value * value * (3 - 2 * value);
+
+const smootherstep = (value: number) => {
+  const clamped = Math.max(0, Math.min(1, value));
+  return clamped * clamped * clamped * (clamped * (clamped * 6 - 15) + 10);
+};
+
+const getSegmentDirection = (route: RouteCoordinate[], index: number) => {
+  const start = route[Math.max(0, Math.min(index, route.length - 2))];
+  const end = route[Math.min(index + 1, route.length - 1)];
+  return calculateBearing(start[1], start[0], end[1], end[0]);
+};
+
+const getTurnBlendDistanceMeters = (speedMps: number | null | undefined) => {
+  const speed = speedMps ?? 0;
+  if (!Number.isFinite(speed) || speed < WALKING_MAX_SPEED_MPS) {
+    return TURN_BLEND_WALKING_METERS;
+  }
+  return TURN_BLEND_VEHICLE_METERS;
+};
+
+const getNavigationHeading = (
+  route: RouteCoordinate[],
+  index: number,
+  point: { latitude: number; longitude: number },
+  segmentProgress?: number,
+  speedMps?: number | null,
+) => {
+  const incoming = getSegmentDirection(route, index);
+
+  if (index + 2 >= route.length) {
+    return incoming;
+  }
+
+  const outgoing = getSegmentDirection(route, index + 1);
+  const turnAngle = getSignedTurnAngle(incoming, outgoing);
+
+  if (Math.abs(turnAngle) < MIN_TURN_ANGLE_FOR_HEADING) {
+    return incoming;
+  }
+
+  let distToVertex: number;
+  if (
+    segmentProgress != null &&
+    Number.isFinite(segmentProgress) &&
+    index + 1 < route.length
+  ) {
+    const segStart = route[index];
+    const segEnd = route[index + 1];
+    const segmentLength = getDistance(
+      segStart[1],
+      segStart[0],
+      segEnd[1],
+      segEnd[0],
+    );
+    distToVertex = segmentLength * (1 - Math.max(0, Math.min(1, segmentProgress)));
+  } else {
+    const vertex = route[index + 1];
+    distToVertex = getDistance(
+      point.latitude,
+      point.longitude,
+      vertex[1],
+      vertex[0],
+    );
+  }
+
+  const blendDistanceMeters = getTurnBlendDistanceMeters(speedMps);
+
+  if (distToVertex > blendDistanceMeters) {
+    return incoming;
+  }
+
+  const blendProgress = 1 - distToVertex / blendDistanceMeters;
+  return interpolateBearing(incoming, outgoing, smootherstep(blendProgress));
+};
+
+const resolveRouteSnap = (
+  route: RouteCoordinate[],
+  gpsLat: number,
+  gpsLng: number,
+  minIndex: number,
+) => {
+  const baseSnap = getNearestPointOnRoute(gpsLat, gpsLng, route, minIndex);
+  if (!baseSnap?.point || baseSnap.index + 1 >= route.length) {
+    return baseSnap;
+  }
+
+  const segmentStart = route[baseSnap.index];
+  const segmentEnd = route[baseSnap.index + 1];
+  const gpsOnSegment = getProjectedPointOnSegment(
+    gpsLat,
+    gpsLng,
+    segmentStart[1],
+    segmentStart[0],
+    segmentEnd[1],
+    segmentEnd[0],
+  );
+
+  const crossTrackDistance = getDistance(
+    gpsLat,
+    gpsLng,
+    gpsOnSegment.latitude,
+    gpsOnSegment.longitude,
+  );
+
+  if (crossTrackDistance > OFF_ROUTE_THRESHOLD_METERS) {
+    return baseSnap;
+  }
+
+  let routeIndex = baseSnap.index;
+  let routePoint = gpsOnSegment;
+
+  const distToVertex = getDistance(
+    gpsOnSegment.latitude,
+    gpsOnSegment.longitude,
+    segmentEnd[1],
+    segmentEnd[0],
+  );
+
+  if (
+    routeIndex + 2 < route.length &&
+    (distToVertex <= SEGMENT_ADVANCE_DISTANCE_METERS ||
+      gpsOnSegment.t >= SEGMENT_ADVANCE_PROGRESS)
+  ) {
+    const nextStart = segmentEnd;
+    const nextEnd = route[routeIndex + 2];
+    const gpsOnNextSegment = getProjectedPointOnSegment(
+      gpsLat,
+      gpsLng,
+      nextStart[1],
+      nextStart[0],
+      nextEnd[1],
+      nextEnd[0],
+    );
+    const nextCrossTrack = getDistance(
+      gpsLat,
+      gpsLng,
+      gpsOnNextSegment.latitude,
+      gpsOnNextSegment.longitude,
+    );
+
+    if (
+      nextCrossTrack <= OFF_ROUTE_THRESHOLD_METERS &&
+      gpsOnNextSegment.t > 0.04
+    ) {
+      routeIndex += 1;
+      routePoint = gpsOnNextSegment;
+    }
+  }
+
+  return {
+    index: routeIndex,
+    distance: crossTrackDistance,
+    point: routePoint,
+  };
+};
+
+const formatRouteDistance = (meters: number) => {
+  if (!Number.isFinite(meters) || meters <= 0) {
+    return '--';
+  }
+  if (meters < 1000) {
+    return `${Math.round(meters)} m`;
+  }
+  return `${(meters / 1000).toFixed(1)} km`;
+};
+
+const formatRouteDuration = (seconds: number) => {
+  if (!Number.isFinite(seconds) || seconds <= 0) {
+    return '--';
+  }
+  const minutes = Math.max(1, Math.round(seconds / 60));
+  return `${minutes} min`;
+};
+
+const formatSpeedKmh = (speedMps: number | null | undefined) => {
+  if (speedMps == null || !Number.isFinite(speedMps) || speedMps < 0) {
+    return 0;
+  }
+  return Math.round(speedMps * 3.6);
+};
+
+const fetchDrivingRoute = async (
+  startLat: number,
+  startLng: number,
+  endLat: number,
+  endLng: number,
+) => {
+  for (const baseUrl of OSRM_ENDPOINTS) {
+    try {
+      const response = await axios.get(
+        `${baseUrl}/route/v1/driving/${startLng},${startLat};${endLng},${endLat}?overview=full&geometries=geojson`,
+      );
+      const route = response.data?.routes?.[0];
+      if (route?.geometry?.coordinates?.length) {
+        return {
+          coordinates: route.geometry.coordinates as RouteCoordinate[],
+          distanceMeters: route.distance ?? 0,
+          durationSeconds: route.duration ?? 0,
+        };
+      }
+    } catch {
+      // try next endpoint
+    }
+  }
+
+  return null;
+};
 
 export default function DeliveryStart({ route, navigation }: any) {
   const {
@@ -68,41 +613,40 @@ export default function DeliveryStart({ route, navigation }: any) {
   
   const LOCATION_PUSH_THRESHOLD_METERS = 20;
   // ROUTE
-  const [routeCoordinates, setRouteCoordinates] = useState<any[]>([]);
-  const routeCoordinatesRef = useRef<any[]>([]);
-  const [remainingRoute, setRemainingRoute] = useState<any[]>([]);
+  const [routeCoordinates, setRouteCoordinates] = useState<RouteCoordinate[]>([]);
+  const routeCoordinatesRef = useRef<RouteCoordinate[]>([]);
+  const [remainingRoute, setRemainingRoute] = useState<RouteCoordinate[]>([]);
+  const [routeDistanceMeters, setRouteDistanceMeters] = useState(0);
+  const [routeDurationSeconds, setRouteDurationSeconds] = useState(0);
   const headingRef = useRef(0);
-  const cameraHeadingRef = useRef(0);
-  const markerAnimationRef = useRef<any>(null);
-  const headingAnimationRef = useRef<any>(null);
+  const targetHeadingRef = useRef(0);
+  const headingRafRef = useRef<number | null>(null);
+  const headingAnimationSpeedRef = useRef(HEADING_ANIMATION_SPEED);
   const riderPositionRef = useRef<{
     latitude: number;
     longitude: number;
   } | null>(null);
-  const lastAnimatedBearingRef = useRef<number>(-1);
   const isReroutingRef = useRef(false);
   const offRouteCountRef = useRef(0);
   const [riderPosition, setRiderPosition] = useState<{
     latitude: number;
     longitude: number;
   } | null>(null);
-  // CAMERA HEADING
-  const [cameraHeading, setCameraHeading] = useState(0);
-  
   const lastSentLocationRef = useRef<{
     latitude: number;
     longitude: number;
   } | null>(null);
-  // SCOOTER HEADING
   const [markerHeading, setMarkerHeading] = useState(0);
+  const [navigationInstruction, setNavigationInstruction] = useState<string | null>(
+    null,
+  );
+  const [currentSpeedKmh, setCurrentSpeedKmh] = useState(0);
   const [loading, setLoading] = useState(false);
-  // FREE CAMERA MODE
   const [isFollowingRider, setIsFollowingRider] = useState(true);
+  const isFollowingRiderRef = useRef(true);
   const userInteractingRef = useRef(false);
   const interactionTimerRef = useRef<any>(null);
-  const [locationHistory, setLocationHistory] = useState<
-    { latitude: number; longitude: number }[]
-  >([]);
+  const cameraRef = useRef<CameraRef>(null);
   // PREVIOUS LOCATION
   const previousCoordinateRef = useRef<{
     latitude: number;
@@ -121,105 +665,6 @@ export default function DeliveryStart({ route, navigation }: any) {
     }
   };
 
-  const calculateBearing = (
-    startLat: number,
-    startLng: number,
-    endLat: number,
-    endLng: number,
-  ) => {
-    const dLon = ((endLng - startLng) * Math.PI) / 180;
-    const y = Math.sin(dLon) * Math.cos((endLat * Math.PI) / 180);
-    const x =
-      Math.cos((startLat * Math.PI) / 180) *
-        Math.sin((endLat * Math.PI) / 180) -
-      Math.sin((startLat * Math.PI) / 180) *
-        Math.cos((endLat * Math.PI) / 180) *
-        Math.cos(dLon);
-    const brng = (Math.atan2(y, x) * 180) / Math.PI;
-    return (brng + 360) % 360;
-  };
-
-  // DISTANCE BETWEEN TWO POINTS
-  const getDistance = (
-    lat1: number,
-    lon1: number,
-    lat2: number,
-    lon2: number,
-  ) => {
-    const R = 6371e3;
-    const φ1 = (lat1 * Math.PI) / 180;
-    const φ2 = (lat2 * Math.PI) / 180;
-    const Δφ = ((lat2 - lat1) * Math.PI) / 180;
-    const Δλ = ((lon2 - lon1) * Math.PI) / 180;
-    const a =
-      Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
-      Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return R * c;
-  };
-
-  const getProjectedPointOnSegment = (
-    lat: number,
-    lng: number,
-    startLat: number,
-    startLng: number,
-    endLat: number,
-    endLng: number,
-  ) => {
-    const dx = endLng - startLng;
-    const dy = endLat - startLat;
-    const lengthSquared = dx * dx + dy * dy;
-    if (lengthSquared === 0) {
-      return { latitude: startLat, longitude: startLng, t: 0 };
-    }
-    let t = ((lng - startLng) * dx + (lat - startLat) * dy) / lengthSquared;
-    t = Math.max(0, Math.min(1, t));
-    return {
-      latitude: startLat + t * dy,
-      longitude: startLng + t * dx,
-      t,
-    };
-  };
-
-  const getNearestPointOnRoute = (
-    latitude: number,
-    longitude: number,
-    route: any[],
-  ) => {
-    if (route.length < 2) return null;
-    let minDistance = Infinity;
-    let nearestIndex = 0;
-    let projectedPoint: any = null;
-    for (let i = 0; i < route.length - 1; i++) {
-      const start = route[i];
-      const end = route[i + 1];
-      const projected = getProjectedPointOnSegment(
-        latitude,
-        longitude,
-        start[1],
-        start[0],
-        end[1],
-        end[0],
-      );
-      const distance = getDistance(
-        latitude,
-        longitude,
-        projected.latitude,
-        projected.longitude,
-      );
-      if (distance < minDistance) {
-        minDistance = distance;
-        nearestIndex = i;
-        projectedPoint = projected;
-      }
-    }
-    return {
-      index: nearestIndex,
-      distance: minDistance,
-      point: projectedPoint,
-    };
-  };
-
   // ROUTE API
   const getRoute = async (
     startLat: number,
@@ -228,55 +673,49 @@ export default function DeliveryStart({ route, navigation }: any) {
     endLng: number,
   ) => {
     try {
-      const response = await axios.get(
-        `https://router.project-osrm.org/route/v1/driving/${startLng},${startLat};${endLng},${endLat}?overview=full&geometries=geojson`,
-      );
-      if (
-        response.data &&
-        response.data.routes &&
-        response.data.routes.length > 0
-      ) {
-        const osrmCoordinates = response.data.routes[0].geometry.coordinates;
-        const coordinates = [[startLng, startLat], ...osrmCoordinates];
-        for (let i = 0; i < 5; i++) {
-          const dist = getDistance(
-            coordinates[i][1],
-            coordinates[i][0],
-            coordinates[i + 1][1],
-            coordinates[i + 1][0],
-          );
-          console.log(`Distance ${i} -> ${i + 1}:`, dist);
+      const result = await fetchDrivingRoute(startLat, startLng, endLat, endLng);
+      if (!result) {
+        return;
+      }
+
+      const { coordinates, distanceMeters, durationSeconds } = result;
+      setRouteDistanceMeters(distanceMeters);
+      setRouteDurationSeconds(durationSeconds);
+      setRouteCoordinates(coordinates);
+      routeCoordinatesRef.current = coordinates;
+      setRemainingRoute(coordinates);
+
+      if (!riderPosition && coordinates.length > 0) {
+        const initialPos = {
+          latitude: coordinates[0][1],
+          longitude: coordinates[0][0],
+        };
+        riderPositionRef.current = initialPos;
+        setRiderPosition(initialPos);
+        lastSnappedIndexRef.current = 0;
+
+        if (coordinates.length > 1) {
+          const initialBearing = getSegmentDirection(coordinates, 0);
+          headingRef.current = initialBearing;
+          targetHeadingRef.current = initialBearing;
+          setMarkerHeading(initialBearing);
         }
-        setRouteCoordinates(coordinates);
-        routeCoordinatesRef.current = coordinates;
-        console.log('Route Length:', coordinates.length);
-        console.log('First Route Point:', coordinates[0]);
-        console.log('Start GPS:', startLat, startLng);
-        console.log(
-          'Distance Between Start And Route Point:',
-          getDistance(startLat, startLng, coordinates[0][1], coordinates[0][0]),
+
+        const maneuver = getUpcomingManeuver(coordinates, 0, initialPos);
+        setNavigationInstruction(
+          maneuver ? formatManeuverInstruction(maneuver) : null,
         );
-        if (!riderPosition && coordinates.length > 0) {
-          const initialPos = {
-            latitude: coordinates[0][1],
-            longitude: coordinates[0][0],
-          };
-          riderPositionRef.current = initialPos;
-          setRiderPosition(initialPos);
-          lastSnappedIndexRef.current = 0;
-          setRemainingRoute(coordinates);
-        }
       }
     } catch (error) {
       console.log('ROUTE ERROR', error);
     }
   };
 
-  
   const reRoute = async (currentLat: number, currentLng: number) => {
-    if (isReroutingRef.current) return;
+    if (isReroutingRef.current) {
+      return;
+    }
 
-    
     const existingRoute = routeCoordinatesRef.current;
     if (existingRoute.length >= 2) {
       const snapCheck = getNearestPointOnRoute(
@@ -285,10 +724,6 @@ export default function DeliveryStart({ route, navigation }: any) {
         existingRoute,
       );
       if (snapCheck && snapCheck.distance <= ON_ROUTE_SNAP_THRESHOLD) {
-        console.log(
-          'Rider back on route, skipping re-route. Distance:',
-          snapCheck.distance,
-        );
         offRouteCountRef.current = 0;
         return;
       }
@@ -297,70 +732,48 @@ export default function DeliveryStart({ route, navigation }: any) {
     isReroutingRef.current = true;
 
     try {
-      const response = await axios.get(
-        `https://router.project-osrm.org/route/v1/driving/${currentLng},${currentLat};${destinationLocation.longitude},${destinationLocation.latitude}?overview=full&geometries=geojson`,
+      const result = await fetchDrivingRoute(
+        currentLat,
+        currentLng,
+        destinationLocation.latitude,
+        destinationLocation.longitude,
       );
 
-      if (response.data?.routes?.length > 0) {
-        const osrmCoordinates = response.data.routes[0].geometry.coordinates;
-        const firstSnapped = osrmCoordinates[0];
-        const currentRiderPos = riderPositionRef.current;
-
-        if (markerAnimationRef.current) {
-          clearInterval(markerAnimationRef.current);
-          markerAnimationRef.current = null;
-        }
-
-        if (currentRiderPos) {
-          const SMOOTH_STEPS = 12;
-          const SMOOTH_INTERVAL = 50;
-          let step = 0;
-          const fromLat = currentRiderPos.latitude;
-          const fromLng = currentRiderPos.longitude;
-          const toLat = firstSnapped[1];
-          const toLng = firstSnapped[0];
-
-          const newCoordinates = [firstSnapped, ...osrmCoordinates.slice(1)];
-
-          
-          const tail = newCoordinates.slice(1);
-
-          const slideInterval = setInterval(() => {
-            step++;
-            const progress = step / SMOOTH_STEPS;
-
-            const newPos = {
-              latitude: fromLat + (toLat - fromLat) * progress,
-              longitude: fromLng + (toLng - fromLng) * progress,
-            };
-            riderPositionRef.current = newPos;
-            setRiderPosition(newPos);
-
-           
-            setRemainingRoute([[newPos.longitude, newPos.latitude], ...tail]);
-
-            if (step >= SMOOTH_STEPS) {
-              clearInterval(slideInterval);
-              setRouteCoordinates(newCoordinates);
-              routeCoordinatesRef.current = newCoordinates;
-              setRemainingRoute(newCoordinates);
-              lastSnappedIndexRef.current = 0;
-              offRouteCountRef.current = 0;
-              isReroutingRef.current = false;
-            }
-          }, SMOOTH_INTERVAL);
-        } else {
-          const newCoordinates = [firstSnapped, ...osrmCoordinates.slice(1)];
-          setRouteCoordinates(newCoordinates);
-          routeCoordinatesRef.current = newCoordinates;
-          setRemainingRoute(newCoordinates);
-          lastSnappedIndexRef.current = 0;
-          offRouteCountRef.current = 0;
-          isReroutingRef.current = false;
-        }
-      } else {
+      if (!result?.coordinates?.length) {
         isReroutingRef.current = false;
+        return;
       }
+
+      const newCoordinates = result.coordinates;
+      const firstSnapped = newCoordinates[0];
+      setRouteDistanceMeters(result.distanceMeters);
+      setRouteDurationSeconds(result.durationSeconds);
+      setRouteCoordinates(newCoordinates);
+      routeCoordinatesRef.current = newCoordinates;
+      setRemainingRoute(newCoordinates);
+      lastSnappedIndexRef.current = 0;
+      offRouteCountRef.current = 0;
+
+      const snapPos = {
+        latitude: firstSnapped[1],
+        longitude: firstSnapped[0],
+      };
+      riderPositionRef.current = snapPos;
+      setRiderPosition(snapPos);
+
+      if (newCoordinates.length > 1) {
+        const segmentBearing = getSegmentDirection(newCoordinates, 0);
+        headingRef.current = segmentBearing;
+        targetHeadingRef.current = segmentBearing;
+        setMarkerHeading(segmentBearing);
+      }
+
+      const maneuver = getUpcomingManeuver(newCoordinates, 0, snapPos);
+      setNavigationInstruction(
+        maneuver ? formatManeuverInstruction(maneuver) : null,
+      );
+
+      isReroutingRef.current = false;
     } catch (error) {
       console.log('Re-route error:', error);
       isReroutingRef.current = false;
@@ -398,13 +811,15 @@ export default function DeliveryStart({ route, navigation }: any) {
     latitude: number,
     longitude: number,
     orderId: string | number,
+    heading = headingRef.current,
+    speed = 0,
   ) => {
     const payload = {
       orderId: orderId,
       latitude: latitude,
       longitude: longitude,
-      speed: 20,
-      heading: 150,
+      speed: speed,
+      heading: heading,
     };
 
     try {
@@ -429,101 +844,87 @@ export default function DeliveryStart({ route, navigation }: any) {
     requestLocationPermission();
     getCurrentLocation();
 
-    const animateMarker = (
-      startLat: number,
-      startLng: number,
-      endLat: number,
-      endLng: number,
-      routeTailAfterEnd?: any[], 
-    ) => {
-      const dist = getDistance(startLat, startLng, endLat, endLng);
-      if (dist < 0.5) return;
+    const startHeadingAnimation = () => {
+      const animateHeading = () => {
+        const currentHeading = headingRef.current;
+        const targetHeading = targetHeadingRef.current;
+        let delta = targetHeading - currentHeading;
 
-      if (markerAnimationRef.current) {
-        clearInterval(markerAnimationRef.current);
-        markerAnimationRef.current = null;
-      }
-
-      const distance = Math.sqrt(
-        Math.pow(endLat - startLat, 2) + Math.pow(endLng - startLng, 2),
-      );
-      const steps = distance > 0.0005 ? 6 : 10;
-      let currentStep = 0;
-
-      const interval = setInterval(() => {
-        currentStep++;
-        const progress = currentStep / steps;
-        const newPos = {
-          latitude: startLat + (endLat - startLat) * progress,
-          longitude: startLng + (endLng - startLng) * progress,
-        };
-        riderPositionRef.current = newPos;
-        setRiderPosition(newPos);
-
-       
-        if (routeTailAfterEnd) {
-          setRemainingRoute([
-            [newPos.longitude, newPos.latitude],
-            ...routeTailAfterEnd,
-          ]);
+        if (delta > 180) {
+          delta -= 360;
+        }
+        if (delta < -180) {
+          delta += 360;
         }
 
-        if (currentStep >= steps) {
-          clearInterval(interval);
-          markerAnimationRef.current = null;
+        if (Math.abs(delta) > 0.2) {
+          const speed = headingAnimationSpeedRef.current;
+          const nextHeading = (currentHeading + delta * speed + 360) % 360;
+          headingRef.current = nextHeading;
+          setMarkerHeading(nextHeading);
+        } else if (headingAnimationSpeedRef.current !== HEADING_ANIMATION_SPEED) {
+          headingAnimationSpeedRef.current = HEADING_ANIMATION_SPEED;
         }
-      }, 50);
 
-      markerAnimationRef.current = interval;
+        headingRafRef.current = requestAnimationFrame(animateHeading);
+      };
+
+      headingRafRef.current = requestAnimationFrame(animateHeading);
     };
 
-    const animateHeading = (fromBearing: number, toBearing: number) => {
-      if (headingAnimationRef.current) {
-        clearInterval(headingAnimationRef.current);
-        headingAnimationRef.current = null;
+    startHeadingAnimation();
+
+    const applySnapToRoute = (
+      route: RouteCoordinate[],
+      snapped: NonNullable<ReturnType<typeof getNearestPointOnRoute>>,
+      gpsSpeed?: number | null,
+    ) => {
+      if (!snapped.point) {
+        return;
       }
-      let delta = toBearing - fromBearing;
-      if (delta > 180) delta -= 360;
-      if (delta < -180) delta += 360;
-      const steps = 10;
-      let currentStep = 0;
-      const interval = setInterval(() => {
-        currentStep++;
-        const progress = currentStep / steps;
-        const newHeading = (fromBearing + delta * progress + 360) % 360;
-        headingRef.current = newHeading;
-        setMarkerHeading(newHeading);
-        setCameraHeading(newHeading);
-        cameraHeadingRef.current = newHeading;
-        if (currentStep >= steps) {
-          clearInterval(interval);
-          headingAnimationRef.current = null;
-        }
-      }, 50);
-      headingAnimationRef.current = interval;
+
+      const previousIndex = lastSnappedIndexRef.current;
+      const routeIndex = Math.max(snapped.index, previousIndex);
+      const segmentProgress = snapped.point.t ?? 0;
+      const snapPos = {
+        latitude: snapped.point.latitude,
+        longitude: snapped.point.longitude,
+      };
+
+      riderPositionRef.current = snapPos;
+      setRiderPosition(snapPos);
+      lastSnappedIndexRef.current = routeIndex;
+      setRemainingRoute(
+        buildRemainingRoute(route, routeIndex, snapPos),
+      );
+
+      targetHeadingRef.current = getNavigationHeading(
+        route,
+        routeIndex,
+        snapPos,
+        segmentProgress,
+        gpsSpeed,
+      );
+
+      if (routeIndex > previousIndex && previousIndex >= 0) {
+        headingAnimationSpeedRef.current = TURN_HEADING_ANIMATION_SPEED;
+      }
+
+      const maneuver = getUpcomingManeuver(route, routeIndex, snapped.point);
+      setNavigationInstruction(
+        maneuver ? formatManeuverInstruction(maneuver) : null,
+      );
     };
 
     const watchId = Geolocation.watchPosition(
-      async position => {
+      position => {
         const latitude = position.coords.latitude;
         const longitude = position.coords.longitude;
-        const previous = previousCoordinateRef.current;
-
-        if (previous) {
-          const movedDistance = getDistance(
-            previous.latitude,
-            previous.longitude,
-            latitude,
-            longitude,
-          );
-          console.log('GPS Move Distance:', movedDistance);
-          if (movedDistance < 0.5) return;
-        }
+        const gpsSpeed = position.coords.speed;
+        setCurrentSpeedKmh(formatSpeedKmh(gpsSpeed));
 
         setCurrentLocation({ latitude, longitude });
-        setLocationHistory(prev => [...prev, { latitude, longitude }]);
 
-       
         const lastSent = lastSentLocationRef.current;
         const distanceFromLastSent = lastSent
           ? getDistance(
@@ -538,117 +939,61 @@ export default function DeliveryStart({ route, navigation }: any) {
           !lastSent ||
           distanceFromLastSent >= LOCATION_PUSH_THRESHOLD_METERS
         ) {
-          sendLocation(latitude, longitude, orderDetail.order.id);
+          sendLocation(
+            latitude,
+            longitude,
+            orderDetail.order.id,
+            headingRef.current,
+            gpsSpeed ?? 0,
+          );
           lastSentLocationRef.current = { latitude, longitude };
         }
 
         const route = routeCoordinatesRef.current;
-        if (route.length < 2) return;
-
-        if (previous) {
-          const route = routeCoordinatesRef.current;
-          if (route.length > 1) {
-            if (isReroutingRef.current) {
-              previousCoordinateRef.current = { latitude, longitude };
-              return;
-            }
-
-            
-            const movementBearing = calculateBearing(
-              previous.latitude,
-              previous.longitude,
-              latitude,
-              longitude,
-            );
-
-            const snapped = getNearestPointOnRoute(latitude, longitude, route);
-
-            if (snapped) {
-              
-              const OFF_ROUTE_THRESHOLD_METERS = 12;
-              const OFF_ROUTE_CONFIRM_COUNT = 4;
-
-              if (snapped.distance > OFF_ROUTE_THRESHOLD_METERS) {
-                offRouteCountRef.current += 1;
-
-               
-                if (riderPositionRef.current) {
-                  animateMarker(
-                    riderPositionRef.current.latitude,
-                    riderPositionRef.current.longitude,
-                    latitude,
-                    longitude,
-                  );
-                }
-
-                if (offRouteCountRef.current >= OFF_ROUTE_CONFIRM_COUNT) {
-                  reRoute(latitude, longitude);
-                  offRouteCountRef.current = 0;
-                  return;
-                }
-
-               
-                previousCoordinateRef.current = { latitude, longitude };
-                return;
-              } else {
-               
-                offRouteCountRef.current = 0;
-
-               
-                const tailAfterSnap = route.slice(snapped.index + 1);
-
-                if (riderPositionRef.current) {
-                  animateMarker(
-                    riderPositionRef.current.latitude,
-                    riderPositionRef.current.longitude,
-                    snapped.point.latitude,
-                    snapped.point.longitude,
-                    tailAfterSnap,
-                  );
-                } else {
-                  const pos = {
-                    latitude: snapped.point.latitude,
-                    longitude: snapped.point.longitude,
-                  };
-                  riderPositionRef.current = pos;
-                  setRiderPosition(pos);
-                }
-
-                setRemainingRoute([
-                  [snapped.point.longitude, snapped.point.latitude],
-                  ...tailAfterSnap,
-                ]);
-
-                if (snapped.index !== lastSnappedIndexRef.current) {
-                  lastSnappedIndexRef.current = snapped.index;
-                }
-              }
-
-              
-              const bearingDiff = Math.abs(
-                movementBearing - headingRef.current,
-              );
-              const normalizedDiff =
-                bearingDiff > 180 ? 360 - bearingDiff : bearingDiff;
-              const alreadyAnimated =
-                Math.abs(movementBearing - lastAnimatedBearingRef.current) < 5;
-
-              if (normalizedDiff > 15 && !alreadyAnimated) {
-                lastAnimatedBearingRef.current = movementBearing;
-                animateHeading(headingRef.current, movementBearing);
-              }
-            }
-          }
+        if (route.length < 2) {
+          previousCoordinateRef.current = { latitude, longitude };
+          return;
         }
 
+        if (isReroutingRef.current) {
+          previousCoordinateRef.current = { latitude, longitude };
+          return;
+        }
+
+        const snapped = resolveRouteSnap(
+          route,
+          latitude,
+          longitude,
+          lastSnappedIndexRef.current,
+        );
+
+        if (!snapped?.point) {
+          previousCoordinateRef.current = { latitude, longitude };
+          return;
+        }
+
+        if (snapped.distance > OFF_ROUTE_THRESHOLD_METERS) {
+          offRouteCountRef.current += 1;
+
+          if (offRouteCountRef.current >= OFF_ROUTE_CONFIRM_COUNT) {
+            reRoute(latitude, longitude);
+            offRouteCountRef.current = 0;
+          }
+
+          previousCoordinateRef.current = { latitude, longitude };
+          return;
+        }
+
+        offRouteCountRef.current = 0;
+        applySnapToRoute(route, snapped, gpsSpeed);
         previousCoordinateRef.current = { latitude, longitude };
       },
       error => console.log(error),
       {
         enableHighAccuracy: true,
-        distanceFilter: 1,
-        interval: 1000,
-        fastestInterval: 1000,
+        distanceFilter: 0,
+        interval: 250,
+        fastestInterval: 250,
         showLocationDialog: true,
         forceRequestLocation: true,
       },
@@ -687,6 +1032,10 @@ export default function DeliveryStart({ route, navigation }: any) {
     }
 
     return () => {
+      if (headingRafRef.current != null) {
+        cancelAnimationFrame(headingRafRef.current);
+        headingRafRef.current = null;
+      }
       Geolocation.clearWatch(watchId);
 
       const s = getSocket();
@@ -747,6 +1096,62 @@ export default function DeliveryStart({ route, navigation }: any) {
       });
     };
 
+  const handleRegionDidChange = (
+    event: NativeSyntheticEvent<ViewStateChangeEvent>,
+  ) => {
+    if (event.nativeEvent.userInteraction) {
+      userInteractingRef.current = true;
+      setIsFollowingRider(false);
+      if (interactionTimerRef.current) {
+        clearTimeout(interactionTimerRef.current);
+      }
+    }
+  };
+
+  useEffect(() => {
+    isFollowingRiderRef.current = isFollowingRider;
+  }, [isFollowingRider]);
+
+  const displayRoute =
+    remainingRoute.length > 1 ? remainingRoute : routeCoordinates;
+
+  // Camera already rotates with bearing in follow mode, so keep icon pointing up.
+  const markerIconRotation = isFollowingRider ? 0 : markerHeading;
+
+  const mapCameraCenter = useMemo<[number, number]>(() => {
+    if (riderPosition) {
+      return [riderPosition.longitude, riderPosition.latitude];
+    }
+
+    return [destinationLocation.longitude, destinationLocation.latitude];
+  }, [
+    riderPosition?.latitude,
+    riderPosition?.longitude,
+    destinationLocation.latitude,
+    destinationLocation.longitude,
+  ]);
+
+  const handleRecenter = () => {
+    userInteractingRef.current = false;
+    setIsFollowingRider(true);
+
+    const center = riderPosition
+      ? ([riderPosition.longitude, riderPosition.latitude] as [number, number])
+      : ([destinationLocation.longitude, destinationLocation.latitude] as [
+          number,
+          number,
+        ]);
+
+    cameraRef.current?.easeTo({
+      center,
+      zoom: NAVIGATION_ZOOM,
+      pitch: NAVIGATION_PITCH,
+      bearing: markerHeading,
+      padding: MAP_PADDING,
+      duration: 400,
+    });
+  };
+
   return (
     <View style={styles.container}>
       <GlobalTopBarDelivery
@@ -763,64 +1168,31 @@ export default function DeliveryStart({ route, navigation }: any) {
           <View style={styles.mapContainer}>
             <Map
               style={styles.map}
-              mapStyle={DARK_MAP_STYLE}
+              mapStyle={NAVIGATION_MAP_STYLE}
               logo={false}
-              compass={false}
-              onTouchStart={() => {
-                userInteractingRef.current = true;
-                setIsFollowingRider(false);
-                if (interactionTimerRef.current) {
-                  clearTimeout(interactionTimerRef.current);
-                }
-              }}
-            >
-              {/* CAMERA */}
-              {riderPosition && isFollowingRider && (
+              onRegionDidChange={handleRegionDidChange}>
+              {isFollowingRider && (
                 <Camera
-                  zoom={18}
-                  pitch={0}
-                  bearing={0}
-                  center={[riderPosition.longitude, riderPosition.latitude]}
-                  padding={{ top: 100, bottom: 300, left: 0, right: 0 }}
+                  ref={cameraRef}
+                  minZoom={14}
+                  initialViewState={{
+                    center: [
+                      destinationLocation.longitude,
+                      destinationLocation.latitude,
+                    ],
+                    zoom: NAVIGATION_ZOOM,
+                    pitch: NAVIGATION_PITCH,
+                    bearing: markerHeading,
+                  }}
+                  zoom={NAVIGATION_ZOOM}
+                  pitch={NAVIGATION_PITCH}
+                  bearing={markerHeading}
+                  center={mapCameraCenter}
+                  padding={MAP_PADDING}
                 />
               )}
 
-              {/* DELIVERY BOY MARKER */}
-              {riderPosition && (
-                <Marker
-                  anchor="center"
-                  lngLat={[riderPosition.longitude, riderPosition.latitude]}
-                >
-                  <View
-                    style={[
-                      styles.currentMarkerWrapper,
-                      { transform: [{ rotate: `${markerHeading}deg` }] },
-                    ]}
-                  >
-                    <Image
-                      source={require('../assets/images/delivery-foodyply-rider.png')}
-                      style={styles.deliveryIcon}
-                      resizeMode="contain"
-                    />
-                  </View>
-                </Marker>
-              )}
-
-              {/* DESTINATION */}
-              <Marker
-                anchor="center"
-                lngLat={[
-                  destinationLocation.longitude,
-                  destinationLocation.latitude,
-                ]}
-              >
-                <View style={styles.destinationMarkerWrapper}>
-                  <View style={styles.destinationMarker} />
-                </View>
-              </Marker>
-
-              {/* ROUTE */}
-              {routeCoordinates.length > 1 && (
+              {displayRoute.length > 1 && (
                 <GeoJSONSource
                   id="routeSource"
                   data={{
@@ -831,19 +1203,18 @@ export default function DeliveryStart({ route, navigation }: any) {
                         properties: {},
                         geometry: {
                           type: 'LineString',
-                          coordinates: remainingRoute,
+                          coordinates: displayRoute,
                         },
                       },
                     ],
-                  }}
-                >
+                  }}>
                   <Layer
                     id="routeLayerBg"
                     type="line"
                     paint={{
-                      'line-color': '#0B3B2E',
-                      'line-width': 10,
-                      'line-opacity': 0.7,
+                      'line-color': '#1B4332',
+                      'line-width': 12,
+                      'line-opacity': 0.85,
                     }}
                     layout={{ 'line-cap': 'round', 'line-join': 'round' }}
                   />
@@ -851,25 +1222,86 @@ export default function DeliveryStart({ route, navigation }: any) {
                     id="routeLayer"
                     type="line"
                     paint={{
-                      'line-color': '#00FF9D',
-                      'line-width': 6,
+                      'line-color': Colors.primary,
+                      'line-width': 7,
                       'line-opacity': 1,
                     }}
                     layout={{ 'line-cap': 'round', 'line-join': 'round' }}
                   />
                 </GeoJSONSource>
               )}
+
+              {riderPosition && (
+                <Marker
+                  anchor="center"
+                  lngLat={[riderPosition.longitude, riderPosition.latitude]}>
+                  <View style={styles.riderMarkerContainer}>
+                    <View style={styles.riderPulse} />
+                    <View
+                      style={[
+                        styles.riderMarkerWrapper,
+                        { transform: [{ rotate: `${markerIconRotation}deg` }] },
+                      ]}>
+                      <Image
+                        source={require('../assets/images/delivery-foodyply-rider.png')}
+                        style={styles.deliveryIcon}
+                        resizeMode="contain"
+                      />
+                    </View>
+                  </View>
+                </Marker>
+              )}
+
+              <Marker
+                anchor="center"
+                lngLat={[
+                  destinationLocation.longitude,
+                  destinationLocation.latitude,
+                ]}>
+                <View style={styles.destinationMarkerOuter}>
+                  <View style={styles.destinationMarkerInner} />
+                </View>
+              </Marker>
             </Map>
+
+            {(routeDistanceMeters > 0 ||
+              routeDurationSeconds > 0 ||
+              displayRoute.length > 1) && (
+              <View style={styles.etaChip}>
+                <Text style={styles.etaChipTitle}>ETA</Text>
+                <Text style={styles.etaChipValue}>
+                  {formatRouteDuration(routeDurationSeconds)}
+                </Text>
+                <Text style={styles.etaChipMeta}>
+                  {formatRouteDistance(routeDistanceMeters)}
+                </Text>
+              </View>
+            )}
+
+            <View style={styles.speedChip}>
+              <Text style={styles.speedChipValue}>{currentSpeedKmh}</Text>
+              <Text style={styles.speedChipUnit}>km/h</Text>
+            </View>
+
+            {navigationInstruction ? (
+              <View
+                style={[
+                  styles.maneuverChip,
+                  showDetailsCard
+                    ? styles.maneuverChipAboveCard
+                    : styles.maneuverChipBottom,
+                ]}>
+                <Text style={styles.maneuverChipText}>
+                  {navigationInstruction}
+                </Text>
+              </View>
+            ) : null}
 
             {!isFollowingRider && (
               <TouchableOpacity
                 activeOpacity={0.85}
                 style={styles.reCenterBtn}
-                onPress={() => {
-                  userInteractingRef.current = false;
-                  setIsFollowingRider(true);
-                }}
-              >
+                onPress={handleRecenter}>
                 <Image
                   source={require('../assets/images/map-point.png')}
                   style={styles.mapPoint}
@@ -1091,27 +1523,133 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   map: { flex: 1 },
-  mapPoint: { width: 20, height: 20 },
-  currentMarkerWrapper: {
+  mapPoint: { width: 22, height: 22, tintColor: Colors.primary },
+  riderMarkerContainer: {
+    width: 56,
+    height: 56,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  riderPulse: {
+    position: 'absolute',
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: 'rgba(255, 106, 0, 0.18)',
+  },
+  riderMarkerWrapper: {
     width: 44,
     height: 44,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  deliveryIcon: { width: 60, height: 60 },
-  destinationMarkerWrapper: {
-    width: 30,
-    height: 30,
+  deliveryIcon: { width: 52, height: 52 },
+  destinationMarkerOuter: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: 'rgba(239, 68, 68, 0.18)',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  destinationMarker: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    backgroundColor: 'red',
+  destinationMarkerInner: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: '#EF4444',
     borderWidth: 3,
-    borderColor: '#fff',
+    borderColor: '#FFFFFF',
+  },
+  etaChip: {
+    position: 'absolute',
+    top: 16,
+    left: 16,
+    minWidth: 92,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    shadowColor: '#000',
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 5,
+  },
+  etaChipTitle: {
+    fontSize: 11,
+    color: '#6B7280',
+    fontFamily: FontFamily.medium,
+  },
+  etaChipValue: {
+    marginTop: 2,
+    fontSize: 18,
+    color: Colors.textColor,
+    fontFamily: FontFamily.bold,
+  },
+  etaChipMeta: {
+    marginTop: 2,
+    fontSize: 12,
+    color: Colors.primary,
+    fontFamily: FontFamily.medium,
+  },
+  speedChip: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+    minWidth: 64,
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    shadowColor: '#000',
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 5,
+  },
+  speedChipValue: {
+    fontSize: 22,
+    color: Colors.textColor,
+    fontFamily: FontFamily.bold,
+    lineHeight: 26,
+  },
+  speedChipUnit: {
+    fontSize: 11,
+    color: '#6B7280',
+    fontFamily: FontFamily.medium,
+  },
+
+  maneuverChip: {
+    position: 'absolute',
+    left: 24,
+    right: 24,
+    alignItems: 'center',
+    backgroundColor: '#111827',
+    borderRadius: 18,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    shadowColor: '#000',
+    shadowOpacity: 0.18,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 6,
+    zIndex: 5,
+  },
+
+  maneuverChipAboveCard: {
+    bottom: 310,
+  },
+
+  maneuverChipBottom: {
+    bottom: 24,
+  },
+
+  maneuverChipText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    textAlign: 'center',
+    fontFamily: FontFamily.semiBold,
   },
   card1: {
     position: 'absolute',
@@ -1318,20 +1856,19 @@ const styles = StyleSheet.create({
   floatingArrow: { width: 24, height: 24, tintColor: '#fff' },
   reCenterBtn: {
     position: 'absolute',
-    top: 16,
     right: 16,
-    backgroundColor: '#fff',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
-    shadowColor: '#000',
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 8,
-    flexDirection: 'row',
+    bottom: 16,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#FFFFFF',
     alignItems: 'center',
-    gap: 4,
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 5,
   },
   reCenterText: {
     color: Colors.primary,
