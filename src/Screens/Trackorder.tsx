@@ -68,6 +68,10 @@ const steps = [
     { latitude: number; longitude: number } | null
   >(null);
 
+   const [deliveryLocation, setDeliveryLocation] = useState<
+    { latitude: number; longitude: number } | null
+  >(null);
+
 
 const socket = useRef<Socket | null>(null);
 const handleSocket = (trackedOrderId: number) => {
@@ -227,6 +231,7 @@ const getOrderDetails = async (trackedOrderId: number) => {
       const result: DeliveryTrackingResponse =
         await response.json();
 
+      console.log('Order Details API:', `${GlobalApi.baseUrl}api/deliveries/order/${trackedOrderId}/track`);
       console.log('Order Details:', result);
 
       if (!response.ok || !result.success) {
@@ -238,6 +243,15 @@ const getOrderDetails = async (trackedOrderId: number) => {
       }
 
       setOrderDetail(result.data);
+      setDeliveryLocation({
+        latitude: result.data.customer.address.latitude ?? 0,
+        longitude: result.data.customer.address.longitude ?? 0,
+      });
+
+      setRiderLocation({
+        latitude: 22.5732984,
+        longitude: 88.4288117,
+      });
      
       const currentStatus = result.data?.order?.status ?? '';
 
