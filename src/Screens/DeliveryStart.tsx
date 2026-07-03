@@ -644,6 +644,7 @@ export default function DeliveryStart({ route, navigation }: any) {
   const [loading, setLoading] = useState(false);
   const [isFollowingRider, setIsFollowingRider] = useState(true);
   const isFollowingRiderRef = useRef(true);
+  const [mapBearing, setMapBearing] = useState(0);
   const userInteractingRef = useRef(false);
   const interactionTimerRef = useRef<any>(null);
   const cameraRef = useRef<CameraRef>(null);
@@ -1099,6 +1100,11 @@ export default function DeliveryStart({ route, navigation }: any) {
   const handleRegionDidChange = (
     event: NativeSyntheticEvent<ViewStateChangeEvent>,
   ) => {
+    const bearing = event.nativeEvent.bearing;
+    if (Number.isFinite(bearing)) {
+      setMapBearing(bearing);
+    }
+
     if (event.nativeEvent.userInteraction) {
       userInteractingRef.current = true;
       setIsFollowingRider(false);
@@ -1115,8 +1121,11 @@ export default function DeliveryStart({ route, navigation }: any) {
   const displayRoute =
     remainingRoute.length > 1 ? remainingRoute : routeCoordinates;
 
-  // Camera already rotates with bearing in follow mode, so keep icon pointing up.
-  const markerIconRotation = isFollowingRider ? 0 : markerHeading;
+  // Follow mode: map bearing tracks heading, icon points up.
+  // Free pan/zoom: rotate icon relative to current map bearing.
+  const markerIconRotation = isFollowingRider
+    ? 0
+    : ((markerHeading - mapBearing) % 360 + 360) % 360;
 
   const mapCameraCenter = useMemo<[number, number]>(() => {
     if (riderPosition) {
@@ -1876,4 +1885,3 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.semiBold,
   },
 });
-
