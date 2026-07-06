@@ -98,6 +98,8 @@ import {
   RazorpayVerifyResponseModel,
 } from '../Models/OrderModel';
 
+import { CommonActions } from '@react-navigation/native';
+
 type CartDisplayItem = {
   id: string;
   cartLineId?: number;
@@ -1188,7 +1190,21 @@ export default function Cart({ navigation, route }: any) {
 
       if (paymentMethod === 'cod') {
         await confirmCodPayment(orderId);
-        navigation.navigate('OrderConfirmed', { orderId });
+        //navigation.navigate('OrderConfirmed', { orderId });
+        navigation.dispatch(
+            CommonActions.reset({
+              index: 1,
+              routes: [
+                {
+                  name: 'Dashboard',
+                },
+                {
+                  name: 'OrderConfirmed',
+                  params: { orderId },
+                },
+              ],
+            })
+          );
         return;
       }
 
@@ -1239,7 +1255,22 @@ export default function Cart({ navigation, route }: any) {
         }),
       );
 
-      navigation.navigate('OrderConfirmed', { orderId });
+      // navigation.navigate('OrderConfirmed', { orderId });
+
+      navigation.dispatch(
+        CommonActions.reset({
+          index: 1,
+          routes: [
+            {
+              name: 'Dashboard',
+            },
+            {
+              name: 'OrderConfirmed',
+              params: { orderId },
+            },
+          ],
+        })
+      );
     } catch (error: any) {
       if (error?.code === 'PAYMENT_CANCELLED') {
         Alert.alert('Payment cancelled', 'You cancelled the payment.');

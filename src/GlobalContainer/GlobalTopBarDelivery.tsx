@@ -18,6 +18,16 @@ export default function GlobalTopBarDelivery({ navigation, notificationClick, te
   return (
     <View style={styles.topBar}>
       <View style={styles.headerContainer}>
+        {!!subtitleText && (
+          <Text
+            style={[
+              styles.subtitle,
+              isBackVisible ? styles.subtitleIndented : null,
+            ]}>
+            {subtitleText}
+          </Text>
+        )}
+
         <View style={styles.titleRow}>
           <View style={styles.row}>
             {isBackVisible && (
@@ -55,15 +65,7 @@ export default function GlobalTopBarDelivery({ navigation, notificationClick, te
           </TouchableOpacity>
         </View>
 
-        {!!subtitleText && (
-          <Text
-            style={[
-              styles.subtitle,
-              isBackVisible ? styles.subtitleIndented : null,
-            ]}>
-            {subtitleText}
-          </Text>
-        )}
+        
       </View>
     </View>
   );
@@ -148,7 +150,8 @@ const styles = StyleSheet.create({
     width: '100%',
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
+    marginTop: 4,
   },
   
     title: {
@@ -171,7 +174,7 @@ const styles = StyleSheet.create({
     },
 
     subtitleIndented: {
-      marginLeft: 44,
+      marginLeft: 26,
     },
 
     row: {
@@ -179,6 +182,7 @@ const styles = StyleSheet.create({
       flexDirection: 'row',
       alignItems: 'center',
       marginRight: 8,
+      justifyContent: 'flex-start',
     },
 
     backButton: {
@@ -186,8 +190,9 @@ const styles = StyleSheet.create({
       height: 40,
       justifyContent: 'center',
       alignItems: 'center',
-      marginRight: 4,
       zIndex: 10,
+      marginTop: -4,
+      marginLeft: -15,
     },
 
     backIcon: {
