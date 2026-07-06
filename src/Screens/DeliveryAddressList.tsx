@@ -29,6 +29,7 @@ import {
   AddressSearchBias,
   LocationIqSearchResult,
   resolveLocationIqAddress,
+  reverseGeocodeLocationIq,
   searchLocationIqAddresses,
 } from '../services/locationIqService';
 
@@ -137,6 +138,7 @@ export default function DeliveryAddressList({ navigation }: any) {
   const [selectedSearchResult, setSelectedSearchResult] =
     useState<LocationIqSearchResult | null>(null);
   const [isSearching, setIsSearching] = useState(false);
+  const [isFetchingLocation, setIsFetchingLocation] = useState(false);
   const [isSavingAddress, setIsSavingAddress] = useState(false);
   const [isDeletingAddress, setIsDeletingAddress] = useState(false);
   const [searchError, setSearchError] = useState('');
@@ -505,6 +507,53 @@ export default function DeliveryAddressList({ navigation }: any) {
     }
   };
 
+  const handleUseCurrentLocation = async () => {
+    if (isSavingAddress || isFetchingLocation) {
+      return;
+    }
+
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+
+    searchRequestIdRef.current += 1;
+    setResults([]);
+    setSearchError('');
+    setIsSearching(false);
+    setIsFetchingLocation(true);
+
+    try {
+      const permission = await GlobalLocationPermission.request();
+      if (permission !== 'granted') {
+        setSearchError(
+          'Location permission is required to use your current location.',
+        );
+        return;
+      }
+
+      const position = await GlobalLocationPermission.getCurrentLocation();
+      const lat = position.coords.latitude;
+      const lon = position.coords.longitude;
+
+      const result = await reverseGeocodeLocationIq(lat, lon);
+
+      setQuery(result.display_name);
+      setSelectedSearchResult(result);
+      selectedSearchResultRef.current = result;
+      setSearchBias({ lat, lon });
+      searchBiasRef.current = { lat, lon };
+    } catch (error) {
+      console.log('Use current location failed:', error);
+      setSearchError(
+        error instanceof Error
+          ? error.message
+          : 'Unable to detect your location. Try searching manually.',
+      );
+    } finally {
+      setIsFetchingLocation(false);
+    }
+  };
+
   const handleQueryChange = (text: string) => {
     setQuery(text);
     setSelectedSearchResult(null);
@@ -600,6 +649,7 @@ export default function DeliveryAddressList({ navigation }: any) {
     setSelectedSearchResult(null);
     setSearchError('');
     setIsSearching(false);
+    setIsFetchingLocation(false);
     setIsAdding(false);
   };
 
@@ -797,6 +847,23 @@ export default function DeliveryAddressList({ navigation }: any) {
               </View>
 
               <Text style={styles.label}>Address</Text>
+              <TouchableOpacity
+                style={[
+                  styles.currentLocationButton,
+                  (isFetchingLocation || isSavingAddress) &&
+                    styles.currentLocationButtonDisabled,
+                ]}
+                disabled={isFetchingLocation || isSavingAddress}
+                onPress={handleUseCurrentLocation}>
+                <Text style={styles.currentLocationButtonText}>
+                  {isFetchingLocation
+                    ? 'Detecting your location...'
+                    : 'Use Current Location'}
+                </Text>
+              </TouchableOpacity>
+
+              <Text style={styles.orDividerText}>or search below</Text>
+
               <TextInput
                 placeholder="Search Address"
                 value={query}
@@ -806,7 +873,16 @@ export default function DeliveryAddressList({ navigation }: any) {
                 autoCapitalize="words"
               />
 
-              {isSearching && !isSavingAddress && (
+              {isFetchingLocation && !isSavingAddress && (
+                <View style={styles.searchStatusRow}>
+                  <ActivityIndicator size="small" color={Colors.primary} />
+                  <Text style={styles.searchStatusText}>
+                    Getting your current location...
+                  </Text>
+                </View>
+              )}
+
+              {isSearching && !isSavingAddress && !isFetchingLocation && (
                 <View style={styles.searchStatusRow}>
                   <ActivityIndicator size="small" color={Colors.primary} />
                   <Text style={styles.searchStatusText}>Searching addresses...</Text>
@@ -1062,6 +1138,33 @@ const styles = StyleSheet.create({
 
   labelPillTextDisabled: {
     color: '#6B7280',
+  },
+
+  currentLocationButton: {
+    backgroundColor: '#FFDECF',
+    borderRadius: 20,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+
+  currentLocationButtonDisabled: {
+    opacity: 0.7,
+  },
+
+  currentLocationButtonText: {
+    color: Colors.primary,
+    fontSize: 16,
+    fontFamily: 'LeagueSpartan-Medium',
+  },
+
+  orDividerText: {
+    textAlign: 'center',
+    fontSize: 13,
+    color: '#6B7280',
+    fontFamily: 'LeagueSpartan-Regular',
+    marginBottom: 10,
   },
 
   input: {
