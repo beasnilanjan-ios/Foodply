@@ -7,6 +7,9 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
+  Linking,
+  Platform,
+  Share,
 } from 'react-native';
 
 import Colors from '../assets/Colors/Colors';
@@ -23,6 +26,7 @@ import {
   OrderInvoiceDataModel,
   OrderInvoiceResponseModel,
 } from '../Models/OrderInvoiceModel';
+import { isCompletedOrderStatus } from '../Models/MyOrdersModel';
 
 const { width, height } = Dimensions.get('window');
 const isTablet = Math.min(width, height) >= 600;
@@ -208,6 +212,97 @@ export default function OrderDetails({ navigation, route }: any) {
     }
   }, [navigation, orderId]);
 
+  const handleDownloadInvoice = useCallback(async () => {
+    if (!orderId) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await GlobalLoginAuth.loadAuthData();
+
+      const response = await fetch(
+        `${GlobalApi.baseUrl}api/orders/${orderId}/invoice/download`,
+        {
+          method: 'GET',
+          headers: {
+            ...getApiHeaders(),
+            Accept: '*/*',
+          },
+        },
+      );
+
+      const contentType = response.headers.get('content-type') ?? '';
+
+      if (!response.ok) {
+        const result = contentType.includes('application/json')
+          ? await response.json().catch(() => null)
+          : null;
+        Alert.alert(
+          'FoodyPly',
+          result?.message || 'Failed to download invoice',
+        );
+        return;
+      }
+
+      const isFileResponse =
+        contentType.includes('application/pdf') ||
+        contentType.includes('application/octet-stream') ||
+        contentType.includes('image/');
+
+      if (isFileResponse) {
+        const arrayBuffer = await response.arrayBuffer();
+        const bytes = new Uint8Array(arrayBuffer);
+        let binary = '';
+        const chunkSize = 0x8000;
+
+        for (let i = 0; i < bytes.length; i += chunkSize) {
+          binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
+        }
+
+        const base64 = global.btoa(binary);
+        const mimeType = contentType.split(';')[0] || 'application/pdf';
+        const title = orderData?.order?.orderNumber
+          ? `Invoice ${orderData.order.orderNumber}`
+          : 'Invoice';
+
+        await Share.share(
+          Platform.OS === 'ios'
+            ? { title, url: `data:${mimeType};base64,${base64}` }
+            : { title, message: title },
+        );
+        return;
+      }
+
+      if (contentType.includes('application/json')) {
+        const result = await response.json();
+        const fileUrl =
+          result?.data?.downloadUrl ??
+          result?.data?.pdfUrl ??
+          result?.downloadUrl ??
+          result?.pdfUrl;
+
+        if (fileUrl) {
+          await Linking.openURL(String(fileUrl));
+          return;
+        }
+
+        Alert.alert(
+          'FoodyPly',
+          result?.message || 'Invoice is not available for this order',
+        );
+        return;
+      }
+
+      Alert.alert('FoodyPly', 'Invoice is not available for this order');
+    } catch (error) {
+      console.log('handleDownloadInvoice failed:', error);
+      Alert.alert('FoodyPly', 'Unable to download invoice');
+    } finally {
+      setLoading(false);
+    }
+  }, [orderData?.order?.orderNumber, orderId]);
+
   useEffect(() => {
     fetchOrderDetails();
   }, [fetchOrderDetails]);
@@ -250,6 +345,10 @@ export default function OrderDetails({ navigation, route }: any) {
   const cgstAmount = summary?.cgstAmount ?? 0;
   const sgstAmount = summary?.sgstAmount ?? 0;
   const tipAmount = summary?.tipAmount ?? 0;
+  const showDownloadInvoice =
+    isReOrder ||
+    isCompletedOrderStatus(orderData?.order?.status ?? '') ||
+    isCompletedOrderStatus(orderData?.delivery?.status ?? '');
 
   return (
     <View style={styles.container}>
@@ -264,6 +363,17 @@ export default function OrderDetails({ navigation, route }: any) {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingBottom: 40 }}
         >
+          {showDownloadInvoice ? (
+            <TouchableOpacity
+              style={styles.downloadInvoiceRow}
+              activeOpacity={0.8}
+              onPress={handleDownloadInvoice}
+            >
+              <Text style={styles.downloadInvoiceText}>Download Invoice</Text>
+              <Text style={styles.downloadIconSmall}>↓</Text>
+            </TouchableOpacity>
+          ) : null}
+
           <DeliveryOrderItemsListComponent items={items} itemQty={totalQty} />
 
           <View style={styles.summaryRow}>
@@ -405,6 +515,30 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     marginBottom: 10,
+  },
+
+  downloadInvoiceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-end',
+    marginBottom: 12,
+    paddingVertical: 4,
+    paddingHorizontal: 2,
+  },
+
+  downloadInvoiceText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: Colors.primary,
+    fontFamily: 'LeagueSpartan-Medium',
+  },
+
+  downloadIconSmall: {
+    marginLeft: 6,
+    fontSize: 16,
+    fontWeight: '700',
+    color: Colors.primary,
+    lineHeight: 18,
   },
 
   summaryItem: {
