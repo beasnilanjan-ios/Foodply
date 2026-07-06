@@ -19,17 +19,13 @@ import { FontFamily } from '../assets/GlobalFont/GlobalFont';
 import GlobalLoginAuth from '../GlobalContainer/GlobalLoginAuth';
 import { Socket } from 'socket.io-client';
 import { ON_THE_WAY } from '../Utils/CommonUtil';
-import {
-  Map,
-  Camera,
-  Marker,
-  GeoJSONSource,
-  Layer,
-} from '@maplibre/maplibre-react-native';
-import { OSM_STYLE } from '../GlobalContainer/mapStyle';
 import { DeliveryTrackingData } from '../Models/CustomerTrackOrder/DeliveryTrackingData';
 import { DeliveryTrackingResponse } from '../Models/CustomerTrackOrder/DeliveryTrackingResponse'
 import GlobalApi from '../GlobalContainer/GlobalApi';
+
+import { CameraRef } from '@maplibre/maplibre-react-native';
+import MapTracking from '../components/MapTracking';
+import useAnimatedMarker from '../tracking/useAnimatedMarker';
 
 export default function TrackOrder({ navigation, route }: any) {
 
@@ -64,14 +60,19 @@ const steps = [
   const trackedOrderId = Number(route?.params?.orderId ?? 0);
   const cleanupRef = useRef<(() => void) | undefined>(undefined);  
 
-  const [riderLocation, setRiderLocation] = useState<
-    { latitude: number; longitude: number } | null
+  // const [riderLocation, setRiderLocation] = useState<
+  //   { latitude: number; longitude: number } | null
+  // >(null);
+
+  const [riderLocation, setRiderLocation] = useState<{
+  latitude: number;
+  longitude: number;}| null
   >(null);
+
 
    const [deliveryLocation, setDeliveryLocation] = useState<
     { latitude: number; longitude: number } | null
   >(null);
-
 
 const socket = useRef<Socket | null>(null);
 const handleSocket = (trackedOrderId: number) => {
@@ -95,31 +96,6 @@ const handleSocket = (trackedOrderId: number) => {
   const onSnapshot = (data: any) => {
     console.log('📍 Tracking Snapshot:', data);
     console.log('stauts onSnapshot:',data?.status)
-
-    // if (data?.status === '"ORDER_ACCEPTED"') {
-    //   setcurrentIndex(0);
-    //   setCurrentLive(getLiveStatus('ACCEPTED'));
-    //   getOrderDetails(trackedOrderId);
-    // } else if (data?.status === 'PREPARING') {
-    //   setcurrentIndex(1);
-    //   setCurrentLive(getLiveStatus('PREPARING'));
-    // } else if (
-    //   data?.status === 'ON_THE_WAY' &&
-    //   data?.latestLocation
-    // ) {
-    //   const {latitude, longitude} = data.latestLocation;
-
-    //   console.log('Lat:', latitude);
-    //   console.log('Lng:', longitude);
-
-    //   setcurrentIndex(2);
-    //   setCurrentLive(getLiveStatus('ON_THE_WAY'));
-
-    //   setRiderLocation({
-    //     latitude,
-    //     longitude,
-    //   });
-    // }
   };
 
   const onLocationUpdated = (data: any) => {
@@ -171,6 +147,7 @@ const handleSocket = (trackedOrderId: number) => {
         latitude,
         longitude,
       });
+
     } else if (payload?.status === 'DELIVERED') {
       setcurrentIndex(3);
       setCurrentLive(getLiveStatus('DELIVERED'));
@@ -243,15 +220,31 @@ const getOrderDetails = async (trackedOrderId: number) => {
       }
 
       setOrderDetail(result.data);
+
+      console.log('Delivery Loc:', result.data.customer.address.latitude, result.data.customer.address.longitude);
       setDeliveryLocation({
         latitude: result.data.customer.address.latitude ?? 0,
         longitude: result.data.customer.address.longitude ?? 0,
       });
 
-      setRiderLocation({
-        latitude: 22.5732984,
-        longitude: 88.4288117,
-      });
+      // setRiderLocation({
+      //   latitude: result.data.latestLocation.latitude,
+      //   longitude: result.data.latestLocation.longitude,
+      // });
+
+      const latestLocation = result.data?.latestLocation;
+
+        if (
+          latestLocation?.latitude != null &&
+          latestLocation?.longitude != null
+        ) {
+          setRiderLocation({
+            latitude: latestLocation.latitude,
+            longitude: latestLocation.longitude,
+          });
+        } else {
+          setRiderLocation(null);
+        }
      
       const currentStatus = result.data?.order?.status ?? '';
 
@@ -299,6 +292,7 @@ useEffect(() => {
     cleanupRef.current = undefined;
   };
 }, [trackedOrderId]);
+
 
 
 const getStepIcon = (status: string, isCurrent: boolean) => {
@@ -411,15 +405,14 @@ const getLiveStatus = (status: string) => {
           <View style={styles.overlay}>
             
             <View style={styles.mapContainer}>
-              <Map
-                style={styles.map}
-                mapStyle={OSM_STYLE}
-                logo={false}
-                compass={false}
-                onTouchStart={() => {         
-                }}></Map>
-
-
+              <MapTracking
+                riderLocation={riderLocation}
+                deliveryLocation={deliveryLocation}
+                showRoute={currentIndex >= 2}
+                showRider={currentIndex >= 2}
+                currentIndex={currentIndex}
+              />
+             
                 {/* FLOATING CARD */}
                 {showDetailsCard ? (
                   <View style={styles.card1}>
