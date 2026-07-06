@@ -29,21 +29,23 @@ useEffect(() => {
     try {
       setLoading(true);
 
+      const token = await GlobalLoginAuth.resolveAuthToken();
+      if (!token) {
+        Alert.alert('FoodyPly', 'Please login to view order details');
+        return;
+      }
+
       const response = await fetch(
         `${GlobalApi.baseUrl}api/deliveries/me/orders/${orderId}`,
         {
           method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${GlobalLoginAuth.accessToken}`,
-          },
+          headers: await GlobalLoginAuth.getAuthHeaders(),
         }
       );
 
       const result: DeliveryOrderDetailsResponse =
         await response.json();
 
-      console.log('Order Details Api:', `Bearer ${GlobalLoginAuth.accessToken}`);
       console.log('Order Details Api:', `${GlobalApi.baseUrl}api/deliveries/me/orders/${orderId}`);
       console.log('Order Details:', result);
 
@@ -86,14 +88,17 @@ useEffect(() => {
 
         setLoading(true);
 
+        const token = await GlobalLoginAuth.resolveAuthToken();
+        if (!token) {
+          Alert.alert('FoodyPly', 'Please login to update order status');
+          return;
+        }
+
         const response = await fetch(
         `${GlobalApi.baseUrl}api/deliveries/me/orders/${orderId}/status`,
         {
             method: 'PATCH',
-            headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${GlobalLoginAuth.accessToken}`,
-            },
+            headers: await GlobalLoginAuth.getAuthHeaders(true),
             body: JSON.stringify({
             status: status,
             }),

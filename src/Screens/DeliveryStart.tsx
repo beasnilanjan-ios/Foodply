@@ -654,37 +654,34 @@ export default function DeliveryStart({ route, navigation }: any) {
       },
     );
 
-    console.log('Auth', GlobalLoginAuth.accessToken);
-  
+    console.log('Auth', GlobalLoginAuth.getBearerToken());
 
-    if (!GlobalLoginAuth.accessToken) {
-      console.log('Token is missing');
-      return;
-    }
-    console.log('Access Token:', GlobalLoginAuth.accessToken);
-    console.log('Type:', typeof GlobalLoginAuth.accessToken);
-    console.log('Parts:', GlobalLoginAuth.accessToken?.split('.').length);
-    const s = connectSocket();
-    console.log('socket status:', s ? s.connected : 'no-socket', 'id:', s?.id);
+    void GlobalLoginAuth.resolveAuthToken().then(token => {
+      if (!token) {
+        console.log('Token is missing');
+        return;
+      }
 
-    
+      const s = connectSocket();
+      console.log('socket status:', s ? s.connected : 'no-socket', 'id:', s?.id);
 
-    if (s && typeof s.onAny === 'function') {
-      s.onAny((event, ...args) => {
-        console.log('socket event:', event, args);
-      });
-    }
+      if (s && typeof s.onAny === 'function') {
+        s.onAny((event, ...args) => {
+          console.log('socket event:', event, args);
+        });
+      }
 
-    if (s) {
-      s.on('newMessage', data => {
-        console.log('Connected:', s.id);
-        console.log('newMessage:', data);
-      });
+      if (s) {
+        s.on('newMessage', data => {
+          console.log('Connected:', s.id);
+          console.log('newMessage:', data);
+        });
 
-      s.on('message', data => {
-        console.log('Message:', data);
-      });
-    }
+        s.on('message', data => {
+          console.log('Message:', data);
+        });
+      }
+    });
 
     return () => {
       Geolocation.clearWatch(watchId);
@@ -700,18 +697,17 @@ export default function DeliveryStart({ route, navigation }: any) {
   const sendOTP = async () => {
     try {
       setLoading(true);
-      console.log(
-        'Fetching dashboard data with token:',
-        GlobalLoginAuth.refreshToken,
-      );
+      const token = await GlobalLoginAuth.resolveAuthToken();
+      if (!token) {
+        Alert.alert('FoodyPly', 'Please login to continue');
+        return;
+      }
+
       const response = await fetch(
         `${GlobalApi.baseUrl}api/deliveries/me/orders/${orderDetail?.order.id}/send-otp`,
         {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${GlobalLoginAuth.accessToken}`,
-          },
+          headers: await GlobalLoginAuth.getAuthHeaders(true),
         },
       );
       const result = await response.json();

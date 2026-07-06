@@ -8,6 +8,7 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 
@@ -30,7 +31,15 @@ const { width, height } = Dimensions.get('window');
 const isTablet = Math.min(width, height) >= 600;
 
 const MY_ORDERS_LIMIT = 20;
-const MY_ORDERS_OFFSET = 0;
+
+const mergeOrders = (
+  existing: MyOrderItemModel[],
+  incoming: MyOrderItemModel[],
+): MyOrderItemModel[] => {
+  const seen = new Set(existing.map(order => order.orderId));
+  const uniqueIncoming = incoming.filter(order => !seen.has(order.orderId));
+  return [...existing, ...uniqueIncoming];
+};
 
 const getApiHeaders = (): Record<string, string> => {
   const headers: Record<string, string> = {
@@ -49,52 +58,91 @@ const getApiHeaders = (): Record<string, string> => {
 export default function Orders({ navigation, onMenuPress }: any) {
   const [activeTab, setActiveTab] = useState('Active');
   const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [orders, setOrders] = useState<MyOrderItemModel[]>([]);
+  const [nextOffset, setNextOffset] = useState(0);
+  const [hasNextPage, setHasNextPage] = useState(false);
 
   const tabs = ['Active', 'Completed', 'Cancelled'];
 
-  const fetchMyOrders = useCallback(async () => {
-    try {
-      setLoading(true);
-      await GlobalLoginAuth.loadAuthData();
+  const fetchOrdersPage = useCallback(
+    async (offset: number, reset: boolean) => {
+      try {
+        if (reset) {
+          setLoading(true);
+        } else {
+          setLoadingMore(true);
+        }
 
-      const token = GlobalLoginAuth.accessToken || GlobalLoginAuth.token;
-      if (!token) {
-        setOrders([]);
-        return;
-      }
+        await GlobalLoginAuth.loadAuthData();
 
-      const response = await fetch(
-        `${GlobalApi.baseUrl}api/orders/my-orders?limit=${MY_ORDERS_LIMIT}&offset=${MY_ORDERS_OFFSET}`,
-        {
-          method: 'GET',
-          headers: getApiHeaders(),
-        },
-      );
+        const token = GlobalLoginAuth.accessToken || GlobalLoginAuth.token;
+        if (!token) {
+          setOrders([]);
+          setNextOffset(0);
+          setHasNextPage(false);
+          return;
+        }
 
-      const result = await response.json();
-      console.log('My orders response:', JSON.stringify(result, null, 2));
-
-      const myOrdersResponse = MyOrdersResponseModel.fromJson(result);
-
-      if (!response.ok || myOrdersResponse.success === false) {
-        Alert.alert(
-          'FoodyPly',
-          myOrdersResponse.message || 'Failed to load orders',
+        const response = await fetch(
+          `${GlobalApi.baseUrl}api/orders/my-orders?limit=${MY_ORDERS_LIMIT}&offset=${offset}`,
+          {
+            method: 'GET',
+            headers: getApiHeaders(),
+          },
         );
-        setOrders([]);
-        return;
-      }
 
-      setOrders(myOrdersResponse.data?.orders ?? []);
-    } catch (error) {
-      console.log('fetchMyOrders failed:', error);
-      Alert.alert('FoodyPly', 'Unable to connect to server');
-      setOrders([]);
-    } finally {
-      setLoading(false);
+        const result = await response.json();
+        console.log('My orders response:', JSON.stringify(result, null, 2));
+
+        const myOrdersResponse = MyOrdersResponseModel.fromJson(result);
+
+        if (!response.ok || myOrdersResponse.success === false) {
+          Alert.alert(
+            'FoodyPly',
+            myOrdersResponse.message || 'Failed to load orders',
+          );
+          if (reset) {
+            setOrders([]);
+            setNextOffset(0);
+            setHasNextPage(false);
+          }
+          return;
+        }
+
+        const pageOrders = myOrdersResponse.data?.orders ?? [];
+        setOrders(prev => (reset ? pageOrders : mergeOrders(prev, pageOrders)));
+        setNextOffset(offset + pageOrders.length);
+        setHasNextPage(myOrdersResponse.data?.hasNextPage ?? false);
+      } catch (error) {
+        console.log('fetchOrdersPage failed:', error);
+        Alert.alert('FoodyPly', 'Unable to connect to server');
+        if (reset) {
+          setOrders([]);
+          setNextOffset(0);
+          setHasNextPage(false);
+        }
+      } finally {
+        if (reset) {
+          setLoading(false);
+        } else {
+          setLoadingMore(false);
+        }
+      }
+    },
+    [],
+  );
+
+  const fetchMyOrders = useCallback(() => {
+    fetchOrdersPage(0, true);
+  }, [fetchOrdersPage]);
+
+  const loadMoreOrders = useCallback(() => {
+    if (loading || loadingMore || !hasNextPage) {
+      return;
     }
-  }, []);
+    fetchOrdersPage(nextOffset, false);
+  }, [fetchOrdersPage, hasNextPage, loading, loadingMore, nextOffset]);
 
   useFocusEffect(
     useCallback(() => {
@@ -157,7 +205,10 @@ export default function Orders({ navigation, onMenuPress }: any) {
       </View>
 
       <View style={styles.overlay}>
-        <ScrollView showsVerticalScrollIndicator={false}>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+        >
           <View style={styles.tabContainer}>
             {tabs.map(tab => (
               <TouchableOpacity
@@ -191,6 +242,21 @@ export default function Orders({ navigation, onMenuPress }: any) {
                 navigation.navigate('Trackorder', { orderId: item.orderId });
               }}
             />
+
+            {hasNextPage ? (
+              <TouchableOpacity
+                style={styles.loadMoreButton}
+                activeOpacity={0.8}
+                disabled={loadingMore}
+                onPress={loadMoreOrders}
+              >
+                {loadingMore ? (
+                  <ActivityIndicator color={Colors.primary} />
+                ) : (
+                  <Text style={styles.loadMoreText}>Load More Orders</Text>
+                )}
+              </TouchableOpacity>
+            ) : null}
           </View>
         </ScrollView>
 
@@ -264,5 +330,27 @@ const styles = StyleSheet.create({
 
   activeTabText: {
     color: '#fff',
+  },
+
+  scrollContent: {
+    paddingBottom: Platform.OS === 'ios' ? 110 : 100,
+  },
+
+  loadMoreButton: {
+    marginTop: 8,
+    marginBottom: 8,
+    paddingVertical: 12,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: Colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 44,
+  },
+
+  loadMoreText: {
+    fontSize: 15,
+    color: Colors.primary,
+    fontFamily: 'LeagueSpartan-Medium',
   },
 });

@@ -34,15 +34,17 @@ const DeliveryOtpVerification = ({ route,
       const sendOTP = async () => {
               try {
                 setLoading(true);
-                console.log('Fetching dashboard data with token:', GlobalLoginAuth.refreshToken);
+                const token = await GlobalLoginAuth.resolveAuthToken();
+                if (!token) {
+                  Alert.alert('FoodyPly', 'Please login to continue');
+                  return;
+                }
+
                 const response = await fetch(
                   `${GlobalApi.baseUrl}api/deliveries/me/orders/${orderDetail?.order.id}/send-otp`,
                   {
                     method: 'POST',
-                    headers: {
-                      'Content-Type': 'application/json',
-                      Authorization: `Bearer ${GlobalLoginAuth.accessToken}`,
-                    },
+                    headers: await GlobalLoginAuth.getAuthHeaders(true),
                   }
                 );
           
@@ -90,15 +92,18 @@ const DeliveryOtpVerification = ({ route,
           try {
       
               setLoading(true);
+
+              const token = await GlobalLoginAuth.resolveAuthToken();
+              if (!token) {
+                Alert.alert('FoodyPly', 'Please login to update order status');
+                return;
+              }
       
               const response = await fetch(
               `${GlobalApi.baseUrl}api/deliveries/me/orders/${orderId}/status`,
               {
                   method: 'PATCH',
-                  headers: {
-                  'Content-Type': 'application/json',
-                  Authorization: `Bearer ${GlobalLoginAuth.accessToken}`,
-                  },
+                  headers: await GlobalLoginAuth.getAuthHeaders(true),
                   body: JSON.stringify({
                   status: status,
                   }),

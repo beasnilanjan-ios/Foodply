@@ -52,15 +52,17 @@ export default function DeliveryDashboard({ navigation }: any) {
   const getDashboardData = async () => {
     try {
       setLoading(true);
-      console.log('Fetching dashboard data with token:', GlobalLoginAuth.refreshToken);
+      const token = await GlobalLoginAuth.resolveAuthToken();
+      if (!token) {
+        Alert.alert('FoodyPly', 'Please login to continue');
+        return;
+      }
+
       const response = await fetch(
         `${GlobalApi.baseUrl}api/deliveries/me/dashboard`,
         {
           method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${GlobalLoginAuth.accessToken}`,
-          },
+          headers: await GlobalLoginAuth.getAuthHeaders(),
         }
       );
 

@@ -96,37 +96,52 @@ export default function OrderDetails({ navigation, route }: any) {
   const [invoiceData, setInvoiceData] = useState<OrderInvoiceDataModel | null>(
     null,
   );
+  const [invoiceError, setInvoiceError] = useState<string | null>(null);
 
-  const fetchOrderInvoice = useCallback(async (id: number) => {
-    try {
-      const response = await fetch(
-        `${GlobalApi.baseUrl}api/orders/${id}/invoice`,
-        {
-          method: 'GET',
-          headers: getApiHeaders(),
-        },
-      );
-
-      const result = await response.json();
-      console.log('Order invoice response:', JSON.stringify(result, null, 2));
-
-      const invoiceResponse = OrderInvoiceResponseModel.fromJson(result);
-
-      if (!response.ok || invoiceResponse.success === false) {
-        console.log(
-          'Order invoice failed:',
-          invoiceResponse.message || 'Failed to load invoice',
+  const fetchOrderInvoice = useCallback(
+    async (id: number): Promise<{ ok: boolean; message?: string }> => {
+      try {
+        const response = await fetch(
+          `${GlobalApi.baseUrl}api/orders/${id}/invoice`,
+          {
+            method: 'GET',
+            headers: getApiHeaders(),
+          },
         );
-        return;
-      }
 
-      if (invoiceResponse.data) {
-        setInvoiceData(invoiceResponse.data);
+        const result = await response.json();
+        console.log('Order invoice response:', JSON.stringify(result, null, 2));
+
+        const invoiceResponse = OrderInvoiceResponseModel.fromJson(result);
+
+        if (!response.ok || invoiceResponse.success === false) {
+          const message =
+            invoiceResponse.message || 'Failed to load invoice';
+          setInvoiceData(null);
+          setInvoiceError(message);
+          return { ok: false, message };
+        }
+
+        if (invoiceResponse.data) {
+          setInvoiceData(invoiceResponse.data);
+          setInvoiceError(null);
+          return { ok: true };
+        }
+
+        const message = 'Invoice is not available for this order';
+        setInvoiceData(null);
+        setInvoiceError(message);
+        return { ok: false, message };
+      } catch (error) {
+        console.log('fetchOrderInvoice failed:', error);
+        const message = 'Unable to load invoice';
+        setInvoiceData(null);
+        setInvoiceError(message);
+        return { ok: false, message };
       }
-    } catch (error) {
-      console.log('fetchOrderInvoice failed:', error);
-    }
-  }, []);
+    },
+    [],
+  );
 
   const fetchOrderDetails = useCallback(async () => {
     if (!orderId) {
@@ -166,7 +181,12 @@ export default function OrderDetails({ navigation, route }: any) {
       }
 
       setOrderData(result.data);
-      await fetchOrderInvoice(orderId);
+      setInvoiceError(null);
+
+      const invoiceResult = await fetchOrderInvoice(orderId);
+      if (!invoiceResult.ok && !result.data.billing) {
+        Alert.alert('FoodyPly', invoiceResult.message || 'Failed to load invoice');
+      }
     } catch (error) {
       console.log('fetchOrderDetails failed:', error);
       Alert.alert('FoodyPly', 'Unable to connect to server');
@@ -349,6 +369,7 @@ export default function OrderDetails({ navigation, route }: any) {
     isReOrder ||
     isCompletedOrderStatus(orderData?.order?.status ?? '') ||
     isCompletedOrderStatus(orderData?.delivery?.status ?? '');
+  const showReOrder = showDownloadInvoice;
 
   return (
     <View style={styles.container}>
@@ -380,6 +401,16 @@ export default function OrderDetails({ navigation, route }: any) {
             <View style={styles.summaryCard}>
               <Text style={styles.cardTitle}>Order Summary</Text>
 
+              {invoiceError && !invoiceData ? (
+                <Text style={styles.invoiceErrorText}>
+                  {orderData?.billing
+                    ? `${invoiceError}. Showing order billing instead.`
+                    : invoiceError}
+                </Text>
+              ) : null}
+
+              {summary ? (
+                <>
               <View style={styles.summaryItem}>
                 <Text style={styles.summaryLabel}>Item Total</Text>
                 <Text style={styles.summaryValue}>
@@ -452,10 +483,16 @@ export default function OrderDetails({ navigation, route }: any) {
                   ₹{(summary?.finalAmount ?? 0).toFixed(2)}
                 </Text>
               </View>
+                </>
+              ) : (
+                <Text style={styles.invoiceErrorText}>
+                  {invoiceError || 'Order summary is not available.'}
+                </Text>
+              )}
             </View>
           </View>
 
-          {isReOrder ? (
+          {showReOrder ? (
             <View style={styles.buttonContainer}>
               <TouchableOpacity
                 style={[GlobalStyles.buttonPrimary, styles.reorderButton]}
@@ -515,6 +552,13 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     marginBottom: 10,
+  },
+
+  invoiceErrorText: {
+    fontSize: 12,
+    color: '#c0392b',
+    marginBottom: 10,
+    lineHeight: 18,
   },
 
   downloadInvoiceRow: {
