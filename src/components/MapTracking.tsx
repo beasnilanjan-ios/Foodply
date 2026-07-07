@@ -96,6 +96,8 @@ const MapTracking = ({
 
   const routeLengthKmRef = useRef<number>(0);
 
+  const [mapBearing, setMapBearing] = useState(0);
+
   // Route pe ab tak kitni door (km) tak rider aage badh chuka hai —
 
   // isse peeche jump hone se rokte hain (monotonic progress).
@@ -161,7 +163,7 @@ const MapTracking = ({
 
       cameraRef.current?.easeTo({
         center: [deliveryLocation.longitude, deliveryLocation.latitude],
-        zoom: 15,
+        zoom: 16,
         duration: 1000,
       });
     }
@@ -430,16 +432,23 @@ const MapTracking = ({
       return;
     }
 
-    const now = Date.now();
+    // const now = Date.now();
 
-    if (
-      lastRouteRequest.current === 0 ||
-      now - lastRouteRequest.current > 30000
-    ) {
-      lastRouteRequest.current = now;
+    // if (
+    //   lastRouteRequest.current === 0 ||
+    //   now - lastRouteRequest.current > 30000
+    // ) {
+    //   lastRouteRequest.current = now;
+
+    //   fetchBikeRoute();
+    //}
+
+      //Remove polyline
+      if (!showRoute) return;
+      if (!riderLocation) return;
+      if (!deliveryLocation) return;
 
       fetchBikeRoute();
-    }
   }, [riderLocation, deliveryLocation, fetchBikeRoute, showRoute]);
 
   useEffect(() => {
@@ -454,9 +463,26 @@ const MapTracking = ({
     }
   }, [showRoute]);
 
+  const finalBearing =
+    (
+      (
+        showRoute
+          ? routeBearing
+          : bearing + 50
+      ) - mapBearing + 360
+    ) % 360;
+
   return (
     <View style={styles.container}>
-      <Map style={styles.map} mapStyle={mapStyle}>
+        <Map style={styles.map} 
+           mapStyle={mapStyle}
+             onRegionDidChange={(e) => {
+                // console.log('Bearing:', e.nativeEvent?.bearing);
+                // console.log('Zoom:', e.nativeEvent?.zoom);
+                // console.log('Center:', e.nativeEvent?.center);
+
+                setMapBearing(e.nativeEvent?.bearing ?? 0);
+        }}>
         <Camera ref={cameraRef} zoom={16} center={initialCenter ?? undefined} />
 
         {showRoute && routeFeature && (
@@ -510,9 +536,7 @@ const MapTracking = ({
                       {
                         transform: [
                           {
-                            rotate: `${
-                              showRoute ? routeBearing : bearing + 50
-                            }deg`,
+                            rotate: `${finalBearing}deg`,
                           },
                         ],
                       },
@@ -539,14 +563,14 @@ const styles = StyleSheet.create({
   },
 
   rider: {
-    width: 32,
-    height: 40,
+    width: 52,
+    height: 60,
     resizeMode: 'contain',
   },
 
   riderContainer: {
-    width: 64,
-    height: 64,
+    width: 90,
+    height: 90,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -560,9 +584,9 @@ const styles = StyleSheet.create({
 
   riderPlaceholder: {
     position: 'absolute',
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
     backgroundColor: Colors.primary,
     opacity: 0.15,
   },
