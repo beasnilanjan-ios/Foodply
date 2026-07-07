@@ -80,9 +80,11 @@ const MapTracking = ({
 
   const [riderImageError, setRiderImageError] = useState(false);
 
-  const [initialCenter, setInitialCenter] = useState<[number, number] | null>(
+  const [initialCenter, _setInitialCenter] = useState<[number, number] | null>(
     null,
   );
+
+  const [routeBearing, setRouteBearing] = useState(0);
 
   const lastRouteRequest = useRef(0);
 
@@ -181,7 +183,7 @@ const MapTracking = ({
     cameraRef.current?.easeTo({
       center: [animatedLocation.longitude, animatedLocation.latitude],
 
-      bearing: bearing,
+      //bearing: bearing,
 
       duration: 800,
     });
@@ -265,15 +267,37 @@ const MapTracking = ({
             : Math.max(progressKmRef.current, locationKm);
 
         return { latitude: lat, longitude: lng };
-      } catch (e) {
+      } catch {
         return point;
       }
     },
     [showRoute],
   );
 
+  const normalizeAngle = useCallback((angle: number) => {
+      let a = angle;
+
+      while (a < 0) a += 360;
+      while (a >= 360) a -= 360;
+
+      return a;
+    }, []);
+
+  const smoothBearing = useCallback(
+      (current: number, target: number) => {
+        let delta = target - current;
+
+        if (delta > 180) delta -= 360;
+        if (delta < -180) delta += 360;
+
+        return normalizeAngle(current + delta * 0.2);
+      },
+      [normalizeAngle],
+    );
+
+   
   useEffect(() => {
-    if (!riderLocation) {
+    if (!riderLocation || !showRoute || !routeLineRef.current) {
       return;
     }
 
@@ -287,8 +311,77 @@ const MapTracking = ({
       return;
     }
 
+    // Calculate bearing from polyline direction at the snapped point
+    try {
+      const routeCoords = routeLineRef.current.geometry.coordinates;
+      const snappedPt = turf.point([target.longitude, target.latitude]);
+
+      // Find the closest polyline point
+      let closestIdx = 0;
+      let closestDist = Infinity;
+
+      for (let i = 0; i < routeCoords.length; i++) {
+        const ptDist = turf.distance(snappedPt, turf.point(routeCoords[i]), {
+          units: 'meters',
+        });
+
+        if (ptDist < closestDist) {
+          closestDist = ptDist;
+          closestIdx = i;
+        }
+      }
+
+      // Get the bearing from the polyline segment ahead
+      // if (closestIdx < routeCoords.length - 1) {
+      //   const segStart = routeCoords[closestIdx];
+      //   const segEnd = routeCoords[closestIdx + 1];
+
+      //   const polyBearing = turf.bearing(
+      //     turf.point(segStart),
+      //     turf.point(segEnd),
+      //   );
+
+      //   setRouteBearing(polyBearing >= 0 ? polyBearing : polyBearing + 360);
+      // }
+
+    const snapped = turf.nearestPointOnLine(
+        routeLineRef.current,
+        turf.point([target.longitude, target.latitude]),
+        { units: 'kilometers' }
+    );
+
+    const distance = snapped.properties.location;
+
+    const start = turf.along(
+        routeLineRef.current,
+        Math.max(distance - 0.005, 0),
+        { units: 'kilometers' },
+    );
+
+    const end = turf.along(
+        routeLineRef.current,
+        Math.min(
+            distance + 0.005,
+            routeLengthKmRef.current,
+        ),
+        { units: 'kilometers' },
+    );
+
+    const b = turf.bearing(start, end);
+
+    //setRouteBearing((b + 360) % 360);
+
+    setRouteBearing(prev =>
+    smoothBearing(prev, (b + 360) % 360)
+);
+
+    } catch {
+      console.log('Error calculating route bearing');
+    }
+
     animateTo(target);
-  }, [riderLocation, animateTo, animatedLocation, snapToRoute]);
+  }, [riderLocation, animateTo, animatedLocation, snapToRoute, showRoute,  smoothBearing,]);
+
 
   const fetchBikeRoute = useCallback(async () => {
     if (!riderLocation || !deliveryLocation || !showRoute) {
@@ -381,7 +474,7 @@ const MapTracking = ({
           >
             <View style={styles.markerContainer}>
               <Image
-                source={require('../assets/images/delivery_location.png')}
+                source={require('../assets/images/delivery-foodyply-rider.png')}
                 style={styles.home}
               />
             </View>
@@ -415,7 +508,13 @@ const MapTracking = ({
                       styles.rider,
 
                       {
-                        transform: [{ rotate: `${bearing}deg` }],
+                        transform: [
+                          {
+                            rotate: `${
+                              showRoute ? routeBearing : bearing + 50
+                            }deg`,
+                          },
+                        ],
                       },
                     ]}
                   />
@@ -478,9 +577,8 @@ const styles = StyleSheet.create({
   },
 
   home: {
-    width: 24,
-    height: 24,
+    width: 26,
+    height: 30,
     resizeMode: 'contain',
-    tintColor: Colors.primary,
   },
 });

@@ -44,19 +44,48 @@ export default function useAnimatedMarker() {
     animationTimer.current = setInterval(() => {
       current += 1;
 
+      // setAnimatedLocation(prev => {
+      //   const position = prev ?? start;
+      //   const next = {
+      //     latitude: position.latitude + latStep,
+      //     longitude: position.longitude + lngStep,
+      //   };
+      //   animatedLocationRef.current = next;
+      //   return next;
+      // });
+
       setAnimatedLocation(prev => {
-        const position = prev ?? start;
-        const next = {
-          latitude: position.latitude + latStep,
-          longitude: position.longitude + lngStep,
-        };
-        animatedLocationRef.current = next;
-        return next;
-      });
+          const position = prev ?? start;
+
+          const next = {
+            latitude: position.latitude + latStep,
+            longitude: position.longitude + lngStep,
+          };
+
+          // Calculate bearing from previous position to next position
+          const newBearing = calculateBearing(position, next);
+
+          // Ignore invalid bearing
+          if (!isNaN(newBearing)) {
+            setBearing(newBearing);
+          }
+
+          animatedLocationRef.current = next;
+
+          return next;
+        });
+
+      // if (current >= frames && animationTimer.current) {
+      //   clearInterval(animationTimer.current);
+      //   animationTimer.current = null;
+      // }
 
       if (current >= frames && animationTimer.current) {
         clearInterval(animationTimer.current);
         animationTimer.current = null;
+
+        animatedLocationRef.current = target;
+        setAnimatedLocation(target);
       }
     }, 40);
   }, []);
