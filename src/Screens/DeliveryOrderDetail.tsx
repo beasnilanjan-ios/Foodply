@@ -55,10 +55,10 @@ useEffect(() => {
         return;
       }
 
-      if(result.data.delivery.status === ON_THE_WAY) {
-        navigation.replace('DeliveryStart', { orderDetail: result.data });
-        return;
-      }
+    //   if(result.data.delivery.status === ON_THE_WAY) {
+    //     navigation.replace('DeliveryStart', { orderDetail: result.data });
+    //     return;
+    //   }
       setOrderData(result.data);
 
     } catch (error) {
@@ -134,6 +134,13 @@ useEffect(() => {
         setLoading(false);
     }
 };
+
+const navigateToDeliveryStart = () => {
+    //    if(orderData?.delivery.status === ON_THE_WAY) {
+    //     navigation.replace('DeliveryStart', { orderDetail: orderData });
+    //     return;
+    //   }
+  };
 
  const makePhoneCall = (phoneNumber?: string) => {
       if (!phoneNumber) {
@@ -357,7 +364,7 @@ useEffect(() => {
                     </TouchableOpacity> */}
 
                     <TouchableOpacity
-                        style={styles.acceptButton} onPress={() => updateOrderStatus(orderData?.order.id || 0, ON_THE_WAY)}
+                        style={styles.acceptButton} onPress={() => navigateToDeliveryStart()}
                     >
                     <Text style={styles.acceptButtonText}>
                        Start Delivery

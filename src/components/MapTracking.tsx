@@ -17,7 +17,7 @@ import useAnimatedMarker from '../tracking/useAnimatedMarker';
 
 import Colors from '../assets/Colors/Colors';
 
-const riderImage = require('../assets/images/delivery_boy.png');
+const riderImage = require('../assets/images/delivery-foodyply-rider.png');
 
 export interface LatLng {
   latitude: number;
@@ -50,7 +50,7 @@ const DEFAULT_STYLE = 'https://tiles.openfreemap.org/styles/liberty';
 const ROUTE_LINE_STYLE = {
   lineColor: '#FF5722',
 
-  lineWidth: 5 as const,
+  lineWidth: 4 as const,
 
   lineCap: 'round' as const,
 
@@ -474,7 +474,7 @@ const MapTracking = ({
           >
             <View style={styles.markerContainer}>
               <Image
-                source={require('../assets/images/delivery-foodyply-rider.png')}
+                source={require('../assets/images/location_circle.png')}
                 style={styles.home}
               />
             </View>
@@ -577,8 +577,9 @@ const styles = StyleSheet.create({
   },
 
   home: {
-    width: 26,
-    height: 30,
+    width: 20,
+    height: 20,
     resizeMode: 'contain',
+    tintColor: Colors.greenDark,
   },
 });
