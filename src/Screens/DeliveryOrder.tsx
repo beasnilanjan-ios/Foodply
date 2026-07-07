@@ -40,17 +40,19 @@ const [refreshing, setRefreshing] = useState(false);
     const getOrderList = async (date: Date = selectedDate) => {
         try {
           setLoading(true);
+          const token = await GlobalLoginAuth.resolveAuthToken();
+          if (!token) {
+            Alert.alert('FoodyPly', 'Please login to continue');
+            return;
+          }
+
           const selectedDateQuery = formatDate(date, undefined, 'YYYY-MM-DD');
-          console.log('Fetching dashboard data with token:', GlobalLoginAuth.refreshToken);
           console.log(`${GlobalApi.baseUrl}api/deliveries/me/order-history?date=${selectedDateQuery}&page=1`);
           const response = await fetch(
             `${GlobalApi.baseUrl}api/deliveries/me/order-history?date=${selectedDateQuery}&page=1`,
             {
               method: 'GET',
-              headers: {
-                'Content-Type': 'application/json',
-                Authorization: `Bearer ${GlobalLoginAuth.accessToken}`,
-              },
+              headers: await GlobalLoginAuth.getAuthHeaders(),
             }
           );
 

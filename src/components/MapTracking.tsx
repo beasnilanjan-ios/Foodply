@@ -247,8 +247,6 @@ const MapTracking = ({
         if (distanceMeters > MAX_SNAP_DISTANCE_METERS) {
           // Route se bahut door — raw GPS point hi use karo, progress
 
-          // ko touch mat karo (agla valid ping se recover ho jayega).
-
           return point;
         }
 
@@ -256,9 +254,7 @@ const MapTracking = ({
           progressKmRef.current !== null &&
           locationKm < progressKmRef.current - BACKWARD_TOLERANCE_KM
         ) {
-          // Ye naya nearest point route pe peeche hai — noise/ambiguous
-
-          // match maan ke ignore karo, last accepted position pe raho.
+          // New nearest point route to the back
 
           return point;
         }
@@ -474,7 +470,9 @@ const MapTracking = ({
 
   return (
     <View style={styles.container}>
-        <Map style={styles.map} 
+        <Map 
+           compass={false}
+           style={styles.map} 
            mapStyle={mapStyle}
              onRegionDidChange={(e) => {
                 // console.log('Bearing:', e.nativeEvent?.bearing);

@@ -37,7 +37,7 @@ function createSocket(token: string): Socket | null {
 }
 
 export function connectSocket() {
-  const token = GlobalLoginAuth.accessToken;
+  const token = GlobalLoginAuth.getBearerToken();
   console.log('SocketToken', token);
   if (!token) {
     console.log('connectSocket: no token available; socket not created.');

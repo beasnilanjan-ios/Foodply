@@ -24,15 +24,17 @@ const DeliveryProfile = ({ navigation }: any) => {
    const getProfileDetails = async () => {
       try {
         setLoading(true);
-        console.log('Fetching profile data with token:', GlobalLoginAuth.refreshToken);
+        const token = await GlobalLoginAuth.resolveAuthToken();
+        if (!token) {
+          Alert.alert('FoodyPly', 'Please login to continue');
+          return;
+        }
+
         const response = await fetch(
           `${GlobalApi.baseUrl}api/deliveries/me/profile`,
           {
             method: 'GET',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${GlobalLoginAuth.accessToken}`,
-            },
+            headers: await GlobalLoginAuth.getAuthHeaders(),
           }
         );
   

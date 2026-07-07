@@ -356,6 +356,44 @@ export const searchLocationIqAddresses = async (
   return rankResults(trimmedInput, merged).slice(0, options?.limit ?? 10);
 };
 
+export const reverseGeocodeLocationIq = async (
+  lat: number,
+  lon: number,
+): Promise<LocationIqSearchResult> => {
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+    throw new Error('Invalid coordinates for reverse geocoding.');
+  }
+
+  const url = new URL(`${LOCATIONIQ_BASE_URL}/reverse`);
+  url.searchParams.set('key', getAccessToken());
+  url.searchParams.set('format', 'json');
+  url.searchParams.set('addressdetails', '1');
+  url.searchParams.set('accept-language', 'en');
+  url.searchParams.set('normalizecity', '1');
+  url.searchParams.set('lat', String(lat));
+  url.searchParams.set('lon', String(lon));
+
+  const response = await fetch(url.toString(), {
+    method: 'GET',
+    headers: {
+      Accept: 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`LocationIQ request failed (${response.status})`);
+  }
+
+  const data = await response.json();
+  const mapped = mapLocationIqItem(data);
+
+  if (!mapped?.display_name || !mapped.lat || !mapped.lon) {
+    throw new Error('Could not resolve your current location to an address.');
+  }
+
+  return mapped;
+};
+
 export const resolveLocationIqAddress = async (
   query: string,
   selected?: LocationIqSearchResult | null,

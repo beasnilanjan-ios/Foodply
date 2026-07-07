@@ -159,10 +159,16 @@ export class MyOrderItemModel {
 export class MyOrdersDataModel {
   orders: MyOrderItemModel[];
   total: number;
+  limit: number;
+  offset: number;
+  hasNextPage: boolean;
 
   constructor(data: Partial<MyOrdersDataModel> = {}) {
     this.orders = data.orders ?? [];
     this.total = data.total ?? 0;
+    this.limit = data.limit ?? 0;
+    this.offset = data.offset ?? 0;
+    this.hasNextPage = data.hasNextPage ?? false;
   }
 
   static fromJson(json: any): MyOrdersDataModel {
@@ -170,10 +176,22 @@ export class MyOrdersDataModel {
     const rawOrders = Array.isArray(payload)
       ? payload
       : payload?.orders ?? payload?.items ?? payload?.results ?? [];
+    const limit = Number(payload?.limit ?? json?.limit ?? rawOrders.length);
+    const offset = Number(payload?.offset ?? json?.offset ?? 0);
+    const total = Number(payload?.total ?? json?.total ?? rawOrders.length);
+    const hasNextPage =
+      payload?.hasNextPage ??
+      json?.hasNextPage ??
+      (total > 0
+        ? offset + rawOrders.length < total
+        : rawOrders.length > 0 && rawOrders.length >= limit);
 
     return new MyOrdersDataModel({
       orders: rawOrders.map((item: any) => MyOrderItemModel.fromJson(item)),
-      total: Number(payload?.total ?? rawOrders.length ?? 0),
+      total,
+      limit,
+      offset,
+      hasNextPage: Boolean(hasNextPage),
     });
   }
 }
@@ -190,10 +208,17 @@ export class MyOrdersResponseModel {
   }
 
   static fromJson(json: any): MyOrdersResponseModel {
+    const hasOrderList =
+      json?.data != null ||
+      Array.isArray(json?.items) ||
+      Array.isArray(json?.orders) ||
+      Array.isArray(json?.results) ||
+      Array.isArray(json);
+
     return new MyOrdersResponseModel({
       success: json?.success !== false,
       message: String(json?.message ?? ''),
-      data: json?.data != null ? MyOrdersDataModel.fromJson(json) : null,
+      data: hasOrderList ? MyOrdersDataModel.fromJson(json) : null,
     });
   }
 }

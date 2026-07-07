@@ -65,6 +65,37 @@ class GlobalLoginAuth {
 
     await AsyncStorage.removeItem('authData');
   }
+
+  getBearerToken(): string | null {
+    return this.accessToken || this.token;
+  }
+
+  async resolveAuthToken(): Promise<string | null> {
+    await this.loadAuthData();
+    return this.getBearerToken();
+  }
+
+  async getAuthHeaders(
+    withBody = false,
+  ): Promise<Record<string, string>> {
+    await this.loadAuthData();
+
+    const headers: Record<string, string> = {
+      Accept: 'application/json',
+      'X-Client-Type': 'mobile',
+    };
+
+    if (withBody) {
+      headers['Content-Type'] = 'application/json';
+    }
+
+    const token = this.getBearerToken();
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+    }
+
+    return headers;
+  }
 }
 
 export default GlobalLoginAuth.getInstance();
