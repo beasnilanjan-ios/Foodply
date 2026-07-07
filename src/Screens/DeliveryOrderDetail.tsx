@@ -21,10 +21,10 @@ const [orderData, setOrderData] =
 
 useEffect(() => {
     console.log(from)
-    getOrderDetails();
+    getOrderDetails(false);
   }, []);
 
-  const getOrderDetails = async () => {
+  const getOrderDetails = async (movetoStartDelivery : boolean) => {
 
     try {
       setLoading(true);
@@ -57,9 +57,16 @@ useEffect(() => {
         return;
       }
 
-      if(result.data.delivery.status === ON_THE_WAY) {
-        navigation.replace('DeliveryStart', { orderDetail: result.data });
-        return;
+      if(movetoStartDelivery) {
+        if(result.data.order.status === ON_THE_WAY) {
+            navigation.replace('DeliveryStart', { orderDetail: result.data });
+            return;
+        } else {
+            Alert.alert(
+              'FoodyPly',
+              'Order is not on the way'
+            );
+        }
       }
       setOrderData(result.data);
 
@@ -122,7 +129,7 @@ useEffect(() => {
         return;
         }
 
-       if(result.data.delivery.status === ON_THE_WAY) {
+       if(result.data.order.status === ON_THE_WAY) {
         navigation.replace('DeliveryStart', { orderDetail: result.data });
         return;
       }
@@ -362,7 +369,7 @@ useEffect(() => {
                     </TouchableOpacity> */}
 
                     <TouchableOpacity
-                        style={styles.acceptButton} onPress={() => updateOrderStatus(orderData?.order.id || 0, ON_THE_WAY)}
+                        style={styles.acceptButton} onPress={() => getOrderDetails(true)}
                     >
                     <Text style={styles.acceptButtonText}>
                        Start Delivery

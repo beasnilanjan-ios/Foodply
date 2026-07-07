@@ -17,7 +17,7 @@ import useAnimatedMarker from '../tracking/useAnimatedMarker';
 
 import Colors from '../assets/Colors/Colors';
 
-const riderImage = require('../assets/images/delivery_boy.png');
+const riderImage = require('../assets/images/delivery-foodyply-rider.png');
 
 export interface LatLng {
   latitude: number;
@@ -50,7 +50,7 @@ const DEFAULT_STYLE = 'https://tiles.openfreemap.org/styles/liberty';
 const ROUTE_LINE_STYLE = {
   lineColor: '#FF5722',
 
-  lineWidth: 5 as const,
+  lineWidth: 4 as const,
 
   lineCap: 'round' as const,
 
@@ -95,6 +95,8 @@ const MapTracking = ({
   const routeLineRef = useRef<any>(null);
 
   const routeLengthKmRef = useRef<number>(0);
+
+  const [mapBearing, setMapBearing] = useState(0);
 
   // Route pe ab tak kitni door (km) tak rider aage badh chuka hai —
 
@@ -161,7 +163,7 @@ const MapTracking = ({
 
       cameraRef.current?.easeTo({
         center: [deliveryLocation.longitude, deliveryLocation.latitude],
-        zoom: 15,
+        zoom: 16,
         duration: 1000,
       });
     }
@@ -430,16 +432,23 @@ const MapTracking = ({
       return;
     }
 
-    const now = Date.now();
+    // const now = Date.now();
 
-    if (
-      lastRouteRequest.current === 0 ||
-      now - lastRouteRequest.current > 30000
-    ) {
-      lastRouteRequest.current = now;
+    // if (
+    //   lastRouteRequest.current === 0 ||
+    //   now - lastRouteRequest.current > 30000
+    // ) {
+    //   lastRouteRequest.current = now;
+
+    //   fetchBikeRoute();
+    //}
+
+      //Remove polyline
+      if (!showRoute) return;
+      if (!riderLocation) return;
+      if (!deliveryLocation) return;
 
       fetchBikeRoute();
-    }
   }, [riderLocation, deliveryLocation, fetchBikeRoute, showRoute]);
 
   useEffect(() => {
@@ -454,9 +463,26 @@ const MapTracking = ({
     }
   }, [showRoute]);
 
+  const finalBearing =
+    (
+      (
+        showRoute
+          ? routeBearing
+          : bearing + 50
+      ) - mapBearing + 360
+    ) % 360;
+
   return (
     <View style={styles.container}>
-      <Map style={styles.map} mapStyle={mapStyle}>
+        <Map style={styles.map} 
+           mapStyle={mapStyle}
+             onRegionDidChange={(e) => {
+                // console.log('Bearing:', e.nativeEvent?.bearing);
+                // console.log('Zoom:', e.nativeEvent?.zoom);
+                // console.log('Center:', e.nativeEvent?.center);
+
+                setMapBearing(e.nativeEvent?.bearing ?? 0);
+        }}>
         <Camera ref={cameraRef} zoom={16} center={initialCenter ?? undefined} />
 
         {showRoute && routeFeature && (
@@ -474,7 +500,7 @@ const MapTracking = ({
           >
             <View style={styles.markerContainer}>
               <Image
-                source={require('../assets/images/delivery-foodyply-rider.png')}
+                source={require('../assets/images/location_circle.png')}
                 style={styles.home}
               />
             </View>
@@ -510,9 +536,7 @@ const MapTracking = ({
                       {
                         transform: [
                           {
-                            rotate: `${
-                              showRoute ? routeBearing : bearing + 50
-                            }deg`,
+                            rotate: `${finalBearing}deg`,
                           },
                         ],
                       },
@@ -539,14 +563,14 @@ const styles = StyleSheet.create({
   },
 
   rider: {
-    width: 32,
-    height: 40,
+    width: 52,
+    height: 60,
     resizeMode: 'contain',
   },
 
   riderContainer: {
-    width: 64,
-    height: 64,
+    width: 90,
+    height: 90,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -560,9 +584,9 @@ const styles = StyleSheet.create({
 
   riderPlaceholder: {
     position: 'absolute',
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
     backgroundColor: Colors.primary,
     opacity: 0.15,
   },
@@ -577,8 +601,9 @@ const styles = StyleSheet.create({
   },
 
   home: {
-    width: 26,
-    height: 30,
+    width: 20,
+    height: 20,
     resizeMode: 'contain',
+    tintColor: Colors.greenDark,
   },
 });
