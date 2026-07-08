@@ -57,10 +57,6 @@ const ROUTE_LINE_STYLE = {
   lineJoin: 'round' as const,
 } as const;
 
-// Agar rider isse zyada (meters) route line se door ho, to snapping
-
-// force nahi karenge — real (raw) location dikhayenge.
-
 const MAX_SNAP_DISTANCE_METERS = 50;
 
 const MapTracking = ({
@@ -98,9 +94,6 @@ const MapTracking = ({
 
   const [mapBearing, setMapBearing] = useState(0);
 
-  // Route pe ab tak kitni door (km) tak rider aage badh chuka hai —
-
-  // isse peeche jump hone se rokte hain (monotonic progress).
 
   const progressKmRef = useRef<number | null>(null);
 
@@ -191,39 +184,7 @@ const MapTracking = ({
     });
   }, [animatedLocation, bearing]);
 
-  // GPS noise ki wajah se thoda peeche jaana allow karte hain,
-
-  // isse zyada peeche gaya to real u-turn/wrong-route maana jayega.
-
   const BACKWARD_TOLERANCE_KM = 0.02; // ~20 meters
-
-  /**
-
-   * Raw GPS point ko route polyline pe snap karta hai, taaki
-
-   * marker route se off zig-zag na kare ("dance" na kare).
-
-   *
-
-   * Important: sirf nearest-point-on-line kaafi nahi hai, kyunki
-
-   * agar road khud ke paas se guzarti hai (loop/parallel road/
-
-   * intersection), to nearest point kabhi aage kabhi peeche jump
-
-   * kar sakta hai — yahi "dance" jaisa dikhta hai.
-
-   *
-
-   * Isliye hum route pe "progress" (kitni door tak chal chuke)
-
-   * track karte hain aur naya snapped point hamesha usi se aage
-
-   * (ya thodi si tolerance ke andar) hona chahiye, warna use
-
-   * reject kar dete hain.
-
-   */
 
   const snapToRoute = useCallback(
     (point: LatLng): LatLng => {
@@ -245,8 +206,6 @@ const MapTracking = ({
         const distanceMeters = turf.distance(pt, snapped, { units: 'meters' });
 
         if (distanceMeters > MAX_SNAP_DISTANCE_METERS) {
-          // Route se bahut door — raw GPS point hi use karo, progress
-
           return point;
         }
 
@@ -407,15 +366,11 @@ const MapTracking = ({
         properties: {},
       });
 
-      // Snapping ke liye turf LineString bhi bana ke rakh lo
-
       const line = turf.lineString(geometry.coordinates);
 
       routeLineRef.current = line;
 
       routeLengthKmRef.current = turf.length(line, { units: 'kilometers' });
-
-      // Naya route mila to progress fresh se track karo
 
       progressKmRef.current = null;
     } catch (e) {
