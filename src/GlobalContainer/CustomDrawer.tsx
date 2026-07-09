@@ -29,7 +29,7 @@ export default function CustomDrawer({ navigation, closeDrawer }: any) {
       icon: require('../assets/images/Deliver_Boy_Icon.png'),
       route: 'DeliveryAddressList',
     },
-    { title: 'Payment Methods', icon: require('../assets/images/Payments.png') },
+    // { title: 'Payment Methods', icon: require('../assets/images/Payments.png') },
     { title: 'Contact Us', icon: require('../assets/images/Contacts.png') },
     { title: 'Help & FAQs', icon: require('../assets/images/Help.png') },
     { title: 'Settings', icon: require('../assets/images/SettingsSideMenu.png') },
