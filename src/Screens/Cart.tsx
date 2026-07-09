@@ -1393,12 +1393,18 @@ export default function Cart({ navigation, route }: any) {
 
                       <View style={styles.actionRow}>
 
-                        <TouchableOpacity style={styles.cancelButton}>
+                        <TouchableOpacity
+                          style={[styles.cancelButton, { opacity: 0 }]}
+                          disabled
+                          pointerEvents="none">
                           <Text style={styles.cancelText}>Cancel Order</Text>
                         </TouchableOpacity>
 
                         <View style={styles.rightControls}>
-                          <TouchableOpacity style={styles.editQtyButton}>
+                          <TouchableOpacity
+                            style={[styles.editQtyButton, { opacity: 0 }]}
+                            disabled
+                            pointerEvents="none">
                             <Image
                               source={require('../assets/images/Writeicon.png')}
                               style={styles.editQtyIcon}
