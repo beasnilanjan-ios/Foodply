@@ -299,7 +299,7 @@ export default function DeliveryStart({ route, navigation }: any) {
 
         // Insert actual GPS as first point
         const coordinates = [[startLng, startLat], ...osrmCoordinates];
-
+        console.log('Fetched Route Coordinates:', coordinates);
         for (let i = 0; i < 5; i++) {
           const dist = getDistance(
             coordinates[i][1],
@@ -950,6 +950,8 @@ export default function DeliveryStart({ route, navigation }: any) {
 
       const SendOtpResponse = result as SendOtpResponse; 
 
+      console.log('Authorization', `Bearer ${GlobalLoginAuth.accessToken}`)
+      console.log('Send OTP API: POST ', `${GlobalApi.baseUrl}api/deliveries/me/orders/${orderDetail?.order.id}/send-otp`);
       console.log('Generate OTP Response:', result);
 
       if (!response.ok) {

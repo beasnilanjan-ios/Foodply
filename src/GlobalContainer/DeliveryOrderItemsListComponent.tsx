@@ -19,7 +19,7 @@ type Props = {
 const ItemCard = ({ item }: { item: OrderItem }) => {
   const [description, setDescription] = useState('');
    useEffect(() => {
-      setDescription(item.addons.join(' • '));
+      setDescription(item.addons?.join(' • ') ?? '');
     }, [item]);
   return (
     <View style={styles.itemRow}>
@@ -53,7 +53,7 @@ const ItemCard = ({ item }: { item: OrderItem }) => {
 
       {/* Price */}
       <Text style={styles.priceText}>
-        ₹{item.totalPrice.toFixed(2)}
+         ₹{Number(item.totalPrice ?? 0).toFixed(2)}
       </Text>
     </View>
   );
@@ -74,9 +74,7 @@ export default function DeliveryOrderItemsListComponent({
 
         <View style={DeliveryGlobalStyles.backLight}>
           <Text style={styles.itemCount}>
-            {items.length} Items •{' '}
-            {itemQty}{' '}
-            Qty
+            {`${items.length} Items • ${itemQty} Qty`}
           </Text>
         </View>
         </View>      

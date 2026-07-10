@@ -160,7 +160,7 @@ useEffect(() => {
 
   return (
      <View style={styles.container}>
-      <GlobalTopBarDelivery navigation={navigation} notificationClick={() => {}} text="Order Detail" subtitleText={`#${orderData?.order.orderNumber}`} isBackVisible={true} isOnlineVisible = {false} />
+      <GlobalTopBarDelivery navigation={navigation} notificationClick={() => {}} text="Order Detail" subtitleText={orderData?.order.orderNumber ? `#${orderData.order.orderNumber}` : ''} isBackVisible={true} isOnlineVisible = {false} />
         <View style={styles.overlay}>
             <ScrollView
                 showsVerticalScrollIndicator={false}
@@ -230,7 +230,7 @@ useEffect(() => {
 
                     <View style={styles.summaryItem}>
                         <Text style={styles.summaryLabel}>
-                        Item Total
+                            Item Total
                         </Text>
 
                         <Text style={styles.summaryValue}>
@@ -240,7 +240,7 @@ useEffect(() => {
 
                     <View style={styles.summaryItem}>
                         <Text style={styles.summaryLabel}>
-                        Tax Charges
+                        Tax
                         </Text>
 
                         <Text style={styles.summaryValue}>
@@ -278,6 +278,17 @@ useEffect(() => {
                         </Text>
                     </View>
                     )}  
+                     {orderData?.billing?.tipAmount && orderData.billing.tipAmount > 0 && (
+                     <View style={styles.summaryItem}>
+                        <Text style={styles.summaryLabel}>
+                        Tip
+                        </Text>
+
+                        <Text style={styles.summaryValue}>
+                        ₹{orderData?.billing?.tipAmount?.toFixed(2)}
+                        </Text>
+                    </View>
+                    )}  
                     <View style={styles.divider} />
 
                     <View style={styles.summaryItem}>
@@ -292,7 +303,7 @@ useEffect(() => {
 
                     <View style={styles.codBadge}>
                         <Text style={styles.codText}>
-                            Payment Status: {orderData?.billing?.paymentStatus}
+                            {`Payment Status: ${orderData?.billing?.paymentStatus || 'Pending'}`}
                         </Text>
                     </View>
                     </View>
